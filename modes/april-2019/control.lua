@@ -12,11 +12,11 @@ local function OnPlayerCreated(event)
     player.insert {name = "piercing-rounds-magazine", count = 10}
     player.insert {name = "iron-plate", count = 10}
     player.insert {name = "centrifuge", count = 5}
-    player.insert {name = "burner-inserter", count = 3}
+    player.insert {name = "burner-mining-drill", count = 3}
     player.insert {name = "stone-furnace", count = 3}
     player.insert {name = "medium-electric-pole", count = 10}
 
-    player.print("Welcome to the March map where you need to do stuff and things")
+    player.print("Welcome to April, here is egg in your face...")
 end
 
 local function OnPlayerRespawned(event)
