@@ -1,3 +1,7 @@
+if settings.startup["jdplays_mode"].value ~= "april-2019" then
+    return
+end
+
 local function ClearPlayerInventories(player)
     player.get_main_inventory().clear()
     player.get_inventory(defines.inventory.player_ammo).clear()

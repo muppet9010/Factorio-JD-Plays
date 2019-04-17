@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 17.0.1
+Date: 2019-04-17
+  Features:
+  Changes:
+  Bugfixes:
+    - Fixed possible mod mismatch errors in code structure by replacing conditional requires around game modes.
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 17.0.0
 Date: 2019-04-04
   Features:
