@@ -20,7 +20,7 @@ local function OnPlayerCreated(event)
     player.insert {name = "stone-furnace", count = 3}
     player.insert {name = "medium-electric-pole", count = 10}
 
-    player.print("Welcome to April, here is egg in your face...")
+    player.print({"messages.welcome1"})
 end
 
 local function OnPlayerRespawned(event)
