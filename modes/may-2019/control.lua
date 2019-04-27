@@ -22,6 +22,10 @@ local function OnPlayerCreated(event)
     player.insert {name = "burner-mining-drill", count = 1}
     player.insert {name = "stone-furnace", count = 1}
 
+    --TODO testing
+    player.insert {name = "grenade", count = 10}
+    player.insert {name = "modular-armor", count = 1}
+
     player.print({"messages.jd_plays_welcome1"})
 end
 
@@ -30,6 +34,10 @@ local function OnPlayerRespawned(event)
     ClearPlayerInventories(player)
     player.insert {name = global.SpawnItems["gun"], count = 1}
     player.insert {name = global.SpawnItems["ammo"], count = 10}
+
+    --TODO testing
+    player.insert {name = "grenade", count = 10}
+    player.insert {name = "modular-armor", count = 1}
 end
 
 local function OnStartup()
