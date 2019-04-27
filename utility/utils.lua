@@ -335,6 +335,8 @@ function Utils.WasCreativeModeInstantDeconstructionUsed(event)
 end
 
 function Utils.GetBiterType(modEnemyProbabilities, spawnerType, evolution)
+    --modEnemyProbabilities argument is a global variable the utility function can use. do not set in any way
+    modEnemyProbabilities = modEnemyProbabilities or {}
     if modEnemyProbabilities[spawnerType] == nil then
         modEnemyProbabilities[spawnerType] = {}
     end
@@ -427,6 +429,51 @@ function Utils.DisableSiloScript()
     local items = remote.call("silo_script", "get_tracked_items")
     for itemName in pairs(items) do
         remote.call("silo_script", "remove_tracked_item", itemName)
+    end
+end
+
+function Utils.PadNumberToMinimumDigits(input, requiredLength)
+    local shortBy = requiredLength - string.len(input)
+    for i = 1, shortBy do
+        input = "0" .. input
+    end
+    return input
+end
+
+function Utils.LocalisedStringOfTime(inputTicks, displayLargestTimeUnit, displaySmallestTimeUnit)
+    local hours = math.floor(inputTicks / 216000)
+    local displayHours = Utils.PadNumberToMinimumDigits(hours, 2)
+    inputTicks = inputTicks - (hours * 216000)
+    local minutes = math.floor(inputTicks / 3600)
+    local displayMinutes = Utils.PadNumberToMinimumDigits(minutes, 2)
+    inputTicks = inputTicks - (minutes * 3600)
+    local seconds = math.floor(inputTicks / 60)
+    local displaySeconds = Utils.PadNumberToMinimumDigits(seconds, 2)
+
+    if displayLargestTimeUnit == "auto" then
+        if hours > 0 then
+            displayLargestTimeUnit = "hour"
+        elseif minutes > 0 then
+            displayLargestTimeUnit = "minute"
+        else
+            displayLargestTimeUnit = "second"
+        end
+    end
+    if displaySmallestTimeUnit == nil or displaySmallestTimeUnit == "" or displaySmallestTimeUnit == "auto" then
+        displaySmallestTimeUnit = "second"
+    end
+    if not (displaySmallestTimeUnit == "hour" or displaySmallestTimeUnit == "minute" or displaySmallestTimeUnit == "second") then
+        error("unrecognised displaySmallestTimeUnit argument in Utils.MakeLocalisedStringDisplayOfTime")
+    end
+
+    if displayLargestTimeUnit == "hour" then
+        return {"muppet-utils.time-hour-" .. displaySmallestTimeUnit, displayHours, displayMinutes, displaySeconds}
+    elseif displayLargestTimeUnit == "minute" then
+        return {"muppet-utils.time-minute-" .. displaySmallestTimeUnit, displayMinutes, displaySeconds}
+    elseif displayLargestTimeUnit == "second" then
+        return {"muppet-utils.time-second-" .. displaySmallestTimeUnit, displaySeconds}
+    else
+        error("unrecognised displayLargestTimeUnit argument in Utils.MakeLocalisedStringDisplayOfTime")
     end
 end
 

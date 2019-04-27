@@ -16,3 +16,5 @@ May 2019
 
 - Players start with: 8 iron plate, 1 wood, 1 burner mining drill, 1 stone furnace, 10 research approperiate ammo, 1 research approperiate bullet gun
 - Players respawn with: 10 research approperiate ammo, 1 research approperiate bullet gun
+- Every 20-45 minutes 80 enemies will spawn in a 100 tile radius around a specific player. They will be evolution approperiate +10% and will individually target that player. There will be a 3 seconds of dirt borrowing effect before each biter will come up.
+- A small GUI will count down to the next biter hunter group and when there is a current group show who is being targeted.

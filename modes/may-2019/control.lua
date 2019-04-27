@@ -1,3 +1,6 @@
+local BiterHuntGroup = require("modes/may-2019/biter-hunt-group")
+local GUIUtil = require("utility/gui-util")
+
 if settings.startup["jdplays_mode"].value ~= "may-2019" then
     return
 end
@@ -19,7 +22,7 @@ local function OnPlayerCreated(event)
     player.insert {name = "burner-mining-drill", count = 1}
     player.insert {name = "stone-furnace", count = 1}
 
-    player.print({"messages.welcome1"})
+    player.print({"messages.jd_plays_welcome1"})
 end
 
 local function OnPlayerRespawned(event)
@@ -33,6 +36,12 @@ local function OnStartup()
     global.SpawnItems = global.SpawnItems or {}
     global.SpawnItems["gun"] = global.SpawnItems["gun"] or "pistol"
     global.SpawnItems["ammo"] = global.SpawnItems["ammo"] or "firearm-magazine"
+    global.BiterHuntGroupUnits = global.BiterHuntGroupUnits or {}
+    if global.nextBiterHuntGroupTick == nil then
+        global.nextBiterHuntGroupTick = 0
+        BiterHuntGroup.ScheduleNextBiterHuntGroup()
+    end
+    GUIUtil.CreatePlayerElementReferenceStorage()
 end
 
 local function OnResearchFinished(event)
@@ -46,8 +55,31 @@ local function OnResearchFinished(event)
     end
 end
 
+local function OnPlayerJoinedGame(event)
+    local player = game.get_player(event.player_index)
+    BiterHuntGroup.GuiCreate(player)
+end
+
+local function OnPlayerLeftGame(event)
+    local player = game.get_player(event.player_index)
+    BiterHuntGroup.GuiDestroy(player)
+end
+
+local function On60Ticks()
+    BiterHuntGroup.GuiUpdateAll()
+end
+
+local function OnFrequentTicks(event)
+    local tick = event.tick
+    BiterHuntGroup.FrequentTick(tick)
+end
+
 script.on_init(OnStartup)
 script.on_configuration_changed(OnStartup)
 script.on_event(defines.events.on_player_created, OnPlayerCreated)
 script.on_event(defines.events.on_player_respawned, OnPlayerRespawned)
 script.on_event(defines.events.on_research_finished, OnResearchFinished)
+script.on_event(defines.events.on_player_joined_game, OnPlayerJoinedGame)
+script.on_event(defines.events.on_player_left_game, OnPlayerLeftGame)
+script.on_nth_tick(60, On60Ticks)
+script.on_nth_tick(10, OnFrequentTicks)
