@@ -441,6 +441,11 @@ function Utils.PadNumberToMinimumDigits(input, requiredLength)
 end
 
 function Utils.LocalisedStringOfTime(inputTicks, displayLargestTimeUnit, displaySmallestTimeUnit)
+    local negativeSign = ""
+    if inputTicks < 0 then
+        negativeSign = "-"
+        inputTicks = 0 - inputTicks
+    end
     local hours = math.floor(inputTicks / 216000)
     local displayHours = Utils.PadNumberToMinimumDigits(hours, 2)
     inputTicks = inputTicks - (hours * 216000)
@@ -467,11 +472,11 @@ function Utils.LocalisedStringOfTime(inputTicks, displayLargestTimeUnit, display
     end
 
     if displayLargestTimeUnit == "hour" then
-        return {"muppet-utils.time-hour-" .. displaySmallestTimeUnit, displayHours, displayMinutes, displaySeconds}
+        return {"muppet-utils.time-hour-" .. displaySmallestTimeUnit, negativeSign .. displayHours, displayMinutes, displaySeconds}
     elseif displayLargestTimeUnit == "minute" then
-        return {"muppet-utils.time-minute-" .. displaySmallestTimeUnit, displayMinutes, displaySeconds}
+        return {"muppet-utils.time-minute-" .. displaySmallestTimeUnit, negativeSign .. displayMinutes, displaySeconds}
     elseif displayLargestTimeUnit == "second" then
-        return {"muppet-utils.time-second-" .. displaySmallestTimeUnit, displaySeconds}
+        return {"muppet-utils.time-second-" .. displaySmallestTimeUnit, negativeSign .. displaySeconds}
     else
         error("unrecognised displayLargestTimeUnit argument in Utils.MakeLocalisedStringDisplayOfTime")
     end

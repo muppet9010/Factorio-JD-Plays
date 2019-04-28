@@ -45,8 +45,10 @@ local function OnStartup()
     global.SpawnItems["gun"] = global.SpawnItems["gun"] or "pistol"
     global.SpawnItems["ammo"] = global.SpawnItems["ammo"] or "firearm-magazine"
     global.BiterHuntGroupUnits = global.BiterHuntGroupUnits or {}
+    global.BiterHuntGroupResults = global.BiterHuntGroupResults or {}
+    global.biterHuntGroupId = global.biterHuntGroupId or 0
     if global.nextBiterHuntGroupTick == nil then
-        global.nextBiterHuntGroupTick = 0
+        global.nextBiterHuntGroupTick = game.tick
         BiterHuntGroup.ScheduleNextBiterHuntGroup()
     end
     GUIUtil.CreatePlayerElementReferenceStorage()
@@ -82,6 +84,11 @@ local function OnFrequentTicks(event)
     BiterHuntGroup.FrequentTick(tick)
 end
 
+local function OnPlayerDied(event)
+    local player = game.get_player(event.player_index)
+    BiterHuntGroup.PlayerDied(player)
+end
+
 script.on_init(OnStartup)
 script.on_configuration_changed(OnStartup)
 script.on_event(defines.events.on_player_created, OnPlayerCreated)
@@ -89,5 +96,6 @@ script.on_event(defines.events.on_player_respawned, OnPlayerRespawned)
 script.on_event(defines.events.on_research_finished, OnResearchFinished)
 script.on_event(defines.events.on_player_joined_game, OnPlayerJoinedGame)
 script.on_event(defines.events.on_player_left_game, OnPlayerLeftGame)
+script.on_event(defines.events.on_player_died, OnPlayerDied)
 script.on_nth_tick(60, On60Ticks)
 script.on_nth_tick(10, OnFrequentTicks)
