@@ -51,7 +51,8 @@ local function OnStartup()
         global.nextBiterHuntGroupTick = game.tick
         BiterHuntGroup.ScheduleNextBiterHuntGroup()
     end
-    GUIUtil.CreatePlayerElementReferenceStorage()
+    GUIUtil.CreateAllPlayersElementReferenceStorage()
+    BiterHuntGroup.GuiRecreateAll()
 end
 
 local function OnResearchFinished(event)
