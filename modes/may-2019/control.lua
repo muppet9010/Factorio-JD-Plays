@@ -1,5 +1,6 @@
 local BiterHuntGroup = require("modes/may-2019/biter-hunt-group")
 local GUIUtil = require("utility/gui-util")
+local testing = false
 
 if settings.startup["jdplays_mode"].value ~= "may-2019" then
     return
@@ -22,9 +23,10 @@ local function OnPlayerCreated(event)
     player.insert {name = "burner-mining-drill", count = 1}
     player.insert {name = "stone-furnace", count = 1}
 
-    --TODO testing
-    player.insert {name = "grenade", count = 10}
-    player.insert {name = "modular-armor", count = 1}
+    if testing then
+        player.insert {name = "grenade", count = 10}
+        player.insert {name = "modular-armor", count = 1}
+    end
 
     player.print({"messages.jd_plays_welcome1"})
 end
@@ -35,9 +37,10 @@ local function OnPlayerRespawned(event)
     player.insert {name = global.SpawnItems["gun"], count = 1}
     player.insert {name = global.SpawnItems["ammo"], count = 10}
 
-    --TODO testing
-    player.insert {name = "grenade", count = 10}
-    player.insert {name = "modular-armor", count = 1}
+    if testing then
+        player.insert {name = "grenade", count = 10}
+        player.insert {name = "modular-armor", count = 1}
+    end
 end
 
 local function OnStartup()
@@ -80,9 +83,9 @@ local function On60Ticks()
     BiterHuntGroup.GuiUpdateAll()
 end
 
-local function OnFrequentTicks(event)
+local function On10Ticks(event)
     local tick = event.tick
-    BiterHuntGroup.FrequentTick(tick)
+    BiterHuntGroup.On10Ticks(tick)
 end
 
 local function OnPlayerDied(event)
@@ -99,4 +102,4 @@ script.on_event(defines.events.on_player_joined_game, OnPlayerJoinedGame)
 script.on_event(defines.events.on_player_left_game, OnPlayerLeftGame)
 script.on_event(defines.events.on_player_died, OnPlayerDied)
 script.on_nth_tick(60, On60Ticks)
-script.on_nth_tick(10, OnFrequentTicks)
+script.on_nth_tick(10, On10Ticks)
