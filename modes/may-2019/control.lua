@@ -43,7 +43,15 @@ local function OnPlayerRespawned(event)
     end
 end
 
+local function UpgradeOldGlobal()
+    if global.biterHuntGroupTargetPlayer ~= nil then
+        global.biterHuntGroupTargetPlayerID = global.biterHuntGroupTargetPlayer.index
+        global.biterHuntGroupTargetPlayer = nil
+    end
+end
+
 local function OnStartup()
+    UpgradeOldGlobal()
     global.SpawnItems = global.SpawnItems or {}
     global.SpawnItems["gun"] = global.SpawnItems["gun"] or "pistol"
     global.SpawnItems["ammo"] = global.SpawnItems["ammo"] or "firearm-magazine"
@@ -89,8 +97,7 @@ local function On10Ticks(event)
 end
 
 local function OnPlayerDied(event)
-    local player = game.get_player(event.player_index)
-    BiterHuntGroup.PlayerDied(player)
+    BiterHuntGroup.PlayerDied(event.player_index)
 end
 
 script.on_init(OnStartup)

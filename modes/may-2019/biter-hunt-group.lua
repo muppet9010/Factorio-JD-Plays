@@ -44,12 +44,12 @@ BiterHuntGroup.SelectTarget = function()
     end
     if #validPlayers >= 1 then
         local target = validPlayers[math.random(1, #validPlayers)]
-        global.biterHuntGroupTargetPlayer = target
+        global.biterHuntGroupTargetPlayerID = target.index
         global.biterHuntGroupTargetEntity = target.character
         global.biterHuntGroupTargetName = target.name
         global.biterHuntGroupSurface = target.surface
     else
-        global.biterHuntGroupTargetPlayer = nil
+        global.biterHuntGroupTargetPlayerID = nil
         global.biterHuntGroupTargetEntity = nil
         global.biterHuntGroupTargetName = "Spawn"
         global.biterHuntGroupSurface = game.surfaces[1]
@@ -147,8 +147,8 @@ BiterHuntGroup.On10Ticks = function(tick)
     end
 end
 
-BiterHuntGroup.PlayerDied = function(player)
-    if player == global.biterHuntGroupTargetPlayer and global.BiterHuntGroupResults[global.biterHuntGroupId].playerWin == nil then
+BiterHuntGroup.PlayerDied = function(playerID)
+    if playerID == global.biterHuntGroupTargetPlayerID and global.BiterHuntGroupResults[global.biterHuntGroupId].playerWin == nil then
         global.BiterHuntGroupResults[global.biterHuntGroupId].playerWin = false
         game.print("[img=entity.medium-biter]      [img=entity.character-corpse]" .. global.biterHuntGroupTargetName)
         BiterHuntGroup.ClearGlobals()
@@ -157,7 +157,7 @@ end
 
 BiterHuntGroup.ClearGlobals = function()
     global.biterHuntGroupState = nil
-    global.biterHuntGroupTargetPlayer = nil
+    global.biterHuntGroupTargetPlayerID = nil
     global.biterHuntGroupTargetEntity = nil
     global.biterHuntGroupTargetName = nil
     global.biterHuntGroupSurface = nil
@@ -166,7 +166,7 @@ end
 BiterHuntGroup.EnsureValidateTarget = function()
     local targetEntity = global.biterHuntGroupTargetEntity
     if targetEntity ~= nil and (not targetEntity.valid) then
-        global.biterHuntGroupTargetPlayer = nil
+        global.biterHuntGroupTargetPlayerID = nil
         global.biterHuntGroupTargetEntity = nil
         global.biterHuntGroupTargetName = "Spawn"
     end

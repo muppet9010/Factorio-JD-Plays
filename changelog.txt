@@ -3,16 +3,17 @@ Version: 17.0.4
 Date: 2019-05-03
   Features:
   Changes:
-    - May 2019 made compatible and requires 0.17.35 and above.
+    - May 2019 mode - made compatible and requires 0.17.35 and above.
   Bugfixes:
   Info:
+    - May 2019 mode - changed mod to store targeted PlayerID rather than LuaPlayer object.
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.3
 Date: 2019-05-03
   Features:
   Changes:
   Bugfixes:
-    - May 2019 mode doesn't spawn biter hunt groups after a player if they are on a surface with "spaceship" or "Orbit" in the name. This is for Space Exploration mod compatibility.
+    - May 2019 mode - doesn't spawn biter hunt groups after a player if they are on a surface with "spaceship" or "Orbit" in the name. This is for Space Exploration mod compatibility.
   Info:
     - Added factorio versions each mode has been tested with.
 ---------------------------------------------------------------------------------------------------
