@@ -109,7 +109,7 @@ BiterHuntGroup.On10Ticks = function(tick)
         global.biterHuntGroupState = biterHuntGroupState.groundMovement
         global.biterHuntGroupStateChangeTick = tick + biterHuntGroupTunnelTime - biterHuntGroupPreTunnelEffectTime
         BiterHuntGroup.SelectTarget()
-        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]      [img=entity.player]" .. global.biterHuntGroupTargetName)
+        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]      [img=entity.character]" .. global.biterHuntGroupTargetName)
         BiterHuntGroup.CreateGroundMovement()
     elseif global.biterHuntGroupState == biterHuntGroupState.groundMovement then
         if tick < (global.biterHuntGroupStateChangeTick) then
@@ -140,7 +140,7 @@ BiterHuntGroup.On10Ticks = function(tick)
         if #global.BiterHuntGroupUnits == 0 then
             if global.BiterHuntGroupResults[global.biterHuntGroupId].playerWin == nil then
                 global.BiterHuntGroupResults[global.biterHuntGroupId].playerWin = true
-                game.print("[img=entity.medium-biter-corpse]      [img=entity.player]" .. global.biterHuntGroupTargetName)
+                game.print("[img=entity.medium-biter-corpse]      [img=entity.character]" .. global.biterHuntGroupTargetName)
             end
             BiterHuntGroup.ClearGlobals()
         end

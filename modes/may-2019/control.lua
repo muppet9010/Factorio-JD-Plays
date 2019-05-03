@@ -8,8 +8,8 @@ end
 
 local function ClearPlayerInventories(player)
     player.get_main_inventory().clear()
-    player.get_inventory(defines.inventory.player_ammo).clear()
-    player.get_inventory(defines.inventory.player_guns).clear()
+    player.get_inventory(defines.inventory.character_ammo).clear()
+    player.get_inventory(defines.inventory.character_guns).clear()
 end
 
 local function OnPlayerCreated(event)

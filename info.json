@@ -1,14 +1,13 @@
 {
     "name": "jd_plays",
-    "version": "17.0.3",
+    "version": "17.0.4",
     "title": "JD-Plays",
     "author": "Muppet9010",
     "contact": "",
     "homepage": "https://mods.factorio.com/mod/jd_plays",
     "factorio_version": "0.17",
     "dependencies": [
-        "base >= 0.17",
-        "base <= 0.17.34"
+        "base >= 0.17.35"
     ],
     "description": "Streamer JD-Plays server mod"
 }

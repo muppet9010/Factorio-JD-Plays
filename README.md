@@ -6,7 +6,7 @@ A mod for streamer JD-Plays's server. Includes a number of distinct modes.
 May 2019
 ---------
 
-- Tested with Factorio 0.17.34
+- Tested with Factorio 0.17.36
 - Players start with: 8 iron plate, 1 wood, 1 burner mining drill, 1 stone furnace, 10 research appropriate ammo, 1 research appropriate bullet gun
 - Players re-spawn with: 10 research appropriate ammo, 1 research appropriate bullet gun
 - Every 20-45 minutes 80 enemies will spawn in a 100 tile radius around a randomly targeted valid player. They will be evolution appropriate +10% and will individually target that player. There will be 3 seconds of dirt borrowing effect before each biter will come up. Should the targeted player die during this time the biters will continue to come up and target the spawn area on that surface. If no players are alive anywhere the biters will target spawn on the nauvis surface.
