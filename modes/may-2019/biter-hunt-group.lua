@@ -24,11 +24,21 @@ BiterHuntGroup.ScheduleNextBiterHuntGroup = function()
     global.nextBiterHuntGroupTick = global.nextBiterHuntGroupTick + math.random(biterHuntGroupFrequencyRangeTicks[1], biterHuntGroupFrequencyRangeTicks[2])
 end
 
+BiterHuntGroup.ValidSurface = function(surface)
+    if string.find(surface.name, "spaceship", 0, true) then
+        return false
+    end
+    if string.find(surface.name, "Orbit", 0, true) then
+        return false
+    end
+    return true
+end
+
 BiterHuntGroup.SelectTarget = function()
     local players = game.connected_players
     local validPlayers = {}
     for _, player in pairs(players) do
-        if player.character then
+        if player.character and BiterHuntGroup.ValidSurface(player.surface) then
             table.insert(validPlayers, player)
         end
     end
@@ -190,7 +200,7 @@ BiterHuntGroup._CreateGroundMovement = function(distance, attempts)
     end
 
     if #biterPositions < (biterHuntGroupSize / 2) then
-        distance = distance / 2
+        distance = distance * 0.75
         attempts = attempts or 0
         attempts = attempts + 1
         if attempts > 3 then

@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 17.0.3
+Date: 2019-05-03
+  Features:
+  Changes:
+  Bugfixes:
+    - May 2019 mode doesn't spawn biter hunt groups after a player if they are on a surface with "spaceship" or "Orbit" in the name. This is for Space Exploration mod compatibility.
+  Info:
+    - Added factorio versions each mode has been tested with.
+---------------------------------------------------------------------------------------------------
 Version: 17.0.2
 Date: 2019-04-26
   Features:
