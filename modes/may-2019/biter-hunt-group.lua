@@ -107,14 +107,14 @@ end
 BiterHuntGroup.On10Ticks = function(tick)
     if tick >= global.nextBiterHuntGroupTick then
         if global.BiterHuntGroupResults[global.biterHuntGroupId] ~= nil and global.BiterHuntGroupResults[global.biterHuntGroupId].playerWin == nil then
-            game.print("[img=entity.medium-biter-corpse]      [img=entity.character-corpse]" .. global.biterHuntGroupTargetName)
+            game.print("[img=entity.medium-biter-corpse]      [img=entity.character-corpse]" .. global.biterHuntGroupTargetName .. " draw")
         end
         BiterHuntGroup.ClearGlobals()
         BiterHuntGroup.ScheduleNextBiterHuntGroup()
         global.biterHuntGroupState = biterHuntGroupState.groundMovement
         global.biterHuntGroupStateChangeTick = tick + biterHuntGroupTunnelTime - biterHuntGroupPreTunnelEffectTime
         BiterHuntGroup.SelectTarget()
-        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]      [img=entity.character]" .. global.biterHuntGroupTargetName)
+        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]" .. " hunting " .. [img=entity.character] .. " " .. global.biterHuntGroupTargetName)
         BiterHuntGroup.CreateGroundMovement()
     elseif global.biterHuntGroupState == biterHuntGroupState.groundMovement then
         if tick < (global.biterHuntGroupStateChangeTick) then
@@ -145,7 +145,7 @@ BiterHuntGroup.On10Ticks = function(tick)
         if #global.BiterHuntGroupUnits == 0 then
             if global.BiterHuntGroupResults[global.biterHuntGroupId].playerWin == nil then
                 global.BiterHuntGroupResults[global.biterHuntGroupId].playerWin = true
-                game.print("[img=entity.medium-biter-corpse]      [img=entity.character]" .. global.biterHuntGroupTargetName)
+                game.print("[img=entity.medium-biter-corpse]      [img=entity.character]" .. global.biterHuntGroupTargetName .. " won")
             end
             BiterHuntGroup.ClearGlobals()
         end
@@ -155,7 +155,7 @@ end
 BiterHuntGroup.PlayerDied = function(playerID)
     if playerID == global.biterHuntGroupTargetPlayerID and global.BiterHuntGroupResults[global.biterHuntGroupId].playerWin == nil then
         global.BiterHuntGroupResults[global.biterHuntGroupId].playerWin = false
-        game.print("[img=entity.medium-biter]      [img=entity.character-corpse]" .. global.biterHuntGroupTargetName)
+        game.print("[img=entity.medium-biter]      [img=entity.character-corpse]" .. global.biterHuntGroupTargetName .. " lost")
         BiterHuntGroup.ClearGlobals()
     end
 end

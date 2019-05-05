@@ -7,6 +7,7 @@ Date: 2019-05-05
     - May 2019 mode - Fix possible infinite loop when trying to find places for missing biters when most have a spot.
   Info:
     - May 2019 mode - Tweak GUI wording.
+	- May 2019 mode - Clarify biter/player chat messages
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.5
 Date: 2019-05-05
