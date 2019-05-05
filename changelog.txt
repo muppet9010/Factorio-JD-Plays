@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 17.0.6
+Date: 2019-05-05
+  Features:
+  Changes:
+  Bugfixes:
+    - May 2019 mode - Fix possible infinite loop when trying to find places for missing biters when most have a spot.
+  Info:
+    - May 2019 mode - Tweak GUI wording.
+---------------------------------------------------------------------------------------------------
 Version: 17.0.5
 Date: 2019-05-05
   Features:

@@ -51,7 +51,7 @@ BiterHuntGroup.SelectTarget = function()
     else
         global.biterHuntGroupTargetPlayerID = nil
         global.biterHuntGroupTargetEntity = nil
-        global.biterHuntGroupTargetName = "Spawn"
+        global.biterHuntGroupTargetName = "at Spawn"
         global.biterHuntGroupSurface = game.surfaces[1]
     end
 end
@@ -221,12 +221,18 @@ BiterHuntGroup._CreateGroundMovement = function(distance, attempts)
         BiterHuntGroup.SpawnGroundMovementEffect(surface, position)
     end
 
+    local maxAttempts = (biterHuntGroupSize - #biterPositions) * 5
+    local currentAttempts = 0
     while #biterPositions < biterHuntGroupSize do
         local positionToTry = biterPositions[math.random(1, #biterPositions)]
         local foundPosition = surface.find_non_colliding_position("biter-ground-movement", positionToTry, 2, 1, true)
         if foundPosition ~= nil then
             table.insert(biterPositions, foundPosition)
             BiterHuntGroup.SpawnGroundMovementEffect(surface, foundPosition)
+        end
+        currentAttempts = currentAttempts + 1
+        if currentAttempts > maxAttempts then
+            break
         end
     end
 end
