@@ -35,11 +35,12 @@ GUI.GetElementFromPlayersReferenceStorage = function(playernIndex, name, type)
 end
 
 GUI.DestroyElementInPlayersReferenceStorage = function(playerIndex, name, type)
-    if global.GUIUtilPlayerElementReferenceStorage[playerIndex] ~= nil and global.GUIUtilPlayerElementReferenceStorage[playerIndex][GenerateName({name = name, type = type})] ~= nil then
-        if global.GUIUtilPlayerElementReferenceStorage[playerIndex][GenerateName({name = name, type = type})].valid then
-            global.GUIUtilPlayerElementReferenceStorage[playerIndex][GenerateName({name = name, type = type})].destroy()
+    local elementName = GenerateName({name = name, type = type})
+    if global.GUIUtilPlayerElementReferenceStorage[playerIndex] ~= nil and global.GUIUtilPlayerElementReferenceStorage[playerIndex][elementName] ~= nil then
+        if global.GUIUtilPlayerElementReferenceStorage[playerIndex][elementName].valid then
+            global.GUIUtilPlayerElementReferenceStorage[playerIndex][elementName].destroy()
         end
-        global.GUIUtilPlayerElementReferenceStorage[playerIndex][GenerateName({name = name, type = type})] = nil
+        global.GUIUtilPlayerElementReferenceStorage[playerIndex][elementName] = nil
     end
 end
 

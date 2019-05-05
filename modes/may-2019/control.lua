@@ -79,12 +79,7 @@ end
 
 local function OnPlayerJoinedGame(event)
     local player = game.get_player(event.player_index)
-    BiterHuntGroup.GuiCreate(player)
-end
-
-local function OnPlayerLeftGame(event)
-    local player = game.get_player(event.player_index)
-    BiterHuntGroup.GuiDestroy(player)
+    BiterHuntGroup.GuiRecreate(player)
 end
 
 local function On60Ticks()
@@ -106,7 +101,6 @@ script.on_event(defines.events.on_player_created, OnPlayerCreated)
 script.on_event(defines.events.on_player_respawned, OnPlayerRespawned)
 script.on_event(defines.events.on_research_finished, OnResearchFinished)
 script.on_event(defines.events.on_player_joined_game, OnPlayerJoinedGame)
-script.on_event(defines.events.on_player_left_game, OnPlayerLeftGame)
 script.on_event(defines.events.on_player_died, OnPlayerDied)
 script.on_nth_tick(60, On60Ticks)
 script.on_nth_tick(10, On10Ticks)

@@ -66,12 +66,17 @@ end
 
 BiterHuntGroup.GuiDestroy = function(player)
     GUIUtil.DestroyElementInPlayersReferenceStorage(player.index, "biterhuntgroup", "frame")
+    GUIUtil.RemovePlayersReferenceStorage(player.index)
+end
+
+BiterHuntGroup.GuiRecreate = function(player)
+    BiterHuntGroup.GuiDestroy(player)
+    BiterHuntGroup.GuiCreate(player)
 end
 
 BiterHuntGroup.GuiRecreateAll = function()
     for _, player in pairs(game.connected_players) do
-        BiterHuntGroup.GuiDestroy(player)
-        BiterHuntGroup.GuiCreate(player)
+        BiterHuntGroup.GuiRecreate(player)
     end
 end
 

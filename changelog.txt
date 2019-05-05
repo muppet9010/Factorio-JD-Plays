@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 17.0.5
+Date: 2019-05-05
+  Features:
+  Changes:
+  Bugfixes:
+    - May 2019 mode - resolved issue with taking an SP game in to MP around GUI creation and destroying.
+  Info:
+ ---------------------------------------------------------------------------------------------------
 Version: 17.0.4
 Date: 2019-05-03
   Features:
