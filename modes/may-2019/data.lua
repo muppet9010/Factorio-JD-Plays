@@ -1,5 +1,6 @@
 local Constants = require("constants")
 local modeFilePath = "modes/may-2019"
+local Utils = require("utility/utils")
 
 if settings.startup["jdplays_mode"].value ~= "may-2019" then
     return
@@ -63,12 +64,7 @@ data:extend(
             collision_box = {{-0.5, -0.5}, {0.5, 0.5}},
             collision_maxk = {"object-layer", "player-layer", "water-tile"},
             selectable_in_game = false,
-            animations = {
-                filename = "__core__/graphics/empty.png",
-                width = 1,
-                height = 1,
-                frame_count = 1
-            },
+            pictures = Utils.DeepCopy(data.raw["simple-entity"]["sand-rock-big"].pictures),
             created_effect = {
                 type = "direct",
                 action_delivery = {
@@ -87,3 +83,10 @@ data:extend(
         }
     }
 )
+
+local defaultStyle = data.raw["gui-style"]["default"]
+defaultStyle["jd_plays-biterwarning-text"] = {
+    type = "label_style",
+    font_color = {r = 1, g = 0.4, b = 0.4, a = 1},
+    font = "default-large"
+}

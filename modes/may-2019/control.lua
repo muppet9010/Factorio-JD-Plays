@@ -82,10 +82,6 @@ local function OnPlayerJoinedGame(event)
     BiterHuntGroup.GuiRecreate(player)
 end
 
-local function On60Ticks()
-    BiterHuntGroup.GuiUpdateAll()
-end
-
 local function On10Ticks(event)
     local tick = event.tick
     BiterHuntGroup.On10Ticks(tick)
@@ -102,5 +98,4 @@ script.on_event(defines.events.on_player_respawned, OnPlayerRespawned)
 script.on_event(defines.events.on_research_finished, OnResearchFinished)
 script.on_event(defines.events.on_player_joined_game, OnPlayerJoinedGame)
 script.on_event(defines.events.on_player_died, OnPlayerDied)
-script.on_nth_tick(60, On60Ticks)
 script.on_nth_tick(10, On10Ticks)

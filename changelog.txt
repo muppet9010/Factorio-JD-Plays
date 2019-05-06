@@ -1,4 +1,18 @@
 ---------------------------------------------------------------------------------------------------
+Version: 17.0.6
+Date: 2019-05-05
+  Features:
+  Changes:
+    - May 2019 mode - Remove GUI countdown to next biter wave. Now a soft light red 10 second warning before they arrive is shown.
+    - May 2019 mode - ground effect space reserving entities have rock pictures under the smoke so its more apparent they are solid.
+  Bugfixes:
+    - May 2019 mode - Fix possible infinite loop when trying to find places for missing biters when most have a spot.
+    - May 2019 mode - Avoid nil LuaEntity references if a ground movement effect is removed by something else.
+    - May 2019 mode - Make ground effect space reserving entities indestructable to avoid issues. Does mean vehicles bounce off them. Need to reserve the space so that biters can safe to spawn there.
+  Info:
+    - May 2019 mode - Tweak GUI wording.
+	- May 2019 mode - Clarify biter/player chat messages
+---------------------------------------------------------------------------------------------------
 Version: 17.0.5
 Date: 2019-05-05
   Features:
