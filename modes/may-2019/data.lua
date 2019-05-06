@@ -83,3 +83,10 @@ data:extend(
         }
     }
 )
+
+local defaultStyle = data.raw["gui-style"]["default"]
+defaultStyle["jd_plays-biterwarning-text"] = {
+    type = "label_style",
+    font_color = {r = 1, g = 0.4, b = 0.4, a = 1},
+    font = "default-large"
+}

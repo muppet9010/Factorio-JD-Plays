@@ -3,6 +3,7 @@ Version: 17.0.6
 Date: 2019-05-05
   Features:
   Changes:
+    - May 2019 mode - Remove GUI countdown to next biter wave. Now a soft light red 10 second warning before they arrive is shown.
     - May 2019 mode - ground effect space reserving entities have rock pictures under the smoke so its more apparent they are solid.
   Bugfixes:
     - May 2019 mode - Fix possible infinite loop when trying to find places for missing biters when most have a spot.
