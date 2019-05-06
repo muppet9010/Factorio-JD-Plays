@@ -9,15 +9,15 @@ local biterHuntGroupFrequencyRangeTicks = {
 local biterHuntGroupSize = 80
 local biterHuntGroupEvolutionAddition = 0.1
 local biterHuntGroupRadius = 100
-local biterHuntGroupPreTunnelEffectTime = 30
+local biterHuntGroupPreTunnelEffectTime = 10
 local biterHuntGroupTunnelTime = 180
 local biterHuntGroupState = {start = "start", groundMovement = "groundMovement", preBitersActiveEffect = "preBitersActiveEffect", bitersActive = "bitersActive"}
 
-local testing = false
+local testing = true
 if testing then
-    biterHuntGroupFrequencyRangeTicks = {600, 600}
-    biterHuntGroupSize = 80
-    biterHuntGroupRadius = 100
+    biterHuntGroupFrequencyRangeTicks = {900, 900}
+    biterHuntGroupSize = 40
+    biterHuntGroupRadius = 20
 end
 
 BiterHuntGroup.ScheduleNextBiterHuntGroup = function()
@@ -114,7 +114,7 @@ BiterHuntGroup.On10Ticks = function(tick)
         global.biterHuntGroupState = biterHuntGroupState.groundMovement
         global.biterHuntGroupStateChangeTick = tick + biterHuntGroupTunnelTime - biterHuntGroupPreTunnelEffectTime
         BiterHuntGroup.SelectTarget()
-        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]" .. " hunting " .. [img=entity.character] .. " " .. global.biterHuntGroupTargetName)
+        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]" .. " hunting " .. global.biterHuntGroupTargetName)
         BiterHuntGroup.CreateGroundMovement()
     elseif global.biterHuntGroupState == biterHuntGroupState.groundMovement then
         if tick < (global.biterHuntGroupStateChangeTick) then
@@ -123,7 +123,7 @@ BiterHuntGroup.On10Ticks = function(tick)
             global.biterHuntGroupState = biterHuntGroupState.preBitersActiveEffect
             global.biterHuntGroupStateChangeTick = tick + biterHuntGroupPreTunnelEffectTime
             BiterHuntGroup.EnsureValidateTarget()
-            BiterHuntGroup.SpawnEnemiePreEffects()
+            BiterHuntGroup.SpawnEnemyPreEffects()
         end
     elseif global.biterHuntGroupState == biterHuntGroupState.preBitersActiveEffect then
         if tick < (global.biterHuntGroupStateChangeTick) then
@@ -179,7 +179,7 @@ end
 
 BiterHuntGroup.GetPositionForTarget = function(surface)
     local targetEntity = global.biterHuntGroupTargetEntity
-    if targetEntity ~= nil then
+    if targetEntity ~= nil and targetEntity.valid then
         return targetEntity.position
     else
         return game.forces["player"].get_spawn_position(surface)
@@ -203,11 +203,13 @@ BiterHuntGroup._CreateGroundMovement = function(distance, attempts)
             table.insert(biterPositions, foundPosition)
         end
     end
+    Logging.Log("initial #biterPositions: " .. #biterPositions, debug)
 
     if #biterPositions < (biterHuntGroupSize / 2) then
         distance = distance * 0.75
         attempts = attempts or 0
         attempts = attempts + 1
+        Logging.Log("not enough places on attempt: " .. attempts, debug)
         if attempts > 3 then
             Logging.LogPrint("failed to find enough places to spawn enemies around " .. Logging.PositionToString(centerPosition))
             return
@@ -223,6 +225,7 @@ BiterHuntGroup._CreateGroundMovement = function(distance, attempts)
 
     local maxAttempts = (biterHuntGroupSize - #biterPositions) * 5
     local currentAttempts = 0
+    Logging.Log("maxAttempts: " .. maxAttempts, debug)
     while #biterPositions < biterHuntGroupSize do
         local positionToTry = biterPositions[math.random(1, #biterPositions)]
         local foundPosition = surface.find_non_colliding_position("biter-ground-movement", positionToTry, 2, 1, true)
@@ -232,9 +235,11 @@ BiterHuntGroup._CreateGroundMovement = function(distance, attempts)
         end
         currentAttempts = currentAttempts + 1
         if currentAttempts > maxAttempts then
+            Logging.Log("currentAttempts > maxAttempts", debug)
             break
         end
     end
+    Logging.Log("final #biterPositions: " .. #biterPositions, debug)
 end
 
 BiterHuntGroup.SpawnGroundMovementEffect = function(surface, position)
@@ -242,15 +247,20 @@ BiterHuntGroup.SpawnGroundMovementEffect = function(surface, position)
     if effect == nil then
         Logging.LogPrint("failed to make effect at: " .. Logging.PositionToString(position))
     else
+        effect.destructible = false
         table.insert(global.BiterHuntGroupGroundMovementEffects, effect)
     end
 end
 
-BiterHuntGroup.SpawnEnemiePreEffects = function()
+BiterHuntGroup.SpawnEnemyPreEffects = function()
     local surface = global.biterHuntGroupSurface
     for _, groundEffect in pairs(global.BiterHuntGroupGroundMovementEffects) do
-        local position = groundEffect.position
-        surface.create_entity {name = "biter-ground-rise-effect", position = position}
+        if not groundEffect.valid then
+            Logging.LogPrint("ground effect has been removed by something, no SpawnEnemiePreEffects can be made")
+        else
+            local position = groundEffect.position
+            surface.create_entity {name = "biter-ground-rise-effect", position = position}
+        end
     end
 end
 
@@ -268,16 +278,20 @@ BiterHuntGroup.SpawnEnemies = function()
         attackCommand = {type = defines.command.attack_area, destination = BiterHuntGroup.GetPositionForTarget(surface), radius = 20}
     end
     for _, groundEffect in pairs(global.BiterHuntGroupGroundMovementEffects) do
-        local position = groundEffect.position
-        groundEffect.destroy()
-        local spawnerType = spawnerTypes[math.random(2)]
-        local enemyType = Utils.GetBiterType(global.biterHuntGroupEnemyProbabilities, spawnerType, evolution)
-        local unit = surface.create_entity {name = enemyType, position = position, force = biterForce}
-        if unit == nil then
-            Logging.LogPrint("failed to make unit at: " .. Logging.PositionToString(position))
+        if not groundEffect.valid then
+            Logging.LogPrint("ground effect has been removed by something, no biter can be made")
         else
-            unit.set_command(attackCommand)
-            table.insert(global.BiterHuntGroupUnits, unit)
+            local position = groundEffect.position
+            groundEffect.destroy()
+            local spawnerType = spawnerTypes[math.random(2)]
+            local enemyType = Utils.GetBiterType(global.biterHuntGroupEnemyProbabilities, spawnerType, evolution)
+            local unit = surface.create_entity {name = enemyType, position = position, force = biterForce}
+            if unit == nil then
+                Logging.LogPrint("failed to make unit at: " .. Logging.PositionToString(position))
+            else
+                unit.set_command(attackCommand)
+                table.insert(global.BiterHuntGroupUnits, unit)
+            end
         end
     end
 end
