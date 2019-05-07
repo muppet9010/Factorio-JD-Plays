@@ -116,7 +116,7 @@ BiterHuntGroup.GuiUpdatePlayerWithData = function(player, warningLocalisedString
             frameElement = GUIUtil.AddElement({parent = player.gui.left, name = "biterhuntgroup", type = "frame", direction = "vertical"}, true)
         end
 
-        GUIUtil.AddElement({parent = frameElement, name = "target", type = "label", caption = targetLocalisedString}, true)
+        GUIUtil.AddElement({parent = frameElement, name = "target", type = "label", caption = targetLocalisedString, style = "muppet_bold_text"}, true)
         childElementPresent = true
     end
 
