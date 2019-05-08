@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------------------------------
+Version: 17.0.8
+Date: 2019-05-08
+  Features:
+    - May 2019 mode - add "biters_attack_now" command for admins only
+  Changes:
+  Bugfixes:
+    - May 2019 mode - Fixed crash loading previous version save.
+  Info:
+    - Made all localisation texts truely uniquely named to avoid future conflicts.
+---------------------------------------------------------------------------------------------------
 Version: 17.0.7
 Date: 2019-05-07
   Features:

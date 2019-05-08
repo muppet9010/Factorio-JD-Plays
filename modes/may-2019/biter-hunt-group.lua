@@ -23,7 +23,16 @@ end
 
 BiterHuntGroup.ScheduleNextBiterHuntGroup = function()
     global.nextBiterHuntGroupTick = global.nextBiterHuntGroupTick + math.random(biterHuntGroupFrequencyRangeTicks[1], biterHuntGroupFrequencyRangeTicks[2])
+    BiterHuntGroup.GenerateOtherNextBiterHuntGroupData()
+end
+
+BiterHuntGroup.GenerateOtherNextBiterHuntGroupData = function()
     global.nextBiterHuntGroupTickWarning = global.nextBiterHuntGroupTick - incomingBitersWarningTime
+end
+
+BiterHuntGroup.MakeBitersAttackNow = function()
+    global.nextBiterHuntGroupTick = game.tick + incomingBitersWarningTime
+    BiterHuntGroup.GenerateOtherNextBiterHuntGroupData()
 end
 
 BiterHuntGroup.ValidSurface = function(surface)
@@ -56,12 +65,12 @@ BiterHuntGroup.SelectTarget = function()
         global.biterHuntGroupTargetName = "at Spawn"
         global.biterHuntGroupSurface = game.surfaces[1]
     end
-    BiterHuntGroup.GuiUpdateAll()
+    BiterHuntGroup.GuiUpdateAllConnected()
 end
 
 BiterHuntGroup.GuiCreate = function(player)
     GUIUtil.CreatePlayersElementReferenceStorage(player.index)
-    BiterHuntGroup.GuiUpdateAll(player.index)
+    BiterHuntGroup.GuiUpdateAllConnected(player.index)
 end
 
 BiterHuntGroup.GuiDestroy = function(player)
@@ -75,19 +84,19 @@ BiterHuntGroup.GuiRecreate = function(player)
 end
 
 BiterHuntGroup.GuiRecreateAll = function()
-    for _, player in pairs(game.connected_players) do
+    for _, player in pairs(game.players) do
         BiterHuntGroup.GuiRecreate(player)
     end
 end
 
-BiterHuntGroup.GuiUpdateAll = function(specificPlayerIndex)
+BiterHuntGroup.GuiUpdateAllConnected = function(specificPlayerIndex)
     local warningLocalisedString
     if global.showIncomingBiterHuntGroupWarning ~= nil then
-        warningLocalisedString = {"gui-caption.jd_plays-warning-label"}
+        warningLocalisedString = {"gui-caption.jd_plays-may-2019-warning-label"}
     end
     local targetLocalisedString
     if global.biterHuntGroupTargetName ~= nil and global.biterHuntGroupSurface ~= nil then
-        targetLocalisedString = {"gui-caption.jd_plays-target-label", global.biterHuntGroupTargetName, global.biterHuntGroupSurface.name}
+        targetLocalisedString = {"gui-caption.jd_plays-may-2019-target-label", global.biterHuntGroupTargetName, global.biterHuntGroupSurface.name}
     end
     for _, player in pairs(game.connected_players) do
         if specificPlayerIndex == nil or (specificPlayerIndex ~= nil and specificPlayerIndex == player.index) then
@@ -96,26 +105,28 @@ BiterHuntGroup.GuiUpdateAll = function(specificPlayerIndex)
     end
 end
 
+BiterHuntGroup.GetModGuiFrame = function(player)
+    local frameElement = GUIUtil.GetElementFromPlayersReferenceStorage(player.index, "biterhuntgroup", "frame")
+    if frameElement == nil then
+        frameElement = GUIUtil.AddElement({parent = player.gui.left, name = "biterhuntgroup", type = "frame", direction = "vertical", style = "muppet_margin_frame"}, true)
+    end
+    return frameElement
+end
+
 BiterHuntGroup.GuiUpdatePlayerWithData = function(player, warningLocalisedString, targetLocalisedString)
     local playerIndex = player.index
-    local frameElement = GUIUtil.GetElementFromPlayersReferenceStorage(playerIndex, "biterhuntgroup", "frame")
     local childElementPresent = false
 
     GUIUtil.DestroyElementInPlayersReferenceStorage(playerIndex, "warning", "label")
     if warningLocalisedString ~= nil then
-        if frameElement == nil then
-            frameElement = GUIUtil.AddElement({parent = player.gui.left, name = "biterhuntgroup", type = "frame", direction = "vertical"}, true)
-        end
+        local frameElement = BiterHuntGroup.GetModGuiFrame(player)
         GUIUtil.AddElement({parent = frameElement, name = "warning", type = "label", caption = warningLocalisedString, style = "jd_plays-biterwarning-text"}, true)
         childElementPresent = true
     end
 
     GUIUtil.DestroyElementInPlayersReferenceStorage(playerIndex, "target", "label")
     if targetLocalisedString ~= nil then
-        if frameElement == nil then
-            frameElement = GUIUtil.AddElement({parent = player.gui.left, name = "biterhuntgroup", type = "frame", direction = "vertical"}, true)
-        end
-
+        local frameElement = BiterHuntGroup.GetModGuiFrame(player)
         GUIUtil.AddElement({parent = frameElement, name = "target", type = "label", caption = targetLocalisedString, style = "muppet_bold_text"}, true)
         childElementPresent = true
     end
@@ -128,7 +139,7 @@ end
 BiterHuntGroup.On10Ticks = function(tick)
     if tick >= global.nextBiterHuntGroupTickWarning and not global.showIncomingBiterHuntGroupWarning then
         global.showIncomingBiterHuntGroupWarning = true
-        BiterHuntGroup.GuiUpdateAll()
+        BiterHuntGroup.GuiUpdateAllConnected()
     elseif tick >= global.nextBiterHuntGroupTick then
         global.showIncomingBiterHuntGroupWarning = nil
         if global.BiterHuntGroupResults[global.biterHuntGroupId] ~= nil and global.BiterHuntGroupResults[global.biterHuntGroupId].playerWin == nil then
@@ -191,7 +202,7 @@ BiterHuntGroup.ClearGlobals = function()
     global.biterHuntGroupTargetEntity = nil
     global.biterHuntGroupTargetName = nil
     global.biterHuntGroupSurface = nil
-    BiterHuntGroup.GuiUpdateAll()
+    BiterHuntGroup.GuiUpdateAllConnected()
 end
 
 BiterHuntGroup.EnsureValidateTarget = function()
@@ -200,7 +211,7 @@ BiterHuntGroup.EnsureValidateTarget = function()
         global.biterHuntGroupTargetPlayerID = nil
         global.biterHuntGroupTargetEntity = nil
         global.biterHuntGroupTargetName = "Spawn"
-        BiterHuntGroup.GuiUpdateAll()
+        BiterHuntGroup.GuiUpdateAllConnected()
     end
 end
 

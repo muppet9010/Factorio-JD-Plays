@@ -11,10 +11,15 @@ defaultStyle.muppet_padded_vertical_flow = {
     top_padding = 4
 }
 
-defaultStyle.muppet_gui_frame = {
+defaultStyle.muppet_padded_frame = {
     type = "frame_style",
     left_padding = 4,
     top_padding = 4
+}
+defaultStyle.muppet_margin_frame = {
+    type = "frame_style",
+    left_margin = 4,
+    top_margin = 4
 }
 
 defaultStyle.muppet_padded_table = {

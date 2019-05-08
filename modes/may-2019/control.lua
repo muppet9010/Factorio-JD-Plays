@@ -1,5 +1,6 @@
 local BiterHuntGroup = require("modes/may-2019/biter-hunt-group")
 local GUIUtil = require("utility/gui-util")
+local Commands = require("utility/commands")
 local testing = false
 
 if settings.startup["jdplays_mode"].value ~= "may-2019" then
@@ -28,7 +29,7 @@ local function OnPlayerCreated(event)
         player.insert {name = "modular-armor", count = 1}
     end
 
-    player.print({"messages.jd_plays_welcome1"})
+    player.print({"messages.jd_plays-may-2019-welcome1"})
 end
 
 local function OnPlayerRespawned(event)
@@ -50,6 +51,10 @@ local function UpgradeOldGlobal()
     end
 end
 
+local function OnLoad()
+    Commands.Register("biters_attack_now", {"api-description.jd_plays-may-2019_biters_attack_now"}, BiterHuntGroup.MakeBitersAttackNow, true)
+end
+
 local function OnStartup()
     UpgradeOldGlobal()
     global.SpawnItems = global.SpawnItems or {}
@@ -62,6 +67,8 @@ local function OnStartup()
         global.nextBiterHuntGroupTick = game.tick
         BiterHuntGroup.ScheduleNextBiterHuntGroup()
     end
+    BiterHuntGroup.GenerateOtherNextBiterHuntGroupData()
+    OnLoad()
     GUIUtil.CreateAllPlayersElementReferenceStorage()
     BiterHuntGroup.GuiRecreateAll()
 end
@@ -93,6 +100,7 @@ end
 
 script.on_init(OnStartup)
 script.on_configuration_changed(OnStartup)
+script.on_load(OnLoad)
 script.on_event(defines.events.on_player_created, OnPlayerCreated)
 script.on_event(defines.events.on_player_respawned, OnPlayerRespawned)
 script.on_event(defines.events.on_research_finished, OnResearchFinished)
