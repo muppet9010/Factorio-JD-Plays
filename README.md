@@ -25,3 +25,11 @@ April 2019
 - Players re-spawn with: Sub-machine gun, 10 AP ammo.
 - At game start unlock the "stone-enrichment-process" recipe from the "Stone Enrichment" mod.
 - The entire map is covered in the 2 vanilla entity rock types after chunk generation
+
+JD P00ber May 2019
+------------------
+
+- Tested with Factorio 0.17.41
+- Rocket Silo is immune from player damage.
+- Add an escape pod recipe and item that is unlocked with the rocket silo. Cost is the same as 1 satalite, plus a fish. Uses alien in yellow tank graphic.
+- Game is only won when a player rides a rocket in an escape pod.
