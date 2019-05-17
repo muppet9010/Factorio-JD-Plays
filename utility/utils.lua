@@ -425,6 +425,9 @@ function Utils.DeepCopy(outerObject)
 end
 
 function Utils.DisableSiloScript()
+    if remote.interfaces["silo_script"] == nil then
+        return
+    end
     remote.call("silo_script", "set_no_victory", true)
     local items = remote.call("silo_script", "get_tracked_items")
     for itemName in pairs(items) do
