@@ -31,5 +31,5 @@ JD P00ber May 2019
 
 - Tested with Factorio 0.17.41
 - Rocket Silo is immune from player damage.
-- Add an escape pod recipe and item that is unlocked with the rocket silo. Cost is the same as 1 satalite, plus a fish. Uses alien in yellow tank graphic.
-- Game is only won when a player rides a rocket in an escape pod.
+- Add an escape pod recipe and item that is unlocked with the rocket silo. Cost is the same as 1 satalite, plus a fish. Uses vanilla game's alien in yellow tank graphic.
+- Game is only won when a rocket is launched with an escape pod in it.
