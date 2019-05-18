@@ -12,9 +12,6 @@ end
 
 local function OnRocketLaunched(event)
     local rocket = event.rocket
-    if rocket == nil or not rocket.valid then
-        return
-    end
     for name, count in pairs(rocket.get_inventory(defines.inventory.rocket).get_contents()) do
         if name == "jd-p00ber-may-2019-escape-pod" and count > 0 then
             game.set_game_state {game_finished = true, player_won = true, can_continue = true, victorious_force = rocket.force}
