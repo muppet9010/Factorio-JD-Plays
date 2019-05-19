@@ -3,7 +3,7 @@
 
 A mod for streamer JD-Plays's server. Includes a number of distinct modes.
 
-May 2019
+May 2019 - Biter Hunting Packs
 ---------
 
 - Tested with Factorio 0.17.36
@@ -15,9 +15,9 @@ May 2019
 - Command to trigger a biter hunting pack now: biters_attack_now
 - Added a character-corpse image as the default game one is of an alive player.
 - Use "Extra Biter Control" mod and increase the pathfinder limits by at least a multiple of 5 to ensure all biters path to target quickly.
-- Players in orbit, on a spaceship or without a character are not deemed valid. Provides compatibility with Space Exploration mod.
+- Players in orbit, on a spaceship or without a character are not deemed valid. Provides compatibility with Space Exploration mod. Space Exploration mod does break the detection of winner between biter pack and targeted player.
 
-April 2019
+April 2019 - Rocky World
 -----------
 
 - Tested with Factorio 0.17.33
@@ -26,7 +26,7 @@ April 2019
 - At game start unlock the "stone-enrichment-process" recipe from the "Stone Enrichment" mod.
 - The entire map is covered in the 2 vanilla entity rock types after chunk generation
 
-JD P00ber May 2019
+JD P00ber May 2019 - Banished Engineers
 ------------------
 
 - Tested with Factorio 0.17.41
