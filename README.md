@@ -9,7 +9,7 @@ June 2019 - Tree World
 - Tested with Factorio 0.17.44
 - Players start with: 8 iron plate, 1 wood, 1 burner mining drill, 1 stone furnace, 10 research appropriate ammo, 1 research appropriate bullet gun
 - Players re-spawn with: 10 research appropriate ammo, 1 research appropriate bullet gun
-- The entire world is covered in biome approperiate trees
+- The entire world is covered in trees. If Biter Reincarnation mod is present they will be biome approperiate trees, otherwise each just a random tree type.
 
 May 2019 - Biter Hunting Packs
 ---------

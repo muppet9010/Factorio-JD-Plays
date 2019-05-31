@@ -425,6 +425,7 @@ function Utils.DeepCopy(outerObject)
 end
 
 function Utils.DisableSiloScript()
+	--OnLoad
     if remote.interfaces["silo_script"] == nil then
         return
     end
@@ -436,6 +437,7 @@ function Utils.DisableSiloScript()
 end
 
 function Utils.DisableWinOnRocket()
+	--OnInit
     if remote.interfaces["silo_script"] == nil then
         return
     end
@@ -443,6 +445,7 @@ function Utils.DisableWinOnRocket()
 end
 
 function Utils.ClearSpawnRespawnItems()
+	--OnInit
     if remote.interfaces["freeplay"] == nil then
         return
     end
@@ -451,6 +454,7 @@ function Utils.ClearSpawnRespawnItems()
 end
 
 function Utils.SetStartingMapReveal(distance)
+	--OnInit
     if remote.interfaces["freeplay"] == nil then
         return
     end
@@ -458,6 +462,7 @@ function Utils.SetStartingMapReveal(distance)
 end
 
 function Utils.DisableIntroMessage()
+	--OnInit
     if remote.interfaces["freeplay"] == nil then
         return
     end
