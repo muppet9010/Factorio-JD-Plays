@@ -3,6 +3,14 @@
 
 A mod for streamer JD-Plays's server. Includes a number of distinct modes.
 
+June 2019 - Tree World
+---------
+
+- Tested with Factorio 0.17.44
+- Players start with: 8 iron plate, 1 wood, 1 burner mining drill, 1 stone furnace, 10 research appropriate ammo, 1 research appropriate bullet gun
+- Players re-spawn with: 10 research appropriate ammo, 1 research appropriate bullet gun
+- The entire world is covered in biome approperiate trees
+
 May 2019 - Biter Hunting Packs
 ---------
 
