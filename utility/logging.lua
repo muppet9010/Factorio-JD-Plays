@@ -13,7 +13,7 @@ function Logging.Log(text, enabled)
         return
     end
     if game ~= nil then
-        game.write_file(Constants.LogFileName , tostring(text) .. "\r\n", true)
+        game.write_file(Constants.LogFileName , tostring(text) .. "\r\n", true, 0)
     end
 end
 

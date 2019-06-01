@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 17.0.11
+Date: 2019-05-31
+  Features:
+    - Added mode "June 2019"
+  Changes:
+  Bugfixes:
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 17.0.10
 Date: 2019-05-19
   Features:
@@ -45,7 +53,7 @@ Date: 2019-05-05
     - May 2019 mode - Make ground effect space reserving entities indestructable to avoid issues. Does mean vehicles bounce off them. Need to reserve the space so that biters can safe to spawn there.
   Info:
     - May 2019 mode - Tweak GUI wording.
-	- May 2019 mode - Clarify biter/player chat messages
+    - May 2019 mode - Clarify biter/player chat messages
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.5
 Date: 2019-05-05
@@ -54,7 +62,7 @@ Date: 2019-05-05
   Bugfixes:
     - May 2019 mode - resolved issue with taking an SP game in to MP around GUI creation and destroying.
   Info:
- ---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 Version: 17.0.4
 Date: 2019-05-03
   Features:
