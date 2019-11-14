@@ -1,6 +1,6 @@
 local Events = require("utility/events")
 local TechAppropriateGear = {}
-local testing = true
+local testing = false
 
 local function ClearPlayerInventories(player)
     player.get_main_inventory().clear()

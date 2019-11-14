@@ -18,7 +18,7 @@ local biterHuntGroupTunnelTime = 180
 local incomingBitersWarningTime = 600
 local biterHuntGroupState = {start = "start", groundMovement = "groundMovement", preBitersActiveEffect = "preBitersActiveEffect", bitersActive = "bitersActive"}
 
-local testing = true
+local testing = false
 if testing then
     biterHuntGroupFrequencyRangeTicks = {600, 600}
     biterHuntGroupSize = 2
