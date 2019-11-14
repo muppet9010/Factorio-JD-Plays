@@ -8,9 +8,10 @@ December 2019 - Race To The North Pole
 ----------
 
 - Tested with Factorio 0.17.75
--
--
-- Other mods required (but can't be forced): xmas-feels, bigwinter, biter_santa, biter_eggs
+- Players start with: 8 iron plate, 1 wood, 1 burner mining drill, 1 stone furnace, 10 research appropriate ammo, 1 research appropriate bullet gun
+- Players re-spawn with: 10 research appropriate ammo, 1 research appropriate bullet gun
+- Utilises Biter Hunting Packs from May 2019 mode
+- Other mods expected (but can't be forced): xmas-feels, BigWinter, biter_santa, biter_eggs, biter_reincarnation
 
 June 2019 - Tree World
 ---------

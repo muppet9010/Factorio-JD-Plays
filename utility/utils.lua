@@ -444,7 +444,7 @@ function Utils.WasCreativeModeInstantDeconstructionUsed(event)
 end
 
 function Utils.GetBiterType(modEnemyProbabilities, spawnerType, evolution)
-    --modEnemyProbabilities argument is a global variable the utility function can use. do not set in any way
+    --modEnemyProbabilities argument is a global variable thats passed in for the utility function can use. do not set in any way before hand.
     modEnemyProbabilities = modEnemyProbabilities or {}
     if modEnemyProbabilities[spawnerType] == nil then
         modEnemyProbabilities[spawnerType] = {}
@@ -454,14 +454,12 @@ function Utils.GetBiterType(modEnemyProbabilities, spawnerType, evolution)
         modEnemyProbabilities[spawnerType].calculatedEvolution = evolution
         modEnemyProbabilities[spawnerType].probabilities = Utils._CalculateSpecificBiterSelectionProbabilities(spawnerType, evolution)
     end
-
-    return Utils.GetRandomEntryFromNormalisedDataSet(modEnemyProbabilities[spawnerType].probabilitie, "chance").unit
+    return Utils.GetRandomEntryFromNormalisedDataSet(modEnemyProbabilities[spawnerType].probabilities, "chance").unit
 end
 
 function Utils._CalculateSpecificBiterSelectionProbabilities(spawnerType, currentEvolution)
     local rawUnitProbs = game.entity_prototypes[spawnerType].result_units
     local currentEvolutionProbabilities = {}
-
     for _, possibility in pairs(rawUnitProbs) do
         local startSpawnPointIndex = nil
         for spawnPointIndex, spawnPoint in pairs(possibility.spawn_points) do
@@ -490,21 +488,20 @@ function Utils._CalculateSpecificBiterSelectionProbabilities(spawnerType, curren
             table.insert(currentEvolutionProbabilities, {chance = weight, unit = possibility.unit})
         end
     end
-
-    local normalisedcurrentEvolutionProbabilities = Utils.NormalisedChanceList(currentEvolutionProbabilities, "chance")
-
+    local normalisedcurrentEvolutionProbabilities = Utils.NormaliseChanceList(currentEvolutionProbabilities, "chance")
     return normalisedcurrentEvolutionProbabilities
 end
 
-function Utils.NormalisedChanceList(dataSet, chancePropertyName)
+function Utils.NormaliseChanceList(dataSet, chancePropertyName)
     local totalChance = 0
-    for k, v in pairs(dataSet) do
+    for _, v in pairs(dataSet) do
         totalChance = totalChance + v[chancePropertyName]
     end
     local multiplier = 1 / totalChance
     for _, v in pairs(dataSet) do
         v[chancePropertyName] = v[chancePropertyName] * multiplier
     end
+    return dataSet
 end
 
 function Utils.GetRandomEntryFromNormalisedDataSet(dataSet, chancePropertyName)
