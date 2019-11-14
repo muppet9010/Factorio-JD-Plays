@@ -2,6 +2,15 @@
 
 
 A mod for streamer JD-Plays's server. Includes a number of distinct modes.
+Note that older months code should work, but are untested retrospectively.
+
+December 2019 - Race To The North Pole
+----------
+
+- Tested with Factorio 0.17.75
+-
+-
+- Other mods required (but can't be forced): xmas-feels, bigwinter, biter_santa, biter_eggs
 
 June 2019 - Tree World
 ---------
