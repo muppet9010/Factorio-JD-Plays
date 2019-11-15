@@ -2,12 +2,6 @@ local Events = require("utility/events")
 local TechAppropriateGear = {}
 local testing = false
 
-local function ClearPlayerInventories(player)
-    player.get_main_inventory().clear()
-    player.get_inventory(defines.inventory.character_ammo).clear()
-    player.get_inventory(defines.inventory.character_guns).clear()
-end
-
 TechAppropriateGear.CreateGlobals = function()
     global.TechAppropriateGear = global.TechAppropriateGear or {}
     global.TechAppropriateGear.SpawnItems = global.TechAppropriateGear.SpawnItems or {}
@@ -24,7 +18,7 @@ end
 TechAppropriateGear.OnPlayerCreated = function(event)
     local player = game.get_player(event.player_index)
 
-    ClearPlayerInventories(player)
+    TechAppropriateGear.ClearPlayerInventories(player)
     player.insert {name = global.TechAppropriateGear.SpawnItems["gun"], count = 1}
     player.insert {name = global.TechAppropriateGear.SpawnItems["ammo"], count = 10}
     player.insert {name = "iron-plate", count = 8}
@@ -40,7 +34,7 @@ end
 
 TechAppropriateGear.OnPlayerRespawned = function(event)
     local player = game.get_player(event.player_index)
-    ClearPlayerInventories(player)
+    TechAppropriateGear.ClearPlayerInventories(player)
     player.insert {name = global.TechAppropriateGear.SpawnItems["gun"], count = 1}
     player.insert {name = global.TechAppropriateGear.SpawnItems["ammo"], count = 10}
 
@@ -59,6 +53,12 @@ TechAppropriateGear.OnResearchFinished = function(event)
     elseif technology.name == "uranium-ammo" then
         global.SpawnItems["ammo"] = "uranium-rounds-magazine"
     end
+end
+
+TechAppropriateGear.ClearPlayerInventories = function(player)
+    player.get_main_inventory().clear()
+    player.get_inventory(defines.inventory.character_ammo).clear()
+    player.get_inventory(defines.inventory.character_guns).clear()
 end
 
 return TechAppropriateGear

@@ -1,0 +1,144 @@
+local WaterBarrier = {}
+local Events = require("utility/events")
+local Utils = require("utility/utils")
+local Logging = require("utility/logging")
+
+local barrierOrientations = {horizontal = "horizontal", vertical = "vertical"}
+local barrierDirections = {positive = "positive", negative = "negative"}
+
+local barrierOrientation = barrierOrientations.horizontal
+local barrierDirection = barrierDirections.positive
+local barrierChunkStart = math.floor(32 / 32) -- TODO should be 200/32
+local firstWaterTypeChunkWidth = 30
+local edgeVariation = 15
+
+WaterBarrier.CreateGlobals = function()
+    global.WaterBarrier = global.WaterBarrier or {}
+    --These must be -1 so that when we check the top left corner tile of new chunks we generate both sides.
+    global.WaterBarrier.barrierVectorEdgeMinCalculated = global.WaterBarrier.barrierVectorEdgeMinCalculated or -1
+    global.WaterBarrier.barrierVectorEdgeMaxCalculated = global.WaterBarrier.barrierVectorEdgeMaxCalculated or -1
+end
+
+WaterBarrier.OnLoad = function()
+    Events.RegisterHandler(defines.events.on_chunk_generated, "WaterBarrier", WaterBarrier.OnChunkGenerated)
+end
+
+WaterBarrier.OnStartup = function()
+    if barrierOrientation == barrierOrientations.horizontal then
+        if barrierDirection == barrierDirections.positive then
+            global.WaterBarrier.waterChunkYStart = 0 + barrierChunkStart
+            global.WaterBarrier.waterTileYMin = global.WaterBarrier.waterChunkYStart * 32
+            global.WaterBarrier.waterTileYMax = global.WaterBarrier.waterTileYMin + edgeVariation
+            global.WaterBarrier.waterInnerEdgeTiles = global.WaterBarrier.waterInnerEdgeTiles or {[-1] = global.WaterBarrier.waterTileYMin + math.random(edgeVariation)}
+
+            global.WaterBarrier.deepwaterTileYMin = (global.WaterBarrier.waterChunkYStart * 32) + firstWaterTypeChunkWidth
+            global.WaterBarrier.deepwaterTileYMax = global.WaterBarrier.deepwaterTileYMin + edgeVariation
+            global.WaterBarrier.deepWaterInnerEdgeTiles = global.WaterBarrier.deepWaterInnerEdgeTiles or {[-1] = global.WaterBarrier.deepwaterTileYMin + math.random(edgeVariation)}
+        elseif barrierDirection == barrierDirections.negative then
+            Logging.LogPrint("barrierOrientations.horizontal barrierDirections.negative NOT DONE YET")
+        end
+    elseif barrierOrientation == barrierOrientations.vertical then
+        Logging.LogPrint("barrierOrientations.vertical NOT DONE YET")
+    end
+end
+
+WaterBarrier.OnChunkGenerated = function(event)
+    local leftTopTileInChunk = event.area.left_top
+    local chunkPos = Utils.GetChunkPositionForTilePosition(leftTopTileInChunk)
+    local surface = event.surface
+    if WaterBarrier.IsChunkBeyondBarrierChunkStart(chunkPos) then
+        WaterBarrier.CalculateShorelinesForVector(leftTopTileInChunk)
+        WaterBarrier.ApplyBarrierTiles(leftTopTileInChunk, surface)
+    end
+end
+
+WaterBarrier.IsChunkBeyondBarrierChunkStart = function(chunkPos)
+    if barrierOrientation == barrierOrientations.horizontal then
+        if barrierDirection == barrierDirections.positive then
+            if chunkPos.y >= global.WaterBarrier.waterChunkYStart then
+                return true
+            else
+                return false
+            end
+        elseif barrierDirection == barrierDirections.negative then
+            Logging.LogPrint("barrierOrientations.horizontal barrierDirections.negative NOT DONE YET")
+        end
+    elseif barrierOrientation == barrierOrientations.vertical then
+        Logging.LogPrint("barrierOrientations.vertical NOT DONE YET")
+    end
+end
+
+--TODO use some better logic to make the coastline. Have it give greater weight to 0 change and also allow perTileVariation below 1.
+WaterBarrier.CalculateShorelinesForVector = function(leftTopTileInChunk)
+    local debug = false
+    local perTileVariation = 1
+    if barrierOrientation == barrierOrientations.horizontal then
+        if barrierDirection == barrierDirections.positive then
+            local leftTopTileInChunkX = leftTopTileInChunk.x
+            Logging.Log("new chunk X range: " .. leftTopTileInChunkX .. " to " .. (leftTopTileInChunkX + 31), debug)
+            if global.WaterBarrier.waterInnerEdgeTiles[leftTopTileInChunkX] == nil then
+                if leftTopTileInChunkX < global.WaterBarrier.barrierVectorEdgeMinCalculated then
+                    --to the left of the lowested already calculated
+                    Logging.Log("lowest X calculated: " .. global.WaterBarrier.barrierVectorEdgeMinCalculated, debug)
+                    local lastVectorPos = global.WaterBarrier.barrierVectorEdgeMinCalculated
+                    local lastShallowDistance = global.WaterBarrier.waterInnerEdgeTiles[lastVectorPos]
+                    local lastDeepDistance = global.WaterBarrier.deepWaterInnerEdgeTiles[lastVectorPos]
+                    while lastVectorPos > leftTopTileInChunkX do
+                        lastVectorPos = lastVectorPos - 1
+                        lastShallowDistance = math.random(math.max(global.WaterBarrier.waterTileYMin, lastShallowDistance - perTileVariation), math.min(global.WaterBarrier.waterTileYMax, lastShallowDistance + perTileVariation))
+                        global.WaterBarrier.waterInnerEdgeTiles[lastVectorPos] = lastShallowDistance
+                        lastDeepDistance = math.random(math.max(global.WaterBarrier.deepwaterTileYMin, lastDeepDistance - perTileVariation), math.min(global.WaterBarrier.deepwaterTileYMax, lastDeepDistance + perTileVariation))
+                        global.WaterBarrier.deepWaterInnerEdgeTiles[lastVectorPos] = lastDeepDistance
+                    end
+                    global.WaterBarrier.barrierVectorEdgeMinCalculated = lastVectorPos
+                    Logging.Log("ending data: " .. Utils.TableContentsToJSON(global.WaterBarrier.waterInnerEdgeTiles) .. "\r\n" .. Utils.TableContentsToJSON(global.WaterBarrier.deepWaterInnerEdgeTiles), debug)
+                elseif leftTopTileInChunkX > global.WaterBarrier.barrierVectorEdgeMaxCalculated then
+                    --to the right of the lowested already calculated
+                    Logging.Log("highest X calculated: " .. global.WaterBarrier.barrierVectorEdgeMaxCalculated, debug)
+                    local lastVectorPos = global.WaterBarrier.barrierVectorEdgeMaxCalculated
+                    local lastShallowDistance = global.WaterBarrier.waterInnerEdgeTiles[lastVectorPos]
+                    local lastDeepDistance = global.WaterBarrier.deepWaterInnerEdgeTiles[lastVectorPos]
+                    while lastVectorPos < leftTopTileInChunkX + 31 do
+                        lastVectorPos = lastVectorPos + 1
+                        lastShallowDistance = math.random(math.max(global.WaterBarrier.waterTileYMin, lastShallowDistance - perTileVariation), math.min(global.WaterBarrier.waterTileYMax, lastShallowDistance + perTileVariation))
+                        global.WaterBarrier.waterInnerEdgeTiles[lastVectorPos] = lastShallowDistance
+                        lastDeepDistance = math.random(math.max(global.WaterBarrier.deepwaterTileYMin, lastDeepDistance - perTileVariation), math.min(global.WaterBarrier.deepwaterTileYMax, lastDeepDistance + perTileVariation))
+                        global.WaterBarrier.deepWaterInnerEdgeTiles[lastVectorPos] = lastDeepDistance
+                    end
+                    global.WaterBarrier.barrierVectorEdgeMaxCalculated = lastVectorPos
+                    Logging.Log("ending data: " .. Utils.TableContentsToJSON(global.WaterBarrier.waterInnerEdgeTiles) .. "\r\n" .. Utils.TableContentsToJSON(global.WaterBarrier.deepWaterInnerEdgeTiles), debug)
+                else
+                    Logging.Log("required range already calculated", debug)
+                end
+            end
+        elseif barrierDirection == barrierDirections.negative then
+            Logging.LogPrint("barrierOrientations.horizontal barrierDirections.negative NOT DONE YET")
+        end
+    elseif barrierOrientation == barrierOrientations.vertical then
+        Logging.LogPrint("barrierOrientations.vertical NOT DONE YET")
+    end
+end
+
+WaterBarrier.ApplyBarrierTiles = function(leftTopTileInChunk, surface)
+    local tilesToChange = {}
+    if barrierOrientation == barrierOrientations.horizontal then
+        if barrierDirection == barrierDirections.positive then
+            for x = leftTopTileInChunk.x, leftTopTileInChunk.x + 31 do
+                for y = leftTopTileInChunk.y, leftTopTileInChunk.y + 31 do
+                    if y >= global.WaterBarrier.deepWaterInnerEdgeTiles[x] then
+                        table.insert(tilesToChange, {name = "deepwater", position = {x, y}})
+                    elseif y >= global.WaterBarrier.waterInnerEdgeTiles[x] then
+                        table.insert(tilesToChange, {name = "water", position = {x, y}})
+                    end
+                end
+            end
+        elseif barrierDirection == barrierDirections.negative then
+            Logging.LogPrint("barrierOrientations.horizontal barrierDirections.negative NOT DONE YET")
+        end
+    elseif barrierOrientation == barrierOrientations.vertical then
+        Logging.LogPrint("barrierOrientations.vertical NOT DONE YET")
+    end
+    surface.set_tiles(tilesToChange)
+end
+
+return WaterBarrier
