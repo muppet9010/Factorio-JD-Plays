@@ -9,8 +9,10 @@ local barrierDirections = {positive = "positive", negative = "negative"}
 local barrierOrientation = barrierOrientations.horizontal
 local barrierDirection = barrierDirections.positive
 local barrierChunkStart = math.floor(32 / 32) -- TODO should be 200/32
-local firstWaterTypeChunkWidth = 30
-local edgeVariation = 15
+local edgeVariation = 20
+local firstWaterTypeWidthMax = 10
+local firstWaterTypeWidthMin = 2
+local coastlinePerTileVariation = 1
 
 WaterBarrier.CreateGlobals = function()
     global.WaterBarrier = global.WaterBarrier or {}
@@ -30,10 +32,7 @@ WaterBarrier.OnStartup = function()
             global.WaterBarrier.waterTileYMin = global.WaterBarrier.waterChunkYStart * 32
             global.WaterBarrier.waterTileYMax = global.WaterBarrier.waterTileYMin + edgeVariation
             global.WaterBarrier.waterInnerEdgeTiles = global.WaterBarrier.waterInnerEdgeTiles or {[-1] = global.WaterBarrier.waterTileYMin + math.random(edgeVariation)}
-
-            global.WaterBarrier.deepwaterTileYMin = (global.WaterBarrier.waterChunkYStart * 32) + firstWaterTypeChunkWidth
-            global.WaterBarrier.deepwaterTileYMax = global.WaterBarrier.deepwaterTileYMin + edgeVariation
-            global.WaterBarrier.deepWaterInnerEdgeTiles = global.WaterBarrier.deepWaterInnerEdgeTiles or {[-1] = global.WaterBarrier.deepwaterTileYMin + math.random(edgeVariation)}
+            global.WaterBarrier.deepWaterInnerEdgeTiles = global.WaterBarrier.deepWaterInnerEdgeTiles or {[-1] = global.WaterBarrier.waterInnerEdgeTiles[-1] + math.random(firstWaterTypeWidthMax)}
         elseif barrierDirection == barrierDirections.negative then
             Logging.LogPrint("barrierOrientations.horizontal barrierDirections.negative NOT DONE YET")
         end
@@ -71,7 +70,6 @@ end
 --TODO use some better logic to make the coastline. Have it give greater weight to 0 change and also allow perTileVariation below 1.
 WaterBarrier.CalculateShorelinesForVector = function(leftTopTileInChunk)
     local debug = false
-    local perTileVariation = 1
     if barrierOrientation == barrierOrientations.horizontal then
         if barrierDirection == barrierDirections.positive then
             local leftTopTileInChunkX = leftTopTileInChunk.x
@@ -85,9 +83,9 @@ WaterBarrier.CalculateShorelinesForVector = function(leftTopTileInChunk)
                     local lastDeepDistance = global.WaterBarrier.deepWaterInnerEdgeTiles[lastVectorPos]
                     while lastVectorPos > leftTopTileInChunkX do
                         lastVectorPos = lastVectorPos - 1
-                        lastShallowDistance = math.random(math.max(global.WaterBarrier.waterTileYMin, lastShallowDistance - perTileVariation), math.min(global.WaterBarrier.waterTileYMax, lastShallowDistance + perTileVariation))
+                        lastShallowDistance = math.random(math.max(global.WaterBarrier.waterTileYMin, lastShallowDistance - coastlinePerTileVariation), math.min(global.WaterBarrier.waterTileYMax, lastShallowDistance + coastlinePerTileVariation))
                         global.WaterBarrier.waterInnerEdgeTiles[lastVectorPos] = lastShallowDistance
-                        lastDeepDistance = math.random(math.max(global.WaterBarrier.deepwaterTileYMin, lastDeepDistance - perTileVariation), math.min(global.WaterBarrier.deepwaterTileYMax, lastDeepDistance + perTileVariation))
+                        lastDeepDistance = math.random(math.max(lastShallowDistance + firstWaterTypeWidthMin, lastDeepDistance - coastlinePerTileVariation), math.min(lastShallowDistance + firstWaterTypeWidthMax, lastDeepDistance + coastlinePerTileVariation))
                         global.WaterBarrier.deepWaterInnerEdgeTiles[lastVectorPos] = lastDeepDistance
                     end
                     global.WaterBarrier.barrierVectorEdgeMinCalculated = lastVectorPos
@@ -100,9 +98,9 @@ WaterBarrier.CalculateShorelinesForVector = function(leftTopTileInChunk)
                     local lastDeepDistance = global.WaterBarrier.deepWaterInnerEdgeTiles[lastVectorPos]
                     while lastVectorPos < leftTopTileInChunkX + 31 do
                         lastVectorPos = lastVectorPos + 1
-                        lastShallowDistance = math.random(math.max(global.WaterBarrier.waterTileYMin, lastShallowDistance - perTileVariation), math.min(global.WaterBarrier.waterTileYMax, lastShallowDistance + perTileVariation))
+                        lastShallowDistance = math.random(math.max(global.WaterBarrier.waterTileYMin, lastShallowDistance - coastlinePerTileVariation), math.min(global.WaterBarrier.waterTileYMax, lastShallowDistance + coastlinePerTileVariation))
                         global.WaterBarrier.waterInnerEdgeTiles[lastVectorPos] = lastShallowDistance
-                        lastDeepDistance = math.random(math.max(global.WaterBarrier.deepwaterTileYMin, lastDeepDistance - perTileVariation), math.min(global.WaterBarrier.deepwaterTileYMax, lastDeepDistance + perTileVariation))
+                        lastDeepDistance = math.random(math.max(lastShallowDistance + firstWaterTypeWidthMin, lastDeepDistance - coastlinePerTileVariation), math.min(lastShallowDistance + firstWaterTypeWidthMax, lastDeepDistance + coastlinePerTileVariation))
                         global.WaterBarrier.deepWaterInnerEdgeTiles[lastVectorPos] = lastDeepDistance
                     end
                     global.WaterBarrier.barrierVectorEdgeMaxCalculated = lastVectorPos
