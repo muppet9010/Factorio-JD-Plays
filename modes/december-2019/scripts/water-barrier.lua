@@ -47,7 +47,7 @@ WaterBarrier.OnChunkGenerated = function(event)
     local surface = event.surface
     if WaterBarrier.IsChunkBeyondBarrierChunkStart(chunkPos) then
         WaterBarrier.CalculateShorelinesForVector(leftTopTileInChunk)
-        WaterBarrier.ApplyBarrierTiles(leftTopTileInChunk, surface)
+        WaterBarrier.ApplyBarrierTiles(leftTopTileInChunk, surface, chunkPos)
     end
 end
 
@@ -144,7 +144,7 @@ WaterBarrier.GetNextDeepWaterDistance = function(lastWaterDistance, lastDeepWate
     return nextDistanceOptions[math.random(#nextDistanceOptions)]
 end
 
-WaterBarrier.ApplyBarrierTiles = function(leftTopTileInChunk, surface)
+WaterBarrier.ApplyBarrierTiles = function(leftTopTileInChunk, surface, chunkPos)
     local tilesToChange = {}
     if barrierOrientation == barrierOrientations.horizontal then
         if barrierDirection == barrierDirections.positive then
@@ -185,6 +185,7 @@ WaterBarrier.ApplyBarrierTiles = function(leftTopTileInChunk, surface)
         Logging.LogPrint("barrierOrientations.vertical NOT DONE YET")
     end
     surface.set_tiles(tilesToChange)
+    surface.regenerate_entity({"fish"}, {chunkPos})
 end
 
 return WaterBarrier

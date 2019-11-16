@@ -13,7 +13,7 @@ December 2019 - Race To The North Pole
 - Utilises Biter Hunting Packs from May 2019 mode
 - Shared damage between all players of 100%
 - Rocket silo crafting is disabled. There is a silo around 5k tiles north somewhere. This rocket silo is invincible and can not be mined.
-- There is just ocean south of the starting area. It has a pretty random coastline.
+- There is just ocean south of the starting area. It has a pretty random coastline and all the fish.
 - Other mods expected (but can't be forced): xmas-feels, BigWinter, biter_santa, biter_eggs, biter_reincarnation
 
 June 2019 - Tree World
