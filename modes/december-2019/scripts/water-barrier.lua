@@ -161,13 +161,16 @@ WaterBarrier.ApplyBarrierTiles = function(leftTopTileInChunk, surface)
                                 xVectorFoundLand[x] = true
                                 replaceToWater = true
                             else
-                                local thisTileName = surface.get_tile(x, y).name
-                                if thisTileName ~= "water" and thisTileName ~= "deepwater" then
-                                    replaceToWater = true
-                                end
+                                xVectorFoundLand[x] = false
                             end
-                        else
+                        end
+                        if xVectorFoundLand[x] == true then
                             replaceToWater = true
+                        else
+                            local thisTileName = surface.get_tile(x, y).name
+                            if thisTileName ~= "water" and thisTileName ~= "deepwater" then
+                                replaceToWater = true
+                            end
                         end
                         if replaceToWater then
                             table.insert(tilesToChange, {name = "water", position = {x, y}})
