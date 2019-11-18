@@ -9,7 +9,7 @@ local barrierDirections = {positive = "positive", negative = "negative"}
 
 local barrierOrientation = barrierOrientations.horizontal
 local barrierDirection = barrierDirections.positive
-local barrierChunkStart = math.floor(32 / 32) -- TODO should be 200/32
+local barrierChunkStart = math.floor(200 / 32)
 local edgeVariation = 20
 local firstWaterTypeWidthMin = 3
 local firstWaterTypeWidthMax = 20

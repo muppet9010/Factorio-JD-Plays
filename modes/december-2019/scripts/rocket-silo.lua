@@ -5,7 +5,6 @@ local Utils = require("utility/utils")
 
 local yChunkOffsetWeighting = 0.95
 local yChunkStarting = 5000
-local testing = true
 
 RocketSilo.CreateGlobals = function()
     global.RocketSilo = global.RocketSilo or {}
@@ -13,9 +12,6 @@ end
 
 RocketSilo.OnStartup = function()
     global.RocketSilo.targetChunkPosition = global.RocketSilo.targetChunkPosition or RocketSilo.CalculateRocketSiloTargetChunk()
-    if testing then
-        global.RocketSilo.targetChunkPosition = {x = 1, y = 1}
-    end
 end
 
 RocketSilo.OnLoad = function()
