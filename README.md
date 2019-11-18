@@ -14,6 +14,7 @@ December 2019 - Race To The North Pole
 - Shared damage between all players of 100%
 - Rocket silo crafting is disabled. There is a silo around 5k tiles north somewhere. This rocket silo is invincible and can not be mined.
 - There is just ocean south of the starting area. It has a nice pretty random coastline with all the fish and freezing fog! Any player, building or vehicle out in the freezing fog will take damage.
+- There is a thick forest at the starting area which fades out to no trees from 100k to 150k north.
 - Other mods expected (but can't be forced): xmas-feels, BigWinter, biter_santa, biter_eggs, biter_reincarnation
 
 June 2019 - Tree World

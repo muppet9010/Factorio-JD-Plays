@@ -7,6 +7,7 @@ local TechAppropriateGear = require(modeFilePath .. "/scripts/tech-appropriate-g
 local SharedPlayerDamage = require(modeFilePath .. "/scripts/shared-player-damage")
 local RocketSilo = require(modeFilePath .. "/scripts/rocket-silo")
 local WaterBarrier = require(modeFilePath .. "/scripts/water-barrier")
+local GenerateTrees = require(modeFilePath .. "/scripts/generate-trees")
 
 if settings.startup["jdplays_mode"].value ~= "december-2019" then
     return
@@ -34,6 +35,7 @@ local function OnLoad()
     SharedPlayerDamage.OnLoad()
     RocketSilo.OnLoad()
     WaterBarrier.OnLoad()
+    GenerateTrees.OnLoad()
 end
 
 local function OnStartup()
