@@ -15,7 +15,13 @@ December 2019 - Race To The North Pole
 - Rocket silo crafting is disabled. There is a silo around 5k tiles north somewhere. This rocket silo is invincible and can not be mined.
 - There is just ocean south of the starting area. It has a nice pretty random coastline with all the fish and freezing fog! Any player, building or vehicle out in the freezing fog will take damage.
 - There is a thick forest at the starting area which fades out to no trees from 100k to 150k north.
+- All minable rocks on the map are replaced with biter eggs. Huge rocks = large egg nests, big rocks = small egg nests.
 - Other mods expected (but can't be forced): xmas-feels, BigWinter, biter_santa, biter_eggs, biter_reincarnation
+- Map Generation Settings:
+    - disable trees on their tick box
+    - map size width = 1000, height unlimited (0)
+- Mod Settings:
+    - Biter Eggs mod Startup setting - Egg nest quantity = 0
 
 June 2019 - Tree World
 ---------

@@ -8,6 +8,7 @@ local SharedPlayerDamage = require(modeFilePath .. "/scripts/shared-player-damag
 local RocketSilo = require(modeFilePath .. "/scripts/rocket-silo")
 local WaterBarrier = require(modeFilePath .. "/scripts/water-barrier")
 local GenerateTrees = require(modeFilePath .. "/scripts/generate-trees")
+local RocksToBiterEggs = require(modeFilePath .. "/scripts/rocks-to-biter-eggs")
 
 if settings.startup["jdplays_mode"].value ~= "december-2019" then
     return
@@ -36,6 +37,7 @@ local function OnLoad()
     RocketSilo.OnLoad()
     WaterBarrier.OnLoad()
     GenerateTrees.OnLoad()
+    RocksToBiterEggs.OnLoad()
 end
 
 local function OnStartup()
