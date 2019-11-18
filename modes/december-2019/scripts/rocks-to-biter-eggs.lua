@@ -1,7 +1,7 @@
 local RocksToBiterEggs = {}
 local Events = require("utility/events")
 local Utils = require("utility/utils")
-local Logging = require("utility/logging")
+--local Logging = require("utility/logging")
 
 local rocksToBiterEggConversion = {
     ["rock-huge"] = "biter-egg-nest-large",
@@ -37,7 +37,7 @@ RocksToBiterEggs.OnChunkGenerated = function(event)
         if createdEggNest == nil then
             pos = surface.find_non_colliding_position(eggNestName, pos, 5, 0.1)
             if pos ~= nil then
-                createdEggNest = surface.create_entity {name = eggNestName, position = pos, force = "enemy"}
+                surface.create_entity {name = eggNestName, position = pos, force = "enemy"}
             end
         end
     end
