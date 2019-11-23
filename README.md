@@ -16,6 +16,7 @@ December 2019 - Race To The North Pole
 - There is just ocean south of the starting area. It has a nice pretty random coastline with all the fish and freezing fog! Any player, building or vehicle out in the freezing fog will take damage.
 - There is a thick forest at the starting area which fades out to no trees from 100k to 150k north.
 - All minable rocks on the map are replaced with biter eggs. Huge rocks = large egg nests, big rocks = small egg nests.
+- When chunks past 150,000 tiles are generated the corrisponding chunk row from 100,000 tiles are cleansed of all rocks, trees, ores, dropped items, fish, decoratives, corpses to keep the map & save file down.
 - Other mods expected (but can't be forced): xmas-feels, BigWinter, biter_santa, biter_eggs, biter_reincarnation
 - Map Generation Settings:
     - disable trees on their tick box

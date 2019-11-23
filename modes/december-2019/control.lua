@@ -9,6 +9,7 @@ local RocketSilo = require(modeFilePath .. "/scripts/rocket-silo")
 local WaterBarrier = require(modeFilePath .. "/scripts/water-barrier")
 local GenerateTrees = require(modeFilePath .. "/scripts/generate-trees")
 local RocksToBiterEggs = require(modeFilePath .. "/scripts/rocks-to-biter-eggs")
+local MapCleanse = require(modeFilePath .. "/scripts/map-cleanse")
 
 if settings.startup["jdplays_mode"].value ~= "december-2019" then
     return
@@ -25,6 +26,7 @@ local function CreateGlobals()
     SharedPlayerDamage.CreateGlobals()
     RocketSilo.CreateGlobals()
     WaterBarrier.CreateGlobals()
+    MapCleanse.CreateGlobals()
 end
 
 local function OnLoad()
@@ -38,6 +40,7 @@ local function OnLoad()
     WaterBarrier.OnLoad()
     GenerateTrees.OnLoad()
     RocksToBiterEggs.OnLoad()
+    MapCleanse.OnLoad()
 end
 
 local function OnStartup()
