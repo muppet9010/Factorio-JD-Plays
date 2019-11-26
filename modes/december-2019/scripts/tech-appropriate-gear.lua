@@ -47,11 +47,11 @@ end
 TechAppropriateGear.OnResearchFinished = function(event)
     local technology = event.research
     if technology.name == "military" then
-        global.SpawnItems["gun"] = "submachine-gun"
+        global.TechAppropriateGear.SpawnItems["gun"] = "submachine-gun"
     elseif technology.name == "military-2" then
-        global.SpawnItems["ammo"] = "piercing-rounds-magazine"
+        global.TechAppropriateGear.SpawnItems["ammo"] = "piercing-rounds-magazine"
     elseif technology.name == "uranium-ammo" then
-        global.SpawnItems["ammo"] = "uranium-rounds-magazine"
+        global.TechAppropriateGear.SpawnItems["ammo"] = "uranium-rounds-magazine"
     end
 end
 
