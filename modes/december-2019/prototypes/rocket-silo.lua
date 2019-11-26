@@ -1,3 +1,6 @@
+local Utils = require("utility/utils")
+local Constants = require("constants")
+
 if settings.startup["jdplays_mode"].value ~= "december-2019" then
     return
 end
@@ -9,3 +12,5 @@ for k, effect in pairs(rocketSiloTechnologyPrototype.effects) do
         break
     end
 end
+
+data:extend({Utils.CreateLandPlacementTestEntityPrototype(data.raw["rocket-silo"]["rocket-silo"], Constants.ModName .. "-rocket_silo_place_test")})

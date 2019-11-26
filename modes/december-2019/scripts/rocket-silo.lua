@@ -1,6 +1,7 @@
 local RocketSilo = {}
 local Events = require("utility/events")
 local Utils = require("utility/utils")
+local Constants = require("constants")
 --local Logging = require("utility/logging")
 
 local yChunkOffsetWeighting = 0.95
@@ -27,14 +28,20 @@ RocketSilo.OnChunkGenerated = function(event)
 
     local surface = event.surface
     local middleTileInChunk = {x = generatedAreaTopLeftTile.x + 16, y = generatedAreaTopLeftTile.y + 16}
-    local foundPosition = surface.find_non_colliding_position("rocket-silo", middleTileInChunk, 0, 1)
+    local placementTestRocketSiloPrototypeName = Constants.ModName .. "-rocket_silo_place_test"
+    local foundPosition = surface.find_non_colliding_position(placementTestRocketSiloPrototypeName, middleTileInChunk, 0, 1)
+
+    local placementTestRocketSiloPrototype = game.entity_prototypes[placementTestRocketSiloPrototypeName]
+    local entityFootprint = Utils.ApplyBoundingBoxToPosition(foundPosition, placementTestRocketSiloPrototype.collision_box)
+    Utils.DestroyAllObjectsInArea(surface, entityFootprint)
     local rocketSiloEntity = surface.create_entity {name = "rocket-silo", position = foundPosition, force = "player"}
     rocketSiloEntity.minable = false
     rocketSiloEntity.destructible = false
 end
 
 RocketSilo.CalculateRocketSiloTargetChunk = function()
-    local xChunk = math.random(1, game.default_map_gen_settings.width / 32)
+    local mapChunksWideFrom0 = math.floor((game.default_map_gen_settings.width / 32) / 2)
+    local xChunk = math.random(-mapChunksWideFrom0, mapChunksWideFrom0)
     local yOffsetWeightings = {}
     local currentOffsetWeight = 1
     local currentOffsetChunk = 0
