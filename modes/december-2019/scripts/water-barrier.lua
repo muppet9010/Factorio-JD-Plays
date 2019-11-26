@@ -266,6 +266,9 @@ end
 
 WaterBarrier.OnBuiltEntity = function(event)
     local createdEntity = event.created_entity
+    if createdEntity.health == nil then
+        return
+    end
     local damageToDo = WaterBarrier.GetDamageForEntityPosition(createdEntity)
     if damageToDo ~= nil then
         table.insert(global.WaterBarrier.buildingsToDamage, {entity = createdEntity, damageToDo = damageToDo})
