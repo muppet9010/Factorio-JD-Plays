@@ -13,7 +13,7 @@ data:extend(
     {
         {
             type = "explosion",
-            name = "biter-ground-rise-effect",
+            name = Constants.ModName .. "-biter_ground_rise_effect",
             animations = {
                 filename = "__core__/graphics/empty.png",
                 width = 1,
@@ -42,7 +42,7 @@ data:extend(
         },
         {
             type = "trivial-smoke",
-            name = "biter-rise-smoke",
+            name = Constants.ModName .. "-biter_rise_smoke",
             flags = {"not-on-map"},
             show_when_smoke_off = true,
             animation = {
@@ -60,7 +60,7 @@ data:extend(
         },
         {
             type = "simple-entity",
-            name = "biter-ground-movement",
+            name = Constants.ModName .. "-biter_ground_movement",
             collision_box = {{-0.5, -0.5}, {0.5, 0.5}},
             collision_maxk = {"object-layer", "player-layer", "water-tile"},
             selectable_in_game = false,
@@ -72,7 +72,7 @@ data:extend(
                     target_effects = {
                         {
                             type = "create-trivial-smoke",
-                            smoke_name = "biter-rise-smoke",
+                            smoke_name = Constants.ModName .. "-biter_rise_smoke",
                             repeat_count = 3,
                             offset_deviation = {{-0.5, -0.5}, {0.5, 0.5}},
                             starting_frame_deviation = 10

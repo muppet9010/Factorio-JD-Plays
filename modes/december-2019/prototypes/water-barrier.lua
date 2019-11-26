@@ -8,7 +8,7 @@ end
 
 local waterBarrierSmokeLight = {
     type = "animation",
-    name = "water_barrier_smoke_light",
+    name = Constants.ModName .. "-water_barrier_smoke_light",
     filename = Constants.AssetModName .. "/" .. modeFilePath .. "/graphics/large-smoke-white.png",
     width = 152,
     height = 120,
@@ -24,7 +24,7 @@ local waterBarrierSmokeLight = {
     blend_mode = "additive"
 }
 local waterBarrierSmokeHeavy = Utils.DeepCopy(waterBarrierSmokeLight)
-waterBarrierSmokeHeavy.name = "water_barrier_smoke_heavy"
+waterBarrierSmokeHeavy.name = Constants.ModName .. "-water_barrier_smoke_heavy"
 waterBarrierSmokeHeavy.tint = {r = 0.4, g = 0.4, b = 0.4}
 data:extend(
     {

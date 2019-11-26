@@ -3,6 +3,7 @@ local Events = require("utility/events")
 local Utils = require("utility/utils")
 local Logging = require("utility/logging")
 local EventScheduler = require("utility/event-scheduler")
+local Constants = require("constants")
 
 local barrierOrientations = {horizontal = "horizontal", vertical = "vertical"}
 local barrierDirections = {positive = "positive", negative = "negative"}
@@ -180,9 +181,9 @@ WaterBarrier.ApplyBarrierTiles = function(leftTopTileInChunk, surface, chunkPos)
                             local yChunkEdgeOffset = deepWaterYEdge % 32
                             deepWaterSmokePosY = leftTopTileInChunk.y + 16 + yChunkEdgeOffset
                             if math.floor((leftTopTileInChunk.y - deepWaterYEdge) / 32) < 1 then
-                                deepWaterSmokeAnimation = "water_barrier_smoke_light"
+                                deepWaterSmokeAnimation = Constants.ModName .. "-water_barrier_smoke_light"
                             else
-                                deepWaterSmokeAnimation = "water_barrier_smoke_heavy"
+                                deepWaterSmokeAnimation = Constants.ModName .. "-water_barrier_smoke_heavy"
                             end
                         end
                     elseif y >= global.WaterBarrier.waterInnerEdgeTiles[x] then

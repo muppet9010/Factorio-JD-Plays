@@ -5,6 +5,7 @@ local Logging = require("utility/logging")
 local Commands = require("utility/commands")
 local Events = require("utility/events")
 local EventScheduler = require("utility/event-scheduler")
+local Constants = require("constants")
 
 local biterHuntGroupFrequencyRangeTicks = {
     20 * 60 * 60,
@@ -273,7 +274,7 @@ BiterHuntGroup._CreateGroundMovement = function(distance, attempts)
     for i = 1, biterHuntGroupSize do
         local x = centerPosition.x + (distance * math.cos(angleRad * i))
         local y = centerPosition.y + (distance * math.sin(angleRad * i))
-        local foundPosition = surface.find_non_colliding_position("biter-ground-movement", {x, y}, 2, 1, true)
+        local foundPosition = surface.find_non_colliding_position(Constants.ModName .. "-biter_ground_movement", {x, y}, 2, 1, true)
         if foundPosition ~= nil then
             table.insert(biterPositions, foundPosition)
         end
@@ -304,7 +305,7 @@ BiterHuntGroup._CreateGroundMovement = function(distance, attempts)
     Logging.Log("maxAttempts: " .. maxAttempts, debug)
     while #biterPositions < biterHuntGroupSize do
         local positionToTry = biterPositions[math.random(1, #biterPositions)]
-        local foundPosition = surface.find_non_colliding_position("biter-ground-movement", positionToTry, 2, 1, true)
+        local foundPosition = surface.find_non_colliding_position(Constants.ModName .. "-biter_ground_movement", positionToTry, 2, 1, true)
         if foundPosition ~= nil then
             table.insert(biterPositions, foundPosition)
             BiterHuntGroup.SpawnGroundMovementEffect(surface, foundPosition)
@@ -319,7 +320,7 @@ BiterHuntGroup._CreateGroundMovement = function(distance, attempts)
 end
 
 BiterHuntGroup.SpawnGroundMovementEffect = function(surface, position)
-    local effect = surface.create_entity {name = "biter-ground-movement", position = position}
+    local effect = surface.create_entity {name = Constants.ModName .. "-biter_ground_movement", position = position}
     if effect == nil then
         Logging.LogPrint("failed to make effect at: " .. Logging.PositionToString(position))
     else
@@ -335,7 +336,7 @@ BiterHuntGroup.SpawnEnemyPreEffects = function()
             Logging.LogPrint("ground effect has been removed by something, no SpawnEnemiePreEffects can be made")
         else
             local position = groundEffect.position
-            surface.create_entity {name = "biter-ground-rise-effect", position = position}
+            surface.create_entity {name = Constants.ModName .. "-biter_ground_rise_effect", position = position}
         end
     end
 end
