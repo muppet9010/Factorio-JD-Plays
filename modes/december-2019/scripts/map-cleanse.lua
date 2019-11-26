@@ -41,7 +41,7 @@ end
 
 MapCleanse.CleanseArea = function(area, surface)
     surface.destroy_decoratives({area = area})
-    local entityTypesToRemove = surface.find_entities_filtered({area = area, type = {"tree", "corpse", "simple-entity", "resource"}})
+    local entityTypesToRemove = surface.find_entities_filtered({area = area, type = {"tree", "corpse", "simple-entity", "resource", "cliff"}})
     for _, entity in pairs(entityTypesToRemove) do
         entity.destroy()
     end
