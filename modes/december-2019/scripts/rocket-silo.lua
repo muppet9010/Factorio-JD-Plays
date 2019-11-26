@@ -4,7 +4,7 @@ local Utils = require("utility/utils")
 --local Logging = require("utility/logging")
 
 local yChunkOffsetWeighting = 0.95
-local yChunkStarting = -5000
+local yChunkStarting = math.floor(-5000 / 32)
 
 RocketSilo.CreateGlobals = function()
     global.RocketSilo = global.RocketSilo or {}
