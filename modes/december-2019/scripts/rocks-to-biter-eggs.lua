@@ -11,22 +11,29 @@ local rocksToBiterEggConversion = {
 }
 local rocksToBeConverted = Utils.TableKeyToArray(rocksToBiterEggConversion)
 
-RocksToBiterEggs.OnLoad = function()
-    local biterEggModPresent = false
-    for modName, _ in pairs(game.active_mods) do
-        if modName == "biter_eggs" then
-            biterEggModPresent = true
-            break
-        end
-    end
-    if not biterEggModPresent then
-        return
-    end
+RocksToBiterEggs.CreateGlobals = function()
+    global.RocksToBiterEggs = global.RocksToBiterEggs or {}
+    global.RocksToBiterEggs.biterEggModPresent = global.RocksToBiterEggs.biterEggModPresent or false
+end
 
+RocksToBiterEggs.OnLoad = function()
     Events.RegisterHandler(defines.events.on_chunk_generated, "RocksToBiterEggs.OnChunkGenerated", RocksToBiterEggs.OnChunkGenerated)
 end
 
+RocksToBiterEggs.OnStartup = function()
+    for modName, _ in pairs(game.active_mods) do
+        if modName == "biter_eggs" then
+            global.RocksToBiterEggs.biterEggModPresent = true
+            break
+        end
+    end
+end
+
 RocksToBiterEggs.OnChunkGenerated = function(event)
+    if not global.RocksToBiterEggs.biterEggModPresent then
+        return
+    end
+
     local surface = event.surface
     local rocksInChunk = surface.find_entities_filtered {area = event.area, name = rocksToBeConverted}
     for _, rockEntity in pairs(rocksInChunk) do

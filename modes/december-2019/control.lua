@@ -26,6 +26,7 @@ local function CreateGlobals()
     SharedPlayerDamage.CreateGlobals()
     RocketSilo.CreateGlobals()
     WaterBarrier.CreateGlobals()
+    RocksToBiterEggs.CreateGlobals()
     MapCleanse.CreateGlobals()
 end
 
@@ -54,6 +55,7 @@ local function OnStartup()
     SharedPlayerDamage.OnStartup()
     RocketSilo.OnStartup()
     WaterBarrier.OnStartup()
+    RocksToBiterEggs.OnStartup()
 end
 
 script.on_init(OnStartup)
