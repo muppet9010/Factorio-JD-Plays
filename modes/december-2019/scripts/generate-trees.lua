@@ -4,8 +4,8 @@ local Utils = require("utility/utils")
 local Logging = require("utility/logging")
 
 local treeChance = 0.2
-local treesStartThiningChunkNegativeY = 0 - math.floor(100000 / 32)
-local treesBecomeNothingChunkNegativeY = 0 - math.floor(150000 / 32)
+local treesStartThiningChunkNegativeY = math.floor(-100000 / 32)
+local treesBecomeNothingChunkNegativeY = math.floor(-150000 / 32)
 local variationChunkDistance = treesBecomeNothingChunkNegativeY - treesStartThiningChunkNegativeY
 
 GenerateTrees.OnLoad = function()

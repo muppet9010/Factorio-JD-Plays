@@ -3,7 +3,7 @@ local Events = require("utility/events")
 local Utils = require("utility/utils")
 --local Logging = require("utility/logging")
 
-local cleanseFrom = 0 - math.floor(100000 / 32)
+local cleanseFrom = math.floor(-100000 / 32)
 local cleanseBehind = math.floor(50000 / 32)
 
 MapCleanse.CreateGlobals = function()
