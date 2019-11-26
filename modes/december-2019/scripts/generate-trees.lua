@@ -1,7 +1,7 @@
 local GenerateTrees = {}
 local Events = require("utility/events")
 local Utils = require("utility/utils")
-local Logging = require("utility/logging")
+--local Logging = require("utility/logging")
 
 local treeChance = 0.2
 local treesStartThiningChunkNegativeY = math.floor(-100000 / 32)
@@ -15,7 +15,6 @@ end
 GenerateTrees.OnChunkGenerated = function(event)
     local chunkPos = Utils.GetChunkPositionForTilePosition(event.area.left_top)
     if chunkPos.y <= treesBecomeNothingChunkNegativeY then
-        Logging.Log("Nothing: " .. chunkPos.y .. " <= " .. treesBecomeNothingChunkNegativeY, chunkPos.x == 0)
         return
     end
 
