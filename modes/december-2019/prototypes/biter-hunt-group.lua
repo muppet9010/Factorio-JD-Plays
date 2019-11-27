@@ -84,6 +84,15 @@ data:extend(
     }
 )
 
+if mods["BigWinter"] ~= nil then
+    local biterGroundMovement = data.raw["simple-entity"][Constants.ModName .. "-biter_ground_movement"]
+    for _, picture in pairs(biterGroundMovement.pictures) do
+        picture.filename = string.gsub(picture.filename, "__base__", "__BigWinter__")
+    end
+    local biterRiseSmoke = data.raw["trivial-smoke"][Constants.ModName .. "-biter_rise_smoke"]
+    biterRiseSmoke.color = {r = 223, g = 230, b = 242, a = 1}
+end
+
 local defaultStyle = data.raw["gui-style"]["default"]
 defaultStyle["jd_plays-biterwarning-text"] = {
     type = "label_style",
