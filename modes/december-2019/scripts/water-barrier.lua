@@ -7,6 +7,7 @@ local Constants = require("constants")
 
 local barrierOrientations = {horizontal = "horizontal", vertical = "vertical"}
 local barrierDirections = {positive = "positive", negative = "negative"}
+local freezingFogDamageTypeName = "jd_plays-december-2019-freezing-fog"
 
 local barrierOrientation = barrierOrientations.horizontal
 local barrierDirection = barrierDirections.positive
@@ -251,9 +252,9 @@ WaterBarrier.CheckPlayerPositions = function()
                 local damageToDo = WaterBarrier.GetDamageForEntityPosition(player)
                 if damageToDo ~= nil then
                     if player.vehicle ~= nil then
-                        player.vehicle.damage(damageToDo, global.WaterBarrier.scriptForce)
+                        player.vehicle.damage(damageToDo, global.WaterBarrier.scriptForce, freezingFogDamageTypeName)
                     elseif player.character then
-                        player.character.damage(damageToDo, global.WaterBarrier.scriptForce)
+                        player.character.damage(damageToDo, global.WaterBarrier.scriptForce, freezingFogDamageTypeName)
                     end
                 end
             end
@@ -283,7 +284,7 @@ WaterBarrier.DamageThings = function(data)
         if entity == nil or not entity.valid then
             table.remove(global.WaterBarrier.buildingsToDamage, k)
         else
-            entity.damage(v.damageToDo, global.WaterBarrier.scriptForce)
+            entity.damage(v.damageToDo, global.WaterBarrier.scriptForce, freezingFogDamageTypeName)
         end
     end
     for k, v in pairs(global.WaterBarrier.vehiclesToDamage) do
@@ -291,7 +292,7 @@ WaterBarrier.DamageThings = function(data)
         if vehicle == nil or not vehicle.valid or vehicle.get_driver() ~= nil or vehicle.get_passenger() ~= nil then
             table.remove(global.WaterBarrier.vehiclesToDamage, k)
         else
-            vehicle.damage(v.damageToDo, global.WaterBarrier.scriptForce)
+            vehicle.damage(v.damageToDo, global.WaterBarrier.scriptForce, freezingFogDamageTypeName)
         end
     end
 end

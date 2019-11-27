@@ -32,3 +32,12 @@ data:extend(
         waterBarrierSmokeHeavy
     }
 )
+
+data:extend(
+    {
+        {
+            type = "damage-type",
+            name = "jd_plays-december-2019-freezing-fog"
+        }
+    }
+)
