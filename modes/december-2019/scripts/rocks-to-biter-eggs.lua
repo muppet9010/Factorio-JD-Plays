@@ -45,6 +45,7 @@ RocksToBiterEggs.OnChunkGenerated = function(event)
         local eggNestName = rocksToBiterEggConversion[rockEntity.name]
         local entityFootprint = Utils.ApplyBoundingBoxToPosition(pos, global.RocksToBiterEggs.eggNestCollisonBoxes[eggNestName])
 		surface.destroy_decoratives{area = entityFootprint}
+		rockEntity.destroy()
         local createdEggNest = surface.create_entity {name = eggNestName, position = pos, force = "enemy"}
         if createdEggNest == nil then
             pos = surface.find_non_colliding_position(eggNestName, pos, 5, 0.1)
