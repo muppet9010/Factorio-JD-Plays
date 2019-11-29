@@ -16,9 +16,7 @@ local edgeVariation = 20
 local firstWaterTypeWidthMin = 3
 local firstWaterTypeWidthMax = 20
 local coastlinePerTileVariation = 1
-local damageHighOffset = 50
-local damageLowDone = 10
-local damageHighDone = 100
+local damageDistanceModifier = 0.1
 
 WaterBarrier.CreateGlobals = function()
     global.WaterBarrier = global.WaterBarrier or {}
@@ -228,12 +226,10 @@ end
 WaterBarrier.GetDamageForEntityPosition = function(entity)
     if barrierOrientation == barrierOrientations.horizontal then
         if barrierDirection == barrierDirections.positive then
-            local lowDamageStartY = global.WaterBarrier.waterTileYMax
-            local highDamageStartY = lowDamageStartY + damageHighOffset
-            if entity.position.y > highDamageStartY then
-                return damageHighDone
-            elseif entity.position.y > lowDamageStartY then
-                return damageLowDone
+            local distancePast = entity.position.y - global.WaterBarrier.waterTileYMax
+            if distancePast > 0 then
+                local damageToDo = distancePast * distancePast * damageDistanceModifier
+                return damageToDo
             end
             return nil
         elseif barrierDirection == barrierDirections.negative then
