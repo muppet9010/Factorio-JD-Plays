@@ -2,6 +2,30 @@
 
 
 A mod for streamer JD-Plays's server. Includes a number of distinct modes.
+Note that older months code should work, but are untested retrospectively.
+
+December 2019 - Race To The North Pole
+----------
+
+- Tested with Factorio 0.17.75
+- Players start with: 8 iron plate, 1 wood, 1 burner mining drill, 1 stone furnace, 10 research appropriate ammo, 1 research appropriate bullet gun
+- Players re-spawn with: 10 research appropriate ammo, 1 research appropriate bullet gun
+- Utilises Biter Hunting Packs as per May 2019 mode settings
+- Shared damage between all players of 100% inbound damage (not damage after armor/shields).
+- Rocket silo crafting is disabled. There is a silo around 5k tiles north somewhere. This rocket silo is invincible and can not be mined.
+- There is just ocean south of the starting area. It has a nice pretty random coastline with all the fish and freezing fog! Any player, building or vehicle out in the freezing fog will take damage.
+- There is a thick forest at the starting area which fades out to no trees from 100k to 150k north.
+- All minable rocks on the map are replaced with biter eggs. Huge rocks = large egg nests, big rocks = small egg nests.
+- When chunks past 150,000 tiles are generated the corrisponding chunk row from 100,000 tiles are cleansed of all rocks, trees, ores, dropped items, fish, decoratives, corpses to keep the map & save file down.
+- Other mods expected (but can't be forced): xmas-feels, BigWinter, biter_santa, biter_eggs, biter_reincarnation
+- Map Generation Settings:
+    - disable trees on their tick box
+    - map size width = 1000, height unlimited (0)
+- Mod Settings:
+    - Biter Eggs mod Startup setting - Egg nest quantity = 0
+    - Biter Santa mod settings:
+        - Set the desired position up north and call santa in once the map has loaded.
+        - Set the Santa's Inventory Contents setting to: [ {"name":"coal", "quantity":5000} ]
 
 June 2019 - Tree World
 ---------

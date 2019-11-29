@@ -1,49 +1,66 @@
-local Utils = require("factorio-utils/utils")
-local Events = {}
-if MOD == nil then
-    MOD = {}
-end
-if MOD.events == nil then
-    MOD.events = {}
-end
-if MOD.customEventNameToId == nil then
-    MOD.customEventNameToId = {}
-end
+local Utils = require("utility/utils")
+--local Logging = require("utility/logging")
 
-function Events.RegisterEvent(eventName)
+local Events = {}
+MOD = MOD or {}
+MOD.events = MOD.events or {}
+MOD.customEventNameToId = MOD.customEventNameToId or {}
+MOD.filteredEvents = MOD.filteredEvents or {}
+
+function Events.RegisterEvent(eventName, filterName, filterData)
     local eventId
     if Utils.GetTableKeyWithValue(defines.events, eventName) ~= nil then
         eventId = eventName
+        if filterName ~= nil then
+            local filteredEventHandler = function(eventData)
+                eventData.filterName = filterName
+                Events._HandleFilteredEvent(eventData)
+            end
+            script.on_event(eventId, filteredEventHandler, filterData)
+            return
+        end
     elseif MOD.customEventNameToId[eventName] ~= nil then
         eventId = MOD.customEventNameToId[eventName]
+    elseif type(eventName) == "number" then
+        eventId = eventName
     else
         eventId = script.generate_event_name()
         MOD.customEventNameToId[eventName] = eventId
     end
-    script.on_event(eventId, Events.CallHandler)
+    script.on_event(eventId, Events._HandleEvent)
 end
 
-function Events.RegisterHandler(eventName, handlerName, handlerFunction)
+function Events.RegisterHandler(eventName, handlerName, handlerFunction, filterName)
     local eventId
     if MOD.customEventNameToId[eventName] ~= nil then
         eventId = MOD.customEventNameToId[eventName]
+    elseif filterName ~= nil then
+        eventId = eventName
+        MOD.filteredEvents[eventId .. filterName] = MOD.filteredEvents[eventId .. filterName] or {}
+        MOD.filteredEvents[eventId .. filterName][handlerName] = handlerFunction
+        return
     else
         eventId = eventName
     end
-    if MOD.events[eventId] == nil then
-        MOD.events[eventId] = {}
-    end
+    MOD.events[eventId] = MOD.events[eventId] or {}
     MOD.events[eventId][handlerName] = handlerFunction
 end
 
-function Events.RemoveHandler(eventName, handlerName)
-    if MOD.events[eventName] == nil then
-        return
+function Events.RemoveHandler(eventName, handlerName, filterName)
+    if filterName ~= nil then
+        if MOD.filteredEvents[eventName .. filterName] == nil then
+            return
+        end
+        MOD.filteredEvents[eventName .. filterName][handlerName] = nil
+    else
+        if MOD.events[eventName] == nil then
+            return
+        end
+        MOD.events[eventName][handlerName] = nil
     end
-    MOD.events[eventName][handlerName] = nil
 end
 
-function Events.CallHandler(eventData)
+function Events._HandleEvent(eventData)
     local eventId = eventData.name
     if MOD.events[eventId] == nil then
         return
@@ -53,14 +70,29 @@ function Events.CallHandler(eventData)
     end
 end
 
-function Events.Fire(eventData)
+function Events._HandleFilteredEvent(eventData)
+    local eventId = eventData.name
+    local filterName = eventData.filterName
+    if MOD.filteredEvents[eventId .. filterName] == nil then
+        return
+    end
+    for _, handlerFunction in pairs(MOD.filteredEvents[eventId .. filterName]) do
+        handlerFunction(eventData)
+    end
+end
+
+function Events.RaiseEvent(eventData)
     eventData.tick = game.tick
     local eventName = eventData.name
     if defines.events[eventName] ~= nil then
         script.raise_event(eventName, eventData)
-    else
+    elseif MOD.customEventNameToId[eventName] ~= nil then
         local eventId = MOD.customEventNameToId[eventName]
         script.raise_event(eventId, eventData)
+    elseif type(eventName) == "number" then
+        script.raise_event(eventName, eventData)
+    else
+        error("WARNING: raise event called that doesn't exist: " .. eventName)
     end
 end
 
