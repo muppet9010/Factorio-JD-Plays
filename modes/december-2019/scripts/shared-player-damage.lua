@@ -21,6 +21,9 @@ SharedPlayerDamage.OnEntityDamagedFilteredCharacter = function(event)
     if (not global.SharedPlayerDamage.enabled) or event.force == global.SharedPlayerDamage.scriptForce then
         return
     end
+    if event.damage_type ~= nil and (event.damage_type == "snowball") then
+        return
+    end
     for i, player in pairs(game.connected_players) do
         if not (player.name == event.entity.player.name) then
             if player.character ~= nil then

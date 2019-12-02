@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 17.0.13
+Date: 2019-12-02
+  Features:
+  Changes:
+    - Added shared damage exclusion for "snowball" type damage to avoid conflicting with that mod.
+  Bugfixes:
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 17.0.12
 Date: 2019-11-23
   Features:
