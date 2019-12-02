@@ -47,8 +47,8 @@ BiterHuntGroup.OnStartup = function()
     end
     BiterHuntGroup.GenerateOtherNextBiterHuntGroupData()
     BiterHuntGroup.GuiRecreateAll()
-    if not EventScheduler.IsEventScheduled("BiterHuntGroup.On10Ticks", BiterHuntGroup.On10Ticks, nil) then
-        EventScheduler.ScheduleEvent(game.tick + 10, "BiterHuntGroup.On10Ticks", BiterHuntGroup.On10Ticks, nil)
+    if not EventScheduler.IsEventScheduled("BiterHuntGroup.On10Ticks", nil, nil) then
+        EventScheduler.ScheduleEvent(game.tick + 10, "BiterHuntGroup.On10Ticks", nil, nil)
     end
 end
 
@@ -172,7 +172,7 @@ end
 
 BiterHuntGroup.On10Ticks = function(event)
     local tick = event.tick
-    EventScheduler.ScheduleEvent(tick + 10, "BiterHuntGroup.On10Ticks", BiterHuntGroup.On10Ticks, nil)
+    EventScheduler.ScheduleEvent(tick + 10, "BiterHuntGroup.On10Ticks", nil, nil)
     if tick >= global.BiterHuntGroup.nextGroupTickWarning and not global.BiterHuntGroup.showIncomingGroupWarning then
         global.BiterHuntGroup.showIncomingGroupWarning = true
         BiterHuntGroup.GuiUpdateAllConnected()

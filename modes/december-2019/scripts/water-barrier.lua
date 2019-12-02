@@ -56,8 +56,8 @@ WaterBarrier.OnStartup = function()
     if not EventScheduler.IsEventScheduled("WaterBarrier.CheckPlayerPositions", WaterBarrier.CheckPlayerPositions, nil) then
         EventScheduler.ScheduleEvent(game.tick + 10, "WaterBarrier.CheckPlayerPositions", WaterBarrier.CheckPlayerPositions, nil)
     end
-    if not EventScheduler.IsEventScheduled("WaterBarrier.DamageThings", WaterBarrier.DamageThings, nil) then
-        EventScheduler.ScheduleEvent(game.tick + 60, "WaterBarrier.DamageThings", WaterBarrier.DamageThings, nil)
+    if not EventScheduler.IsEventScheduled("WaterBarrier.DamageThings", nil, nil) then
+        EventScheduler.ScheduleEvent(game.tick + 60, "WaterBarrier.DamageThings", nil, nil)
     end
 end
 
@@ -274,7 +274,7 @@ WaterBarrier.OnBuiltEntity = function(event)
 end
 
 WaterBarrier.DamageThings = function(data)
-    EventScheduler.ScheduleEvent(data.tick + 60, "WaterBarrier.DamageThings", WaterBarrier.DamageThings, nil)
+    EventScheduler.ScheduleEvent(data.tick + 60, "WaterBarrier.DamageThings", nil, nil)
     for k, v in pairs(global.WaterBarrier.buildingsToDamage) do
         local entity = v.entity
         if entity == nil or not entity.valid then

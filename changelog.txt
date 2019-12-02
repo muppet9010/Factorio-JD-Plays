@@ -5,6 +5,7 @@ Date: 2019-12-02
   Changes:
     - Added shared damage exclusion for "snowball" type damage to avoid conflicting with that mod.
   Bugfixes:
+    - Correct intermittent crash for some players with scheduled event functions shown in logs.
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.12
