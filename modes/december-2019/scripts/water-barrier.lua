@@ -264,7 +264,7 @@ end
 
 WaterBarrier.OnBuiltEntity = function(event)
     local createdEntity = event.created_entity
-    if createdEntity.health == nil then
+    if createdEntity == nil or not createdEntity.valid or createdEntity.health == nil then
         return
     end
     local damageToDo = WaterBarrier.GetDamageForEntityPosition(createdEntity)
@@ -295,6 +295,9 @@ end
 
 WaterBarrier.CheckVehicleLeftPosition = function(event)
     local vehicle = event.entity
+    if vehicle == nil or not vehicle.valid or vehicle.health == nil then
+        return
+    end
     local damageToDo = WaterBarrier.GetDamageForEntityPosition(vehicle)
     if damageToDo ~= nil then
         table.insert(global.WaterBarrier.vehiclesToDamage, {vehicle = vehicle, damageToDo = damageToDo})

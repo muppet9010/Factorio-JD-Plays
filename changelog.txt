@@ -6,6 +6,7 @@ Date: 2019-12-02
     - Added shared damage exclusion for "snowball" type damage to avoid conflicting with that mod.
   Bugfixes:
     - Correct intermittent crash for some players with scheduled event functions shown in logs.
+    - Fix crash when a vehicle died by non mod means.
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.12
