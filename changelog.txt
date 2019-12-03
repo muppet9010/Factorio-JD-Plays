@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.13
-Date: 2019-12-02
+Date: 2019-12-03
   Features:
     - Players are safe from suffering shared damage for 60 seconds after respawn.
     - Biter Hunting Packs, if the target player disconnects it is a loss. Biters will be re-targeted at spawn after the target dies or disconnects.
