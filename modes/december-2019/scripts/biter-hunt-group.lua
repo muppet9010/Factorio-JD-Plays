@@ -21,7 +21,7 @@ local biterHuntGroupState = {start = "start", groundMovement = "groundMovement",
 
 local testing = false
 if testing then
-    biterHuntGroupFrequencyRangeTicks = {600, 600}
+    biterHuntGroupFrequencyRangeTicks = {1800, 1800}
     biterHuntGroupSize = 2
     biterHuntGroupRadius = 5
 end
@@ -38,6 +38,7 @@ BiterHuntGroup.OnLoad = function()
     Events.RegisterHandler(defines.events.on_player_joined_game, "BiterHuntGroup", BiterHuntGroup.OnPlayerJoinedGame)
     Events.RegisterHandler(defines.events.on_player_died, "BiterHuntGroup", BiterHuntGroup.OnPlayerDied)
     EventScheduler.RegisterScheduledEventType("BiterHuntGroup.On10Ticks", BiterHuntGroup.On10Ticks)
+    Events.RegisterHandler(defines.events.on_player_left_game, "BiterHuntGroup", BiterHuntGroup.OnPlayerLeftGame)
 end
 
 BiterHuntGroup.OnStartup = function()
@@ -47,8 +48,8 @@ BiterHuntGroup.OnStartup = function()
     end
     BiterHuntGroup.GenerateOtherNextBiterHuntGroupData()
     BiterHuntGroup.GuiRecreateAll()
-    if not EventScheduler.IsEventScheduled("BiterHuntGroup.On10Ticks", BiterHuntGroup.On10Ticks, nil) then
-        EventScheduler.ScheduleEvent(game.tick + 10, "BiterHuntGroup.On10Ticks", BiterHuntGroup.On10Ticks, nil)
+    if not EventScheduler.IsEventScheduled("BiterHuntGroup.On10Ticks", nil, nil) then
+        EventScheduler.ScheduleEvent(game.tick + 10, "BiterHuntGroup.On10Ticks", nil, nil)
     end
 end
 
@@ -172,7 +173,7 @@ end
 
 BiterHuntGroup.On10Ticks = function(event)
     local tick = event.tick
-    EventScheduler.ScheduleEvent(tick + 10, "BiterHuntGroup.On10Ticks", BiterHuntGroup.On10Ticks, nil)
+    EventScheduler.ScheduleEvent(tick + 10, "BiterHuntGroup.On10Ticks", nil, nil)
     if tick >= global.BiterHuntGroup.nextGroupTickWarning and not global.BiterHuntGroup.showIncomingGroupWarning then
         global.BiterHuntGroup.showIncomingGroupWarning = true
         BiterHuntGroup.GuiUpdateAllConnected()
@@ -187,6 +188,8 @@ BiterHuntGroup.On10Ticks = function(event)
         global.BiterHuntGroup.stateChangeTick = tick + biterHuntGroupTunnelTime - biterHuntGroupPreTunnelEffectTime
         BiterHuntGroup.SelectTarget()
         game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]" .. " hunting " .. global.BiterHuntGroup.targetName)
+        global.BiterHuntGroup.id = global.BiterHuntGroup.id + 1
+        global.BiterHuntGroup.Results[global.BiterHuntGroup.id] = {playerWin = nil, targetName = global.BiterHuntGroup.targetName}
         BiterHuntGroup.CreateGroundMovement()
     elseif global.BiterHuntGroup.state == biterHuntGroupState.groundMovement then
         if tick < (global.BiterHuntGroup.stateChangeTick) then
@@ -204,9 +207,8 @@ BiterHuntGroup.On10Ticks = function(event)
             global.BiterHuntGroup.state = biterHuntGroupState.bitersActive
             global.BiterHuntGroup.stateChangeTick = nil
             BiterHuntGroup.EnsureValidateTarget()
-            global.BiterHuntGroup.id = global.BiterHuntGroup.id + 1
-            global.BiterHuntGroup.Results[global.BiterHuntGroup.id] = {playerWin = nil, targetName = global.BiterHuntGroup.targetName}
             BiterHuntGroup.SpawnEnemies()
+            BiterHuntGroup.CommandEnemies()
         end
     elseif global.BiterHuntGroup.state == biterHuntGroupState.bitersActive then
         for i, biter in pairs(global.BiterHuntGroup.Units) do
@@ -228,8 +230,19 @@ BiterHuntGroup.OnPlayerDied = function(event)
     local playerID = event.player_index
     if playerID == global.BiterHuntGroup.targetPlayerID and global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin == nil then
         global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin = false
-        game.print("[img=entity.medium-biter]      [img=entity.character-corpse]" .. global.BiterHuntGroup.targetName .. " lost")
-        BiterHuntGroup.ClearGlobals()
+        game.print("[img=entity.medium-biter]      [img=entity.character-corpse]" .. tostring(global.BiterHuntGroup.targetName) .. " lost")
+        global.BiterHuntGroup.TargetEntity = nil
+        BiterHuntGroup.CommandEnemies()
+    end
+end
+
+BiterHuntGroup.OnPlayerLeftGame = function(event)
+    local playerID = event.player_index
+    if playerID == global.BiterHuntGroup.targetPlayerID and global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin == nil then
+        global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin = false
+        game.print("[img=entity.medium-biter]      [img=entity.character]" .. tostring(global.BiterHuntGroup.targetName) .. " fled like a coward")
+        global.BiterHuntGroup.TargetEntity = nil
+        BiterHuntGroup.CommandEnemies()
     end
 end
 
@@ -342,18 +355,11 @@ BiterHuntGroup.SpawnEnemyPreEffects = function()
 end
 
 BiterHuntGroup.SpawnEnemies = function()
-    local targetEntity = global.BiterHuntGroup.TargetEntity
     local surface = global.BiterHuntGroup.Surface
     local biterForce = game.forces["enemy"]
     local spawnerTypes = {"biter-spawner", "spitter-spawner"}
     local evolution = Utils.RoundNumberToDecimalPlaces(biterForce.evolution_factor + biterHuntGroupEvolutionAddition, 3)
     global.BiterHuntGroup.Units = {}
-    local attackCommand
-    if targetEntity ~= nil then
-        attackCommand = {type = defines.command.attack, target = targetEntity}
-    else
-        attackCommand = {type = defines.command.attack_area, destination = BiterHuntGroup.GetPositionForTarget(surface), radius = 20}
-    end
     for _, groundEffect in pairs(global.BiterHuntGroup.GroundMovementEffects) do
         if not groundEffect.valid then
             Logging.LogPrint("ground effect has been removed by something, no biter can be made")
@@ -366,9 +372,24 @@ BiterHuntGroup.SpawnEnemies = function()
             if unit == nil then
                 Logging.LogPrint("failed to make unit at: " .. Logging.PositionToString(position))
             else
-                unit.set_command(attackCommand)
                 table.insert(global.BiterHuntGroup.Units, unit)
             end
+        end
+    end
+end
+
+BiterHuntGroup.CommandEnemies = function()
+    local targetEntity = global.BiterHuntGroup.TargetEntity
+    local surface = global.BiterHuntGroup.Surface
+    local attackCommand
+    if targetEntity ~= nil then
+        attackCommand = {type = defines.command.attack, target = targetEntity}
+    else
+        attackCommand = {type = defines.command.attack_area, destination = BiterHuntGroup.GetPositionForTarget(surface), radius = 20}
+    end
+    for _, unit in pairs(global.BiterHuntGroup.Units) do
+        if unit ~= nil and unit.valid then
+            unit.set_command(attackCommand)
         end
     end
 end
