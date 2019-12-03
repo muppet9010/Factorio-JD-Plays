@@ -170,42 +170,50 @@ WaterBarrier.ApplyBarrierTiles = function(leftTopTileInChunk, surface, chunkPos)
     if barrierOrientation == barrierOrientations.horizontal then
         if barrierDirection == barrierDirections.positive then
             local xVectorFoundLand = {}
+            local mapWidthMin = 0 - (surface.map_gen_settings.width / 2)
+            local mapWidthMax = surface.map_gen_settings.width / 2
+            local mapHeightMin = 0 - (surface.map_gen_settings.height / 2)
+            local mapHeightMax = surface.map_gen_settings.height / 2
             for x = leftTopTileInChunk.x, leftTopTileInChunk.x + 31 do
-                for y = leftTopTileInChunk.y, leftTopTileInChunk.y + 31 do
-                    if y >= global.WaterBarrier.deepWaterInnerEdgeTiles[x] then
-                        table.insert(tilesToChange, {name = "deepwater", position = {x, y}})
-                        if deepWaterSmokeAnimation == nil then
-                            deepWaterSmokePosX = leftTopTileInChunk.x + 16
-                            local deepWaterYEdge = global.WaterBarrier.deepWaterInnerEdgeTiles[leftTopTileInChunk.x + 16]
-                            local yChunkEdgeOffset = deepWaterYEdge % 32
-                            deepWaterSmokePosY = leftTopTileInChunk.y + 16 + yChunkEdgeOffset
-                            if math.floor((leftTopTileInChunk.y - deepWaterYEdge) / 32) < 1 then
-                                deepWaterSmokeAnimation = Constants.ModName .. "-water_barrier_smoke_light"
-                            else
-                                deepWaterSmokeAnimation = Constants.ModName .. "-water_barrier_smoke_heavy"
+                if x >= mapWidthMin and x < mapWidthMax then
+                    for y = leftTopTileInChunk.y, leftTopTileInChunk.y + 31 do
+                        if y >= mapHeightMin and y < mapHeightMax then
+                            if y >= global.WaterBarrier.deepWaterInnerEdgeTiles[x] then
+                                table.insert(tilesToChange, {name = "deepwater", position = {x, y}})
+                                if deepWaterSmokeAnimation == nil then
+                                    deepWaterSmokePosX = leftTopTileInChunk.x + 16
+                                    local deepWaterYEdge = global.WaterBarrier.deepWaterInnerEdgeTiles[leftTopTileInChunk.x + 16]
+                                    local yChunkEdgeOffset = deepWaterYEdge % 32
+                                    deepWaterSmokePosY = leftTopTileInChunk.y + 16 + yChunkEdgeOffset
+                                    if math.floor((leftTopTileInChunk.y - deepWaterYEdge) / 32) < 1 then
+                                        deepWaterSmokeAnimation = Constants.ModName .. "-water_barrier_smoke_light"
+                                    else
+                                        deepWaterSmokeAnimation = Constants.ModName .. "-water_barrier_smoke_heavy"
+                                    end
+                                end
+                            elseif y >= global.WaterBarrier.waterInnerEdgeTiles[x] then
+                                local replaceToWater = false
+                                if xVectorFoundLand[x] == nil then
+                                    local aboveTileName = surface.get_tile(x, y - 1).name
+                                    if aboveTileName ~= "water" and aboveTileName ~= "deepwater" then
+                                        xVectorFoundLand[x] = true
+                                        replaceToWater = true
+                                    else
+                                        xVectorFoundLand[x] = false
+                                    end
+                                end
+                                if xVectorFoundLand[x] == true then
+                                    replaceToWater = true
+                                else
+                                    local thisTileName = surface.get_tile(x, y).name
+                                    if thisTileName ~= "water" and thisTileName ~= "deepwater" then
+                                        replaceToWater = true
+                                    end
+                                end
+                                if replaceToWater then
+                                    table.insert(tilesToChange, {name = "water", position = {x, y}})
+                                end
                             end
-                        end
-                    elseif y >= global.WaterBarrier.waterInnerEdgeTiles[x] then
-                        local replaceToWater = false
-                        if xVectorFoundLand[x] == nil then
-                            local aboveTileName = surface.get_tile(x, y - 1).name
-                            if aboveTileName ~= "water" and aboveTileName ~= "deepwater" then
-                                xVectorFoundLand[x] = true
-                                replaceToWater = true
-                            else
-                                xVectorFoundLand[x] = false
-                            end
-                        end
-                        if xVectorFoundLand[x] == true then
-                            replaceToWater = true
-                        else
-                            local thisTileName = surface.get_tile(x, y).name
-                            if thisTileName ~= "water" and thisTileName ~= "deepwater" then
-                                replaceToWater = true
-                            end
-                        end
-                        if replaceToWater then
-                            table.insert(tilesToChange, {name = "water", position = {x, y}})
                         end
                     end
                 end

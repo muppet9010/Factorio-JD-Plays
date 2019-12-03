@@ -10,6 +10,7 @@ Date: 2019-12-02
   Bugfixes:
     - Correct intermittent crash for some players with scheduled event functions shown in logs.
     - Fix crash when a vehicle died by non mod means.
+    - Don't generate water barrier tiles past edge of map tile width
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.12
