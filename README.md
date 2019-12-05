@@ -11,7 +11,7 @@ December 2019 - Race To The North Pole
 - Players start with: 8 iron plate, 1 wood, 1 burner mining drill, 1 stone furnace, 10 research appropriate ammo, 1 research appropriate bullet gun
 - Players re-spawn with: 10 research appropriate ammo, 1 research appropriate bullet gun
 - Utilises Biter Hunting Packs as per May 2019 mode settings. With the addition that a hunted player disconnecting counts as a loss and the biters target spawn instead.
-- Shared damage between all players of 75% inbound damage (not damage after armor/shields). 60 second safe period after respawning.
+- Shared damage between all players of 75% inbound damage (not damage after armor/shields). 60 second safe period after respawning. Players killing via shared damage are named and shamed. Shared damage deaths suffered and caused are logged for a future use.
 - Rocket silo crafting is disabled. There is a silo around 5k tiles north somewhere. This rocket silo is invincible and can not be mined.
 - There is just ocean south of the starting area. It has a nice pretty random coastline with all the fish and freezing fog! Any player, building or vehicle out in the freezing fog will take damage.
 - There is a thick forest at the starting area which fades out to no trees from 100k to 150k north.

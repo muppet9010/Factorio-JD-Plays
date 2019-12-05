@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 17.0.14
+Date: 2019-12-05
+  Features:
+    - Shared damage - When a player dies to shared damage the "killer" player is named and shamed. Also logged to stats table (no viewer yet)
+  Changes:
+  Bugfixes:
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 17.0.13
 Date: 2019-12-03
   Features:
