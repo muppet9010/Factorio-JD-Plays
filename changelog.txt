@@ -3,6 +3,7 @@ Version: 17.0.15
 Date: 2019-12-06
   Features:
   Changes:
+    - Shared damage kill alerts include how many kills and deaths the 2 participants have had
   Bugfixes:
     - fixed typo in snowball mod compatibility added in 17.0.13
   Info:

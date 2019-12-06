@@ -37,7 +37,7 @@ SharedPlayerDamage.OnEntityDamagedFilteredCharacter = function(event)
     local damagedPlayer = event.entity.player
     global.SharedPlayerDamage.lastPlayerDamageSharedName = damagedPlayer.name
     for i, player in pairs(game.connected_players) do
-        if not (player.index == damagedPlayer.index) then
+        if player.index ~= damagedPlayer.index then
             if player.character ~= nil then
                 local playerLastRespawn = global.SharedPlayerDamage.PlayersLastRespawnTick[player.index]
                 local playerSafe = false
@@ -69,18 +69,20 @@ SharedPlayerDamage.OnPlayerDied = function(event)
     if deathCausingPlayer == nil then
         return
     end
-    local deadPlayer = game.get_player(event.player_index)
-    game.print({"messages.jd_plays-december-2019-shared_damage_died_by_player", deadPlayer.name, deathCausingPlayer})
     if global.SharedPlayerDamage.playerCausedOthersDeaths[deathCausingPlayer] == nil then
         global.SharedPlayerDamage.playerCausedOthersDeaths[deathCausingPlayer] = 1
     else
         global.SharedPlayerDamage.playerCausedOthersDeaths[deathCausingPlayer] = global.SharedPlayerDamage.playerCausedOthersDeaths[deathCausingPlayer] + 1
     end
-    if global.SharedPlayerDamage.playerDeathsFromOthers[deadPlayer.name] == nil then
-        global.SharedPlayerDamage.playerDeathsFromOthers[deadPlayer.name] = 1
+    local deathCausingPlayerCount = global.SharedPlayerDamage.playerCausedOthersDeaths[deathCausingPlayer]
+    local deadPlayerName = game.get_player(event.player_index).name
+    if global.SharedPlayerDamage.playerDeathsFromOthers[deadPlayerName] == nil then
+        global.SharedPlayerDamage.playerDeathsFromOthers[deadPlayerName] = 1
     else
-        global.SharedPlayerDamage.playerDeathsFromOthers[deadPlayer.name] = global.SharedPlayerDamage.playerDeathsFromOthers[deadPlayer.name] + 1
+        global.SharedPlayerDamage.playerDeathsFromOthers[deadPlayerName] = global.SharedPlayerDamage.playerDeathsFromOthers[deadPlayerName] + 1
     end
+    local deadPlayerCount = global.SharedPlayerDamage.playerDeathsFromOthers[deadPlayerName]
+    game.print({"messages.jd_plays-december-2019-shared_damage_died_by_player", deathCausingPlayer, deathCausingPlayerCount, deadPlayerName, deadPlayerCount})
 end
 
 return SharedPlayerDamage
