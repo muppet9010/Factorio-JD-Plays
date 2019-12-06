@@ -29,7 +29,7 @@ SharedPlayerDamage.OnEntityDamagedFilteredCharacter = function(event)
     if (not global.SharedPlayerDamage.enabled) or event.force == global.SharedPlayerDamage.scriptForce then
         return
     end
-    if event.damage_type ~= nil and (event.damage_type == "snowball") then
+    if event.damage_type ~= nil and (event.damage_type.name == "snowball") then
         return
     end
     local tick = event.tick
