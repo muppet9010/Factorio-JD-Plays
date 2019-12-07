@@ -187,7 +187,7 @@ BiterHuntGroup.On10Ticks = function(event)
         global.BiterHuntGroup.state = biterHuntGroupState.groundMovement
         global.BiterHuntGroup.stateChangeTick = tick + biterHuntGroupTunnelTime - biterHuntGroupPreTunnelEffectTime
         BiterHuntGroup.SelectTarget()
-        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]" .. " hunting " .. global.BiterHuntGroup.targetName .. " at [gps=" .. global.BiterHuntGroup.TargetEntity.position.x .. "," .. global.BiterHuntGroup.TargetEntity.position.y .. "]")
+        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]" .. " hunting " .. global.BiterHuntGroup.targetName .. " at [gps=" .. math.floor(global.BiterHuntGroup.TargetEntity.position.x) .. "," .. math.floor(global.BiterHuntGroup.TargetEntity.position.y) .. "]")
         global.BiterHuntGroup.id = global.BiterHuntGroup.id + 1
         global.BiterHuntGroup.Results[global.BiterHuntGroup.id] = {playerWin = nil, targetName = global.BiterHuntGroup.targetName}
         BiterHuntGroup.CreateGroundMovement()
@@ -216,12 +216,14 @@ BiterHuntGroup.On10Ticks = function(event)
                 global.BiterHuntGroup.Units[i] = nil
             end
         end
-        if #global.BiterHuntGroup.Units == 0 then
+        if Utils.GetTableNonNilLength(global.BiterHuntGroup.Units) == 0 then
             if global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin == nil then
                 global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin = true
                 game.print("[img=entity.medium-biter-corpse]      [img=entity.character]" .. global.BiterHuntGroup.targetName .. " won")
             end
             BiterHuntGroup.ClearGlobals()
+        else
+            BiterHuntGroup.CommandEnemies()
         end
     end
 end
@@ -383,12 +385,12 @@ BiterHuntGroup.CommandEnemies = function()
     local surface = global.BiterHuntGroup.Surface
     local attackCommand
     if targetEntity ~= nil then
-        attackCommand = {type = defines.command.attack, target = targetEntity}
+        attackCommand = {type = defines.command.attack, target = targetEntity, distraction = defines.distraction.none}
     else
-        attackCommand = {type = defines.command.attack_area, destination = BiterHuntGroup.GetPositionForTarget(surface), radius = 20}
+        attackCommand = {type = defines.command.attack_area, destination = BiterHuntGroup.GetPositionForTarget(surface), radius = 20, distraction = defines.distraction.by_anything}
     end
-    for _, unit in pairs(global.BiterHuntGroup.Units) do
-        if unit ~= nil and unit.valid then
+    for i, unit in pairs(global.BiterHuntGroup.Units) do
+        if unit ~= nil and unit.valid and not unit.has_command() then
             unit.set_command(attackCommand)
         end
     end
