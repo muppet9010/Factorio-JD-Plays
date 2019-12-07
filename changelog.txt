@@ -3,6 +3,7 @@ Version: 17.0.15
 Date: 2019-12-06
   Features:
     - Shared damage is proportional to the distance between the injured player and the other player vs the generated map size. So on big maps you need to be further away from them to recive half damage than a small map.
+    - Biter hunting group message includes clickable GPS location of targeted player's position.
   Changes:
     - Shared damage kill alerts include how many kills and deaths the 2 participants have had
   Bugfixes:

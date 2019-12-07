@@ -187,7 +187,7 @@ BiterHuntGroup.On10Ticks = function(event)
         global.BiterHuntGroup.state = biterHuntGroupState.groundMovement
         global.BiterHuntGroup.stateChangeTick = tick + biterHuntGroupTunnelTime - biterHuntGroupPreTunnelEffectTime
         BiterHuntGroup.SelectTarget()
-        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]" .. " hunting " .. global.BiterHuntGroup.targetName)
+        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]" .. " hunting " .. global.BiterHuntGroup.targetName .. " at [gps=" .. global.BiterHuntGroup.TargetEntity.position.x .. "," .. global.BiterHuntGroup.TargetEntity.position.y .. "]")
         global.BiterHuntGroup.id = global.BiterHuntGroup.id + 1
         global.BiterHuntGroup.Results[global.BiterHuntGroup.id] = {playerWin = nil, targetName = global.BiterHuntGroup.targetName}
         BiterHuntGroup.CreateGroundMovement()
