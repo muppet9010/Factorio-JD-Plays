@@ -9,6 +9,8 @@ Date: 2019-12-06
   Bugfixes:
     - fixed typo in snowball mod compatibility added in 17.0.13
     - Shared damage - damage <= 0 is ignored
+    - Biter hunt groups will be given new attack orders should thye lose them.
+    - Biter hunt group will not declare player vicotry before they are all dead now.
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.14
