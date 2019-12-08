@@ -1,6 +1,7 @@
 local Events = require("utility/events")
 --local Logging = require("utility/logging")
 local Utils = require("utility/utils")
+local Commands = require("utility/commands")
 local SharedPlayerDamage = {}
 
 --[[-----------------------------------------------------------
@@ -27,6 +28,7 @@ SharedPlayerDamage.OnLoad = function()
     Events.RegisterHandler(defines.events.on_player_respawned, "SharedPlayerDamage", SharedPlayerDamage.OnPlayerRespawned)
     Events.RegisterHandler(defines.events.on_player_died, "SharedPlayerDamage", SharedPlayerDamage.OnPlayerDied)
     Events.RegisterHandler(defines.events.on_chunk_generated, "SharedPlayerDamage", SharedPlayerDamage.OnChunkGenerated)
+    Commands.Register("shared_damage_write_out_kills_deaths", {"api-description.jd_plays-december-2019-shared_damage_write_out_kills_deaths"}, SharedPlayerDamage.WriteOutSharedDamageKillsDeaths, false)
 end
 
 SharedPlayerDamage.OnStartup = function()
@@ -112,6 +114,11 @@ SharedPlayerDamage.OnChunkGenerated = function(event)
     if distance > global.SharedPlayerDamage.farestGeneratedMapDistance then
         global.SharedPlayerDamage.farestGeneratedMapDistance = distance
     end
+end
+
+SharedPlayerDamage.WriteOutSharedDamageKillsDeaths = function(commandData)
+    local killsDeaths = {["other players killed"] = global.SharedPlayerDamage.playerCausedOthersDeaths, ["deaths caused by others"] = global.SharedPlayerDamage.playerDeathsFromOthers}
+    game.write_file("Shared Damage Deaths Kills.txt", Utils.TableContentsToJSON(killsDeaths), false, commandData.player_index)
 end
 
 return SharedPlayerDamage

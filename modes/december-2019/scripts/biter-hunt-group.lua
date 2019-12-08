@@ -34,11 +34,12 @@ BiterHuntGroup.CreateGlobals = function()
 end
 
 BiterHuntGroup.OnLoad = function()
-    Commands.Register("biters_attack_now", {"api-description.jd_plays-december-2019_biters_attack_now"}, BiterHuntGroup.MakeBitersAttackNow, true)
+    Commands.Register("biters_attack_now", {"api-description.jd_plays-december-2019-biters_attack_now"}, BiterHuntGroup.MakeBitersAttackNow, true)
     Events.RegisterHandler(defines.events.on_player_joined_game, "BiterHuntGroup", BiterHuntGroup.OnPlayerJoinedGame)
     Events.RegisterHandler(defines.events.on_player_died, "BiterHuntGroup", BiterHuntGroup.OnPlayerDied)
     EventScheduler.RegisterScheduledEventType("BiterHuntGroup.On10Ticks", BiterHuntGroup.On10Ticks)
     Events.RegisterHandler(defines.events.on_player_left_game, "BiterHuntGroup", BiterHuntGroup.OnPlayerLeftGame)
+    Commands.Register("biters_write_out_hunt_group_results", {"api-description.jd_plays-december-2019-biters_write_out_hunt_group_results"}, BiterHuntGroup.WriteOutHuntGroupResults, false)
 end
 
 BiterHuntGroup.OnStartup = function()
@@ -394,6 +395,10 @@ BiterHuntGroup.CommandEnemies = function()
             unit.set_command(attackCommand)
         end
     end
+end
+
+BiterHuntGroup.WriteOutHuntGroupResults = function(commandData)
+    game.write_file("Biter Hunt Group Results.txt", Utils.TableContentsToJSON(global.BiterHuntGroup.Results), false, commandData.player_index)
 end
 
 return BiterHuntGroup

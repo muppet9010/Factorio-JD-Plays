@@ -4,6 +4,8 @@ Date: 2019-12-06
   Features:
     - Shared damage is proportional to the distance between the injured player and the other player vs the generated map size. So on big maps you need to be further away from them to recive half damage than a small map.
     - Biter hunting group message includes clickable GPS location of targeted player's position.
+    - Biter Hunt Groups has command to write out results as JSON: biters_write_out_hunt_group_results
+    - Shared damage has command to write out results as JSON: shared_damage_write_out_kills_deaths
   Changes:
     - Shared damage kill alerts include how many kills and deaths the 2 participants have had
     - Includes command to do a one off fix on bad old repeating scheduled events: december_2019_fix_scheduled_events
