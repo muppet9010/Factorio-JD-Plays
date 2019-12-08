@@ -1,6 +1,17 @@
 ---------------------------------------------------------------------------------------------------
+Version: 17.0.16
+Date: 2019-12-08
+  Features:
+  Changes:
+  Bugfixes:
+    - Fix the biters targeting message to handle spawn as target
+    - Fix the december_2019_fix_scheduled_events command and event scheduling library in MP with 2+ players
+    - Biter hunt groups will chase players in vehicles and handle them getting in/out
+    - When a biter hunt group kills the targeted player it will attack towards spawn.
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 17.0.15
-Date: 2019-12-06
+Date: 2019-12-08
   Features:
     - Shared damage is proportional to the distance between the injured player and the other player vs the generated map size. So on big maps you need to be further away from them to recive half damage than a small map.
     - Biter hunting group message includes clickable GPS location of targeted player's position.
