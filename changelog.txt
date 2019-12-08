@@ -6,6 +6,7 @@ Date: 2019-12-08
   Bugfixes:
     - Fix the biters targeting message to handle spawn as target
     - Fix the december_2019_fix_scheduled_events command and event scheduling library in MP with 2+ players
+    - Biter hunt groups will chase players in vehicles and handle them getting in/out
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.15

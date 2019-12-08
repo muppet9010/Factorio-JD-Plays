@@ -40,6 +40,7 @@ BiterHuntGroup.OnLoad = function()
     EventScheduler.RegisterScheduledEventType("BiterHuntGroup.On10Ticks", BiterHuntGroup.On10Ticks)
     Events.RegisterHandler(defines.events.on_player_left_game, "BiterHuntGroup", BiterHuntGroup.OnPlayerLeftGame)
     Commands.Register("biters_write_out_hunt_group_results", {"api-description.jd_plays-december-2019-biters_write_out_hunt_group_results"}, BiterHuntGroup.WriteOutHuntGroupResults, false)
+    Events.RegisterHandler(defines.events.on_player_driving_changed_state, "BiterHuntGroup", BiterHuntGroup.OnPlayerDrivingChangedState)
 end
 
 BiterHuntGroup.OnStartup = function()
@@ -87,14 +88,18 @@ BiterHuntGroup.SelectTarget = function()
     local players = game.connected_players
     local validPlayers = {}
     for _, player in pairs(players) do
-        if player.character and BiterHuntGroup.ValidSurface(player.surface) then
+        if (player.vehicle or player.character) and BiterHuntGroup.ValidSurface(player.surface) then
             table.insert(validPlayers, player)
         end
     end
     if #validPlayers >= 1 then
         local target = validPlayers[math.random(1, #validPlayers)]
         global.BiterHuntGroup.targetPlayerID = target.index
-        global.BiterHuntGroup.TargetEntity = target.character
+        if target.vehicle ~= nil then
+            global.BiterHuntGroup.TargetEntity = target.vehicle
+        else
+            global.BiterHuntGroup.TargetEntity = target.character
+        end
         global.BiterHuntGroup.targetName = target.name
         global.BiterHuntGroup.Surface = target.surface
     else
@@ -235,7 +240,7 @@ BiterHuntGroup.OnPlayerDied = function(event)
     if playerID == global.BiterHuntGroup.targetPlayerID and global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin == nil then
         global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin = false
         game.print("[img=entity.medium-biter]      [img=entity.character-corpse]" .. tostring(global.BiterHuntGroup.targetName) .. " lost")
-        global.BiterHuntGroup.TargetEntity = nil
+        BiterHuntGroup.ClearGlobals()
         BiterHuntGroup.CommandEnemies()
     end
 end
@@ -245,7 +250,7 @@ BiterHuntGroup.OnPlayerLeftGame = function(event)
     if playerID == global.BiterHuntGroup.targetPlayerID and global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin == nil then
         global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin = false
         game.print("[img=entity.medium-biter]      [img=entity.character]" .. tostring(global.BiterHuntGroup.targetName) .. " fled like a coward")
-        global.BiterHuntGroup.TargetEntity = nil
+        BiterHuntGroup.ClearGlobals()
         BiterHuntGroup.CommandEnemies()
     end
 end
@@ -255,7 +260,6 @@ BiterHuntGroup.ClearGlobals = function()
     global.BiterHuntGroup.targetPlayerID = nil
     global.BiterHuntGroup.TargetEntity = nil
     global.BiterHuntGroup.targetName = nil
-    global.BiterHuntGroup.Surface = nil
     BiterHuntGroup.GuiUpdateAllConnected()
 end
 
@@ -384,22 +388,71 @@ BiterHuntGroup.SpawnEnemies = function()
 end
 
 BiterHuntGroup.CommandEnemies = function()
+    local debug = false
     local targetEntity = global.BiterHuntGroup.TargetEntity
     local attackCommand
     if targetEntity ~= nil then
+        Logging.Log("CommandEnemies - targetEntity not nil - targetEntity: " .. targetEntity.name, debug)
         attackCommand = {type = defines.command.attack, target = targetEntity, distraction = defines.distraction.none}
     else
+        Logging.Log("CommandEnemies - targetEntity is nil - target spawn", debug)
         attackCommand = {type = defines.command.attack_area, destination = BiterHuntGroup.GetPositionForTarget(), radius = 20, distraction = defines.distraction.by_anything}
     end
     for i, unit in pairs(global.BiterHuntGroup.Units) do
-        if unit ~= nil and unit.valid and not unit.has_command() then
-            unit.set_command(attackCommand)
+        if unit.valid then
+            local applyCommand
+            if not unit.has_command() then
+                applyCommand = true
+                Logging.Log("unit " .. i .. " has no command", debug)
+            elseif unit.has_command() then
+                if unit.command.type == defines.command.attack then
+                    if targetEntity == nil then
+                        applyCommand = true
+                        Logging.Log("unit " .. i .. " attack nill target", debug)
+                    elseif unit.command.target == nil then
+                        applyCommand = true
+                        Logging.Log("unit " .. i .. " attack no target", debug)
+                    elseif not unit.command.target.valid then
+                        applyCommand = true
+                        Logging.Log("unit " .. i .. " attack invalid target", debug)
+                    elseif unit.command.target ~= targetEntity then
+                        applyCommand = true
+                        Logging.Log("unit " .. i .. " attack old target entity", debug)
+                    else
+                        applyCommand = false
+                        Logging.Log("unit " .. i .. " attack valid target", debug)
+                    end
+                elseif unit.command.type == defines.command.attack_area then
+                    applyCommand = false
+                    Logging.Log("unit " .. i .. " attack area", debug)
+                else
+                    applyCommand = true
+                    Logging.Log("unit " .. i .. " other command", debug)
+                end
+            end
+            if applyCommand then
+                unit.set_command(attackCommand)
+                Logging.LogPrint("unit " .. i .. " updated command", debug)
+            end
         end
     end
 end
 
 BiterHuntGroup.WriteOutHuntGroupResults = function(commandData)
     game.write_file("Biter Hunt Group Results.txt", Utils.TableContentsToJSON(global.BiterHuntGroup.Results), false, commandData.player_index)
+end
+
+BiterHuntGroup.OnPlayerDrivingChangedState = function(event)
+    local playerId = event.player_index
+    if playerId ~= global.BiterHuntGroup.targetPlayerID then
+        return
+    end
+    local player = game.get_player(playerId)
+    if player.vehicle and player.vehicle.valid then
+        global.BiterHuntGroup.TargetEntity = player.vehicle
+    else
+        global.BiterHuntGroup.TargetEntity = player.character
+    end
 end
 
 return BiterHuntGroup

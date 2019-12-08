@@ -8,6 +8,9 @@ MOD.customEventNameToId = MOD.customEventNameToId or {}
 MOD.filteredEvents = MOD.filteredEvents or {}
 
 function Events.RegisterEvent(eventName, filterName, filterData)
+    if eventName == nil then
+        error("Events.RegisterEvent called with missing arguments")
+    end
     local eventId
     if Utils.GetTableKeyWithValue(defines.events, eventName) ~= nil then
         eventId = eventName
@@ -31,6 +34,9 @@ function Events.RegisterEvent(eventName, filterName, filterData)
 end
 
 function Events.RegisterHandler(eventName, handlerName, handlerFunction, filterName)
+    if eventName == nil or handlerName == nil or handlerFunction == nil then
+        error("Events.RegisterHandler called with missing arguments")
+    end
     local eventId
     if MOD.customEventNameToId[eventName] ~= nil then
         eventId = MOD.customEventNameToId[eventName]
@@ -47,6 +53,9 @@ function Events.RegisterHandler(eventName, handlerName, handlerFunction, filterN
 end
 
 function Events.RemoveHandler(eventName, handlerName, filterName)
+    if eventName == nil or handlerName == nil then
+        error("Events.RemoveHandler called with missing arguments")
+    end
     if filterName ~= nil then
         if MOD.filteredEvents[eventName .. filterName] == nil then
             return

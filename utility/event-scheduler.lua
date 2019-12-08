@@ -33,10 +33,16 @@ function EventScheduler.OnSchedulerCycle(event)
 end
 
 function EventScheduler.RegisterScheduledEventType(eventName, eventFunction)
+    if eventName == nil or eventFunction == nil then
+        error("EventScheduler.RegisterScheduledEventType called with missing arguments")
+    end
     MOD.scheduledEventNames[eventName] = eventFunction
 end
 
 function EventScheduler.ScheduleEvent(eventTick, eventName, instanceId, eventData)
+    if eventName == nil then
+        error("EventScheduler.ScheduleEvent called with missing arguments")
+    end
     local nowTick = game.tick
     if eventTick == nil or eventTick <= nowTick then
         eventTick = nowTick + 1
@@ -53,6 +59,9 @@ function EventScheduler.ScheduleEvent(eventTick, eventName, instanceId, eventDat
 end
 
 function EventScheduler.RemoveScheduledEvents(targetEventName, targetInstanceId, targetTick)
+    if targetEventName == nil then
+        error("EventScheduler.RemoveScheduledEvents called with missing arguments")
+    end
     targetInstanceId = GetDefaultInstanceId(targetInstanceId)
     if targetTick == nil then
         for tick, events in pairs(global.UTILITYSCHEDULEDFUNCTIONS) do
@@ -82,6 +91,9 @@ function EventScheduler._RemoveScheduledEventsFromTickEntry(events, targetEventN
 end
 
 function EventScheduler.IsEventScheduled(targetEventName, targetInstanceId, targetTick)
+    if targetEventName == nil then
+        error("EventScheduler.IsEventScheduled called with missing arguments")
+    end
     global.UTILITYSCHEDULEDFUNCTIONS = global.UTILITYSCHEDULEDFUNCTIONS or {}
     targetInstanceId = GetDefaultInstanceId(targetInstanceId)
     if targetTick == nil then
