@@ -47,7 +47,7 @@ BiterHuntGroup.OnStartup = function()
         global.BiterHuntGroup.nextGroupTick = game.tick
         BiterHuntGroup.ScheduleNextBiterHuntGroup()
     end
-    BiterHuntGroup.GenerateOtherNextBiterHuntGroupData()
+    BiterHuntGroup.UpdateNextGroupTickWarning()
     BiterHuntGroup.GuiRecreateAll()
     if not EventScheduler.IsEventScheduled("BiterHuntGroup.On10Ticks", nil, nil) then
         EventScheduler.ScheduleEvent(game.tick + 10, "BiterHuntGroup.On10Ticks", nil, nil)
@@ -61,16 +61,16 @@ end
 
 BiterHuntGroup.ScheduleNextBiterHuntGroup = function()
     global.BiterHuntGroup.nextGroupTick = global.BiterHuntGroup.nextGroupTick + math.random(biterHuntGroupFrequencyRangeTicks[1], biterHuntGroupFrequencyRangeTicks[2])
-    BiterHuntGroup.GenerateOtherNextBiterHuntGroupData()
+    BiterHuntGroup.UpdateNextGroupTickWarning()
 end
 
-BiterHuntGroup.GenerateOtherNextBiterHuntGroupData = function()
+BiterHuntGroup.UpdateNextGroupTickWarning = function()
     global.BiterHuntGroup.nextGroupTickWarning = global.BiterHuntGroup.nextGroupTick - incomingBitersWarningTime
 end
 
 BiterHuntGroup.MakeBitersAttackNow = function()
     global.BiterHuntGroup.nextGroupTick = game.tick + incomingBitersWarningTime
-    BiterHuntGroup.GenerateOtherNextBiterHuntGroupData()
+    BiterHuntGroup.UpdateNextGroupTickWarning()
 end
 
 BiterHuntGroup.ValidSurface = function(surface)
@@ -188,7 +188,8 @@ BiterHuntGroup.On10Ticks = function(event)
         global.BiterHuntGroup.state = biterHuntGroupState.groundMovement
         global.BiterHuntGroup.stateChangeTick = tick + biterHuntGroupTunnelTime - biterHuntGroupPreTunnelEffectTime
         BiterHuntGroup.SelectTarget()
-        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]" .. " hunting " .. global.BiterHuntGroup.targetName .. " at [gps=" .. math.floor(global.BiterHuntGroup.TargetEntity.position.x) .. "," .. math.floor(global.BiterHuntGroup.TargetEntity.position.y) .. "]")
+        local biterTargetPos = BiterHuntGroup.GetPositionForTarget()
+        game.print("[img=entity.medium-biter][img=entity.medium-biter][img=entity.medium-biter]" .. " hunting " .. global.BiterHuntGroup.targetName .. " at [gps=" .. math.floor(biterTargetPos.x) .. "," .. math.floor(biterTargetPos.y) .. "]")
         global.BiterHuntGroup.id = global.BiterHuntGroup.id + 1
         global.BiterHuntGroup.Results[global.BiterHuntGroup.id] = {playerWin = nil, targetName = global.BiterHuntGroup.targetName}
         BiterHuntGroup.CreateGroundMovement()

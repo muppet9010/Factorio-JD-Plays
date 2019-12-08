@@ -7,7 +7,7 @@
     "homepage": "https://mods.factorio.com/mod/jd_plays",
     "factorio_version": "0.17",
     "dependencies": [
-        "base >= 0.17.75"
+        "base >= 0.17.79"
     ],
     "description": "Streamer JD-Plays server mod"
 }
