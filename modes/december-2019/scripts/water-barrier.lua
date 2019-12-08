@@ -53,11 +53,12 @@ WaterBarrier.OnStartup = function()
     elseif barrierOrientation == barrierOrientations.vertical then
         Logging.LogPrint("barrierOrientations.vertical NOT DONE YET")
     end
-    if not EventScheduler.IsEventScheduled("WaterBarrier.CheckPlayerPositions", WaterBarrier.CheckPlayerPositions, nil) then
-        EventScheduler.ScheduleEvent(game.tick + 10, "WaterBarrier.CheckPlayerPositions", WaterBarrier.CheckPlayerPositions, nil)
+    --Do at non 10 rounding offset from 0 to start
+    if not EventScheduler.IsEventScheduled("WaterBarrier.CheckPlayerPositions", nil, nil) then
+        EventScheduler.ScheduleEvent(game.tick + 1, "WaterBarrier.CheckPlayerPositions", nil, nil)
     end
     if not EventScheduler.IsEventScheduled("WaterBarrier.DamageThings", nil, nil) then
-        EventScheduler.ScheduleEvent(game.tick + 60, "WaterBarrier.DamageThings", nil, nil)
+        EventScheduler.ScheduleEvent(game.tick + 2, "WaterBarrier.DamageThings", nil, nil)
     end
 end
 
@@ -249,7 +250,7 @@ WaterBarrier.GetDamageForEntityPosition = function(entity)
 end
 
 WaterBarrier.CheckPlayerPositions = function()
-    EventScheduler.ScheduleEvent(game.tick + 60, "WaterBarrier.CheckPlayerPositions", WaterBarrier.CheckPlayerPositions, nil)
+    EventScheduler.ScheduleEvent(game.tick + 60, "WaterBarrier.CheckPlayerPositions", nil, nil)
     if barrierOrientation == barrierOrientations.horizontal then
         if barrierDirection == barrierDirections.positive then
             for _, player in pairs(game.connected_players) do
