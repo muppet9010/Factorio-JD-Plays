@@ -1,5 +1,5 @@
 --local Logging = require("utility/logging")
-
+local Utils = require("utility/utils")
 local EventScheduler = {}
 MOD = MOD or {}
 MOD.scheduledEventNames = MOD.scheduledEventNames or {}
@@ -50,13 +50,19 @@ end
 
 function EventScheduler.RemoveScheduledEvents(targetEventName, targetInstanceId, targetTick)
     if targetTick == nil then
-        for _, events in pairs(global.UTILITYSCHEDULEDFUNCTIONS) do
+        for tick, events in pairs(global.UTILITYSCHEDULEDFUNCTIONS) do
             EventScheduler._RemoveScheduledEventsFromTickEntry(events, targetEventName, targetInstanceId)
+            if Utils.GetTableNonNilLength(events) == 0 then
+                global.UTILITYSCHEDULEDFUNCTIONS[tick] = nil
+            end
         end
     else
         local events = global.UTILITYSCHEDULEDFUNCTIONS[targetTick]
         if events ~= nil then
             EventScheduler._RemoveScheduledEventsFromTickEntry(events, targetEventName, targetInstanceId)
+            if Utils.GetTableNonNilLength(events) == 0 then
+                global.UTILITYSCHEDULEDFUNCTIONS[targetTick] = nil
+            end
         end
     end
 end

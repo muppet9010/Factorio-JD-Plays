@@ -10,6 +10,8 @@ local WaterBarrier = require(modeFilePath .. "/scripts/water-barrier")
 local GenerateTrees = require(modeFilePath .. "/scripts/generate-trees")
 local RocksToBiterEggs = require(modeFilePath .. "/scripts/rocks-to-biter-eggs")
 local MapCleanse = require(modeFilePath .. "/scripts/map-cleanse")
+local Commands = require("utility/commands")
+local Logging = require("utility/logging")
 
 if settings.startup["jdplays_mode"].value ~= "december-2019" then
     return
@@ -58,6 +60,20 @@ local function OnStartup()
     RocksToBiterEggs.OnStartup()
 end
 
+--[[
+    A command to be used as a one off to remove the old duplicate & bad scheduled events and to trigger them to be re-added cleanly. The changes to fix scheduled event crashes is what stops the issue re-occuring.
+]]
+local function FixScheduledEvents()
+    Logging.Log(Utils.TableContentsToJSON(global.UTILITYSCHEDULEDFUNCTIONS, "scheduled stuff before:"))
+    EventScheduler.RemoveScheduledEvents("WaterBarrier.CheckPlayerPositions", nil, nil)
+    EventScheduler.RemoveScheduledEvents("WaterBarrier.DamageThings", nil, nil)
+    EventScheduler.RemoveScheduledEvents("BiterHuntGroup.On10Ticks", nil, nil)
+    WaterBarrier.OnStartup()
+    BiterHuntGroup.OnStartup()
+    Logging.Log(Utils.TableContentsToJSON(global.UTILITYSCHEDULEDFUNCTIONS, "scheduled stuff after:"))
+    game.print("Scheduled Events Fixed")
+end
+
 script.on_init(OnStartup)
 script.on_configuration_changed(OnStartup)
 script.on_load(OnLoad)
@@ -73,3 +89,4 @@ Events.RegisterEvent(defines.events.on_robot_built_entity)
 Events.RegisterEvent(defines.events.on_player_driving_changed_state)
 Events.RegisterEvent(defines.events.on_player_left_game)
 EventScheduler.RegisterScheduler()
+Commands.Register("december_2019_fix_scheduled_events", ": fix scheduled events from previous versions", FixScheduledEvents, true)
