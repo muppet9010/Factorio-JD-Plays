@@ -269,7 +269,8 @@ BiterHuntGroup.EnsureValidateTarget = function()
     end
 end
 
-BiterHuntGroup.GetPositionForTarget = function(surface)
+BiterHuntGroup.GetPositionForTarget = function()
+    local surface = global.BiterHuntGroup.Surface
     local targetEntity = global.BiterHuntGroup.TargetEntity
     if targetEntity ~= nil and targetEntity.valid then
         return targetEntity.position
@@ -286,7 +287,7 @@ BiterHuntGroup._CreateGroundMovement = function(distance, attempts)
     local biterPositions = {}
     local angleRad = math.rad(360 / biterHuntGroupSize)
     local surface = global.BiterHuntGroup.Surface
-    local centerPosition = BiterHuntGroup.GetPositionForTarget(surface)
+    local centerPosition = BiterHuntGroup.GetPositionForTarget()
     distance = distance or biterHuntGroupRadius
     for i = 1, biterHuntGroupSize do
         local x = centerPosition.x + (distance * math.cos(angleRad * i))
@@ -384,12 +385,11 @@ end
 
 BiterHuntGroup.CommandEnemies = function()
     local targetEntity = global.BiterHuntGroup.TargetEntity
-    local surface = global.BiterHuntGroup.Surface
     local attackCommand
     if targetEntity ~= nil then
         attackCommand = {type = defines.command.attack, target = targetEntity, distraction = defines.distraction.none}
     else
-        attackCommand = {type = defines.command.attack_area, destination = BiterHuntGroup.GetPositionForTarget(surface), radius = 20, distraction = defines.distraction.by_anything}
+        attackCommand = {type = defines.command.attack_area, destination = BiterHuntGroup.GetPositionForTarget(), radius = 20, distraction = defines.distraction.by_anything}
     end
     for i, unit in pairs(global.BiterHuntGroup.Units) do
         if unit ~= nil and unit.valid and not unit.has_command() then

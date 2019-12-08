@@ -4,6 +4,10 @@ local EventScheduler = {}
 MOD = MOD or {}
 MOD.scheduledEventNames = MOD.scheduledEventNames or {}
 
+local function GetDefaultInstanceId(instanceId)
+    return instanceId or ""
+end
+
 function EventScheduler.RegisterScheduler()
     script.on_event(defines.events.on_tick, EventScheduler.OnSchedulerCycle)
 end
@@ -37,7 +41,7 @@ function EventScheduler.ScheduleEvent(eventTick, eventName, instanceId, eventDat
     if eventTick == nil or eventTick <= nowTick then
         eventTick = nowTick + 1
     end
-    instanceId = instanceId or ""
+    instanceId = GetDefaultInstanceId(instanceId)
     eventData = eventData or {}
     global.UTILITYSCHEDULEDFUNCTIONS = global.UTILITYSCHEDULEDFUNCTIONS or {}
     global.UTILITYSCHEDULEDFUNCTIONS[eventTick] = global.UTILITYSCHEDULEDFUNCTIONS[eventTick] or {}
@@ -49,6 +53,7 @@ function EventScheduler.ScheduleEvent(eventTick, eventName, instanceId, eventDat
 end
 
 function EventScheduler.RemoveScheduledEvents(targetEventName, targetInstanceId, targetTick)
+    targetInstanceId = GetDefaultInstanceId(targetInstanceId)
     if targetTick == nil then
         for tick, events in pairs(global.UTILITYSCHEDULEDFUNCTIONS) do
             EventScheduler._RemoveScheduledEventsFromTickEntry(events, targetEventName, targetInstanceId)
@@ -68,15 +73,17 @@ function EventScheduler.RemoveScheduledEvents(targetEventName, targetInstanceId,
 end
 
 function EventScheduler._RemoveScheduledEventsFromTickEntry(events, targetEventName, targetInstanceId)
-    if targetInstanceId == nil then
-        events[targetEventName] = nil
-    elseif events[targetEventName] ~= nil then
+    if events[targetEventName] ~= nil then
         events[targetEventName][targetInstanceId] = nil
+        if Utils.GetTableNonNilLength(events[targetEventName]) == 0 then
+            events[targetEventName] = nil
+        end
     end
 end
 
 function EventScheduler.IsEventScheduled(targetEventName, targetInstanceId, targetTick)
     global.UTILITYSCHEDULEDFUNCTIONS = global.UTILITYSCHEDULEDFUNCTIONS or {}
+    targetInstanceId = GetDefaultInstanceId(targetInstanceId)
     if targetTick == nil then
         for _, events in pairs(global.UTILITYSCHEDULEDFUNCTIONS) do
             if EventScheduler._IsEventScheduledInTickEntry(events, targetEventName, targetInstanceId) then
@@ -95,14 +102,8 @@ function EventScheduler.IsEventScheduled(targetEventName, targetInstanceId, targ
 end
 
 function EventScheduler._IsEventScheduledInTickEntry(events, targetEventName, targetInstanceId)
-    if targetInstanceId == nil then
-        if events[targetEventName] ~= nil then
-            return true
-        end
-    else
-        if events[targetEventName] ~= nil and events[targetEventName][targetInstanceId] ~= nil then
-            return true
-        end
+    if events[targetEventName] ~= nil and events[targetEventName][targetInstanceId] ~= nil then
+        return true
     end
 end
 
