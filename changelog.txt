@@ -3,7 +3,9 @@ Version: 17.0.17
 Date: 2019-12-10
   Features:
   Changes:
+    - Biter Hunt Groups will no longer be treated like vanilla biters. So not despawned or told to join a biter base.
   Bugfixes:
+    - Once biters are targeting spawn they will stop being re-directed.
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.16

@@ -382,6 +382,8 @@ BiterHuntGroup.SpawnEnemies = function()
                 Logging.LogPrint("failed to make unit at: " .. Logging.PositionToString(position))
             else
                 table.insert(global.BiterHuntGroup.Units, unit)
+                unit.ai_settings.allow_destroy_when_commands_fail = false
+                unit.ai_settings.allow_try_return_to_spawner = false
             end
         end
     end
