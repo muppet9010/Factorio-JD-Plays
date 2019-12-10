@@ -12,6 +12,7 @@ local SharedPlayerDamage = {}
 local ticksSafeAfterRespawn = 60 * 60
 local damageMultiplier = 0.75
 local playerSpawnPos = {x = 0, y = 0}
+local surfaceName = "nauvis"
 
 SharedPlayerDamage.CreateGlobals = function()
     global.SharedPlayerDamage = global.SharedPlayerDamage or {}
@@ -20,7 +21,9 @@ SharedPlayerDamage.CreateGlobals = function()
     global.SharedPlayerDamage.lastPlayerDamageSharedName = global.SharedPlayerDamage.lastPlayerDamageSharedName or nil
     global.SharedPlayerDamage.playerCausedOthersDeaths = global.SharedPlayerDamage.playerCausedOthersDeaths or {}
     global.SharedPlayerDamage.playerDeathsFromOthers = global.SharedPlayerDamage.playerDeathsFromOthers or {}
-    global.SharedPlayerDamage.farestGeneratedMapDistance = global.SharedPlayerDamage.farestGeneratedMapDistance or 0
+    if global.SharedPlayerDamage.farestGeneratedMapDistance == nil or global.SharedPlayerDamage.farestGeneratedMapDistance == 0 then
+        SharedPlayerDamage.CalculateFarestCurrentMapDistance()
+    end
 end
 
 SharedPlayerDamage.OnLoad = function()
@@ -113,6 +116,13 @@ SharedPlayerDamage.OnChunkGenerated = function(event)
     local distance = Utils.GetDistance(playerSpawnPos, measureToPos)
     if distance > global.SharedPlayerDamage.farestGeneratedMapDistance then
         global.SharedPlayerDamage.farestGeneratedMapDistance = distance
+    end
+end
+
+SharedPlayerDamage.CalculateFarestCurrentMapDistance = function()
+    global.SharedPlayerDamage.farestGeneratedMapDistance = 0
+    for chunk in game.get_surface(surfaceName).get_chunks() do
+        SharedPlayerDamage.OnChunkGenerated(chunk)
     end
 end
 
