@@ -31,6 +31,7 @@ BiterHuntGroup.CreateGlobals = function()
     global.BiterHuntGroup.Units = global.BiterHuntGroup.Units or {}
     global.BiterHuntGroup.Results = global.BiterHuntGroup.Results or {}
     global.BiterHuntGroup.id = global.BiterHuntGroup.id or 0
+    global.BiterHuntGroup.unitsTargetedAtSpawn = global.BiterHuntGroup.unitsTargetedAtSpawn or nil
 end
 
 BiterHuntGroup.OnLoad = function()
@@ -240,8 +241,9 @@ BiterHuntGroup.OnPlayerDied = function(event)
     if playerID == global.BiterHuntGroup.targetPlayerID and global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin == nil then
         global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin = false
         game.print("[img=entity.medium-biter]      [img=entity.character-corpse]" .. tostring(global.BiterHuntGroup.targetName) .. " lost")
-        BiterHuntGroup.ClearGlobals()
+        global.BiterHuntGroup.TargetEntity = nil
         BiterHuntGroup.CommandEnemies()
+        BiterHuntGroup.ClearGlobals()
     end
 end
 
@@ -250,8 +252,9 @@ BiterHuntGroup.OnPlayerLeftGame = function(event)
     if playerID == global.BiterHuntGroup.targetPlayerID and global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin == nil then
         global.BiterHuntGroup.Results[global.BiterHuntGroup.id].playerWin = false
         game.print("[img=entity.medium-biter]      [img=entity.character]" .. tostring(global.BiterHuntGroup.targetName) .. " fled like a coward")
-        BiterHuntGroup.ClearGlobals()
+        global.BiterHuntGroup.TargetEntity = nil
         BiterHuntGroup.CommandEnemies()
+        BiterHuntGroup.ClearGlobals()
     end
 end
 
@@ -260,6 +263,7 @@ BiterHuntGroup.ClearGlobals = function()
     global.BiterHuntGroup.targetPlayerID = nil
     global.BiterHuntGroup.TargetEntity = nil
     global.BiterHuntGroup.targetName = nil
+    global.BiterHuntGroup.unitsTargetedAtSpawn = nil
     BiterHuntGroup.GuiUpdateAllConnected()
 end
 
@@ -395,9 +399,14 @@ BiterHuntGroup.CommandEnemies = function()
     local attackCommand
     if targetEntity ~= nil then
         Logging.Log("CommandEnemies - targetEntity not nil - targetEntity: " .. targetEntity.name, debug)
+        global.BiterHuntGroup.unitsTargetedAtSpawn = false
         attackCommand = {type = defines.command.attack, target = targetEntity, distraction = defines.distraction.none}
     else
         Logging.Log("CommandEnemies - targetEntity is nil - target spawn", debug)
+        if global.BiterHuntGroup.unitsTargetedAtSpawn then
+            return
+        end
+        global.BiterHuntGroup.unitsTargetedAtSpawn = true
         attackCommand = {type = defines.command.attack_area, destination = BiterHuntGroup.GetPositionForTarget(), radius = 20, distraction = defines.distraction.by_anything}
     end
     for i, unit in pairs(global.BiterHuntGroup.Units) do
