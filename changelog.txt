@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 17.0.18
+Date: 2019-12-13
+  Features:
+  Changes:
+  Bugfixes:
+    - Make mod safe to be removed from save and then re-added later, or atleast not error on load...
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 17.0.17
 Date: 2019-12-10
   Features:
