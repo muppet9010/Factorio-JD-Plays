@@ -89,7 +89,7 @@ BiterHuntGroup.SelectTarget = function()
     local players = game.connected_players
     local validPlayers = {}
     for _, player in pairs(players) do
-        if (player.vehicle or player.character) and BiterHuntGroup.ValidSurface(player.surface) then
+        if (player.vehicle ~= nil or player.character ~= nil) and BiterHuntGroup.ValidSurface(player.surface) then
             table.insert(validPlayers, player)
         end
     end
