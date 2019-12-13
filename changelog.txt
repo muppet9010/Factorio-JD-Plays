@@ -6,6 +6,8 @@ Date: 2019-12-13
   Bugfixes:
     - Make mod safe to be removed from save and then re-added later, or atleast not error on load...
     - Shared Damage - Tweak player kills other player shared damage message so it reads properly
+    - Biter Hunt Group - fixed logic path where biter target entity could be kept after becoming invalid if player driving state changed after death event.
+    - Added protection to try and catch invalid biter target entity command scenarios. Will try to fix state so mod doesn't crash, but it 'may' lead to a messed up mod state that can be cleared later.
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.17
