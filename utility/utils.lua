@@ -352,8 +352,7 @@ end
 function Utils._TableContentsToJSON(target_table, name, tablesLogged, indent, stop_traversing)
     indent = indent or 1
     local indentstring = string.rep(" ", (indent * 4))
-    local table_id = string.gsub(tostring(target_table), "table: ", "")
-    tablesLogged[table_id] = "logged"
+    tablesLogged[target_table] = "logged"
     local table_contents = ""
     if Utils.GetTableLength(target_table) > 0 then
         for k, v in pairs(target_table) do
@@ -363,12 +362,11 @@ function Utils._TableContentsToJSON(target_table, name, tablesLogged, indent, st
             elseif type(k) == "nil" then
                 key = '"nil"'
             elseif type(k) == "table" then
-                local sub_table_id = string.gsub(tostring(k), "table: ", "")
                 if stop_traversing == true then
-                    key = '"CIRCULAR LOOP TABLE'
+                    key = '"CIRCULAR LOOP TABLE"'
                 else
                     local sub_stop_traversing = nil
-                    if tablesLogged[sub_table_id] ~= nil then
+                    if tablesLogged[k] ~= nil then
                         sub_stop_traversing = true
                     end
                     key = "{\r\n" .. Utils._TableContentsToJSON(k, name, tablesLogged, indent + 1, sub_stop_traversing) .. "\r\n" .. indentstring .. "}"
@@ -383,12 +381,11 @@ function Utils._TableContentsToJSON(target_table, name, tablesLogged, indent, st
             elseif type(v) == "nil" then
                 value = '"nil"'
             elseif type(v) == "table" then
-                local sub_table_id = string.gsub(tostring(v), "table: ", "")
                 if stop_traversing == true then
-                    value = '"CIRCULAR LOOP TABLE'
+                    value = '"CIRCULAR LOOP TABLE"'
                 else
                     local sub_stop_traversing = nil
-                    if tablesLogged[sub_table_id] ~= nil then
+                    if tablesLogged[v] ~= nil then
                         sub_stop_traversing = true
                     end
                     value = "{\r\n" .. Utils._TableContentsToJSON(v, name, tablesLogged, indent + 1, sub_stop_traversing) .. "\r\n" .. indentstring .. "}"
