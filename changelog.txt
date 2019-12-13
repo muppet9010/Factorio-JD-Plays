@@ -5,6 +5,7 @@ Date: 2019-12-13
   Changes:
   Bugfixes:
     - Make mod safe to be removed from save and then re-added later, or atleast not error on load...
+    - Shared Damage - Tweak player kills other player shared damage message so it reads properly
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.17
