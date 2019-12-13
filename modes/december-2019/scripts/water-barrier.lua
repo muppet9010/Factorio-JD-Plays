@@ -59,13 +59,10 @@ WaterBarrier.OnStartup = function()
         Logging.LogPrint("barrierOrientations.vertical NOT DONE YET")
     end
     --Do at non 10 rounding offset from 0 to start
-    Logging.Log(Utils.TableContentsToJSON(global.UTILITYSCHEDULEDFUNCTIONS))
     if not EventScheduler.IsEventScheduled("WaterBarrier.CheckPlayerPositions", nil, nil) then
-        Logging.Log("added: CheckPlayerPositions")
         EventScheduler.ScheduleEvent(game.tick + 1, "WaterBarrier.CheckPlayerPositions", nil, nil)
     end
     if not EventScheduler.IsEventScheduled("WaterBarrier.DamageThings", nil, nil) then
-        Logging.Log("added: DamageThings")
         EventScheduler.ScheduleEvent(game.tick + 2, "WaterBarrier.DamageThings", nil, nil)
     end
 end
