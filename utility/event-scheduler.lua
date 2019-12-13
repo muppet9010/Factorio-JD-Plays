@@ -94,7 +94,9 @@ function EventScheduler.IsEventScheduled(targetEventName, targetInstanceId, targ
     if targetEventName == nil then
         error("EventScheduler.IsEventScheduled called with missing arguments")
     end
-    global.UTILITYSCHEDULEDFUNCTIONS = global.UTILITYSCHEDULEDFUNCTIONS or {}
+    if global.UTILITYSCHEDULEDFUNCTIONS == nil then
+        return false
+    end
     targetInstanceId = GetDefaultInstanceId(targetInstanceId)
     if targetTick == nil then
         for _, events in pairs(global.UTILITYSCHEDULEDFUNCTIONS) do

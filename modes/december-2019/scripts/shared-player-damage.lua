@@ -36,7 +36,12 @@ end
 
 SharedPlayerDamage.OnStartup = function()
     if global.SharedPlayerDamage.scriptForce == nil then
-        global.SharedPlayerDamage.scriptForce = game.create_force("sharedPlayerDamage")
+        local sharedPlayerDamageForceName = "sharedPlayerDamage"
+        if game.forces[sharedPlayerDamageForceName] ~= nil then
+            global.SharedPlayerDamage.scriptForce = game.forces[sharedPlayerDamageForceName]
+        else
+            global.SharedPlayerDamage.scriptForce = game.create_force(sharedPlayerDamageForceName)
+        end
     end
 end
 

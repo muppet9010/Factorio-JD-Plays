@@ -38,7 +38,12 @@ end
 
 WaterBarrier.OnStartup = function()
     if global.WaterBarrier.scriptForce == nil then
-        global.WaterBarrier.scriptForce = game.create_force("Water Barrier")
+        local waterBarrierForceName = "Water Barrier"
+        if game.forces[waterBarrierForceName] ~= nil then
+            global.WaterBarrier.scriptForce = game.forces[waterBarrierForceName]
+        else
+            global.WaterBarrier.scriptForce = game.create_force(waterBarrierForceName)
+        end
     end
     if barrierOrientation == barrierOrientations.horizontal then
         if barrierDirection == barrierDirections.positive then
