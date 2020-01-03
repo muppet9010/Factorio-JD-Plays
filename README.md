@@ -4,6 +4,12 @@
 A mod for streamer JD-Plays's server. Includes a number of distinct modes.
 Note that older months code should work, but are untested retrospectively.
 
+January 2020 - Just a few trees
+----------
+
+- Tested with Factorio 0.17.79
+- There is a thin spread of trees everywhere
+
 December 2019 - Race To The North Pole
 ----------
 

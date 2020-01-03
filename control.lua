@@ -1,3 +1,4 @@
+require("modes/january-2020/control")
 require("modes/december-2019/control")
 require("modes/april-2019/control")
 require("modes/may-2019/control")
