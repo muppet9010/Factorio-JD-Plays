@@ -4,8 +4,21 @@ local Events = require("utility/events")
 
 local treeChance = 0.1
 
+GenerateTrees.CreateGlobals = function()
+    global.randomTrees = global.randomTrees or nil
+end
+
 GenerateTrees.OnLoad = function()
     Events.RegisterHandler(defines.events.on_chunk_generated, "GenerateTrees.OnChunkGenerated", GenerateTrees.OnChunkGenerated)
+end
+
+GenerateTrees.PopulateRandomTrees = function()
+    global.randomTrees = {}
+    for _, entityType in pairs(game.entity_prototypes) do
+        if entityType.type == "tree" then
+            table.insert(global.randomTrees, entityType.name)
+        end
+    end
 end
 
 GenerateTrees.OnChunkGenerated = function(event)
@@ -17,13 +30,8 @@ GenerateTrees.OnChunkGenerated = function(event)
     local maxX = area.right_bottom.x
     local maxY = area.right_bottom.y
 
-    local trees = {}
-    if remote.interfaces["biter_reincarnation"] == nil then
-        for _, entityType in pairs(game.entity_prototypes) do
-            if entityType.type == "tree" then
-                table.insert(trees, entityType.name)
-            end
-        end
+    if global.randomTrees == nil then
+        GenerateTrees.PopulateRandomTrees()
     end
 
     for x = minX, maxX do
@@ -31,8 +39,8 @@ GenerateTrees.OnChunkGenerated = function(event)
             if math.random() < thisChunkTreeChance then
                 local position = {x, y}
                 local tree_type
-                if #trees > 0 then
-                    tree_type = trees[math.random(#trees)]
+                if remote.interfaces["biter_reincarnation"] == nil then
+                    tree_type = global.randomTrees[math.random(#global.randomTrees)]
                 else
                     tree_type = remote.call("biter_reincarnation", "get_random_tree_type_for_position", surface, position)
                 end

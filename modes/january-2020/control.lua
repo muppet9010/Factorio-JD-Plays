@@ -13,6 +13,7 @@ local function OnPlayerCreated(event)
 end
 
 local function CreateGlobals()
+    GenerateTrees.CreateGlobals()
 end
 
 local function OnLoad()
