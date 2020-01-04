@@ -2,6 +2,14 @@
 Version: 17.0.19
 Date: 2020-01-03
   Features:
+  Changes:
+  Bugfixes:
+  Info:
+    - January 2020: tweak tree list obtaining code to be more effecient and clearer to read
+---------------------------------------------------------------------------------------------------
+Version: 17.0.19
+Date: 2020-01-03
+  Features:
     - Add mode "January 2020"
   Changes:
   Bugfixes:
