@@ -290,6 +290,16 @@ function Utils.GetMaxKey(table)
     return max_key
 end
 
+function Utils.GetTableValueByIndexCount(table, indexCount)
+    local count = 0
+    for _, v in pairs(table) do
+        count = count + 1
+        if count == indexCount then
+            return v
+        end
+    end
+end
+
 function Utils.CalculateBoundingBoxFromPositionAndRange(position, range)
     return {
         left_top = {

@@ -95,13 +95,11 @@ end
 Events.RaiseEvent = function(eventData)
     eventData.tick = game.tick
     local eventName = eventData.name
-    if defines.events[eventName] ~= nil then
-        script.raise_event(defines.events[eventName], eventData)
+    if type(eventName) == "number" then
+        script.raise_event(eventName, eventData)
     elseif MOD.customEventNameToId[eventName] ~= nil then
         local eventId = MOD.customEventNameToId[eventName]
         script.raise_event(eventId, eventData)
-    elseif type(eventName) == "number" then
-        script.raise_event(eventName, eventData)
     else
         error("WARNING: raise event called that doesn't exist: " .. eventName)
     end
@@ -111,12 +109,10 @@ end
 Events.RaiseInternalEvent = function(eventData)
     eventData.tick = game.tick
     local eventName = eventData.name
-    if defines.events[eventName] ~= nil then
+    if type(eventName) == "number" then
         Events._HandleEvent(eventData)
     elseif MOD.customEventNameToId[eventName] ~= nil then
         eventData.name = MOD.customEventNameToId[eventName]
-        Events._HandleEvent(eventData)
-    elseif type(eventName) == "number" then
         Events._HandleEvent(eventData)
     else
         error("WARNING: raise event called that doesn't exist: " .. eventName)

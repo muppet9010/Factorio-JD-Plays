@@ -3,6 +3,7 @@ Version: 18.1.0
 Date: 2020-03-30
   Features:
     - Mod updated to Factorio 0.18 - all old modes removed as they are left in 0.17
+    - Added mode March 2020 - Egg surprise
   Changes:
   Bugfixes:
   Info:
