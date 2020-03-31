@@ -6,13 +6,31 @@ if settings.startup["jdplays_mode"].value ~= "march-2020" then
     return
 end
 
+local excludedItems = {
+    ["infinity-chest"] = true,
+    ["infinity-pipe"] = true,
+    ["player-port"] = true,
+    ["simple-entity-with-force"] = true,
+    ["simple-entity-with-owner"] = true,
+    ["computer"] = true,
+    ["selection-tool"] = true,
+    ["item-with-inventory"] = true,
+    ["item-with-label"] = true,
+    ["item-with-tags"] = true,
+    ["blueprint"] = true,
+    ["deconstruction-planner"] = true,
+    ["upgrade-planner"] = true,
+    ["blueprint-book"] = true,
+    ["copy-paste-tool"] = true,
+    ["cut-paste-tool"] = true
+}
+
 local function SelectItemName(previousItems)
-    previousItems = previousItems or {}
     local items = game.item_prototypes
     local gameItemsCount = Utils.GetTableNonNilLength(items)
     local randomIndex = math.random(gameItemsCount)
     local itemName = Utils.GetTableValueByIndexCount(items, randomIndex).name
-    if previousItems[itemName] ~= nil and itemName ~= "infinity-chest" then
+    if previousItems[itemName] ~= nil or excludedItems[itemName] ~= nil then
         itemName = SelectItemName(previousItems)
     end
     return itemName
@@ -62,16 +80,9 @@ local function OnLoad()
     end
 end
 
-local function OnSettingChanged(event)
-    --if event == nil or event.setting == "xxxxx" then
-    --	local x = tonumber(settings.global["xxxxx"].value)
-    --end
-end
-
 local function OnStartup()
     CreateGlobals()
     OnLoad()
-    OnSettingChanged(nil)
 
     Utils.DisableIntroMessage()
     Utils.DisableWinOnRocket()
@@ -79,6 +90,5 @@ end
 
 script.on_init(OnStartup)
 script.on_configuration_changed(OnStartup)
-script.on_event(defines.events.on_runtime_mod_setting_changed, OnSettingChanged)
 script.on_load(OnLoad)
 Events.RegisterEvent(defines.events.on_player_created)
