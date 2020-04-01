@@ -22,7 +22,8 @@ local excludedItems = {
     ["upgrade-planner"] = true,
     ["blueprint-book"] = true,
     ["copy-paste-tool"] = true,
-    ["cut-paste-tool"] = true
+    ["cut-paste-tool"] = true,
+    ["dummy-steel-axe"] = true
 }
 
 local function SelectItemName(previousItems)
