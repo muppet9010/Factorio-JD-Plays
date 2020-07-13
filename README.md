@@ -8,8 +8,14 @@ All older months from 0.17 removed from mod as part of upgrade to 0.18.
 JD P00ber - August 2020
 ================
 
-- Tested with Factorio 0.18.35
-- Add per player spawn/respawn locations. Set via command.
+- Tested with Factorio 0.18.35.
+- Command to set spawn/respawn location per player:
+
+    - Set via command "jd_plays_set_player_spawn".
+    - Taken as 3 arguments seperated by a space in format: PlayerName XPos YPos.
+    - If the player name has a space in it wrap the name in single or double quotes, i.e. 'player name'
+    - Example: /jd_plays_set_player_spawn muppet9010 10 90
+- Command to show all players spawn locations in chat, "jd_plays_get_players_spawns".
 
 March 2020 - Easter Egg Suprise
 ================

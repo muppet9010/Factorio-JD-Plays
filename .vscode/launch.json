@@ -11,7 +11,11 @@
             "factorioPath": "C:/FactorioModding/bin/x64/factorio.exe",
             "factorioArgs": [
                 "--window-size=1280x720"
-            ]
+            ],
+            "hookControl": true,
+            "hookData": true,
+            "hookSettings": true,
+            "hookLog": true
         }
     ]
 }
