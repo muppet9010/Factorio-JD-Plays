@@ -15,6 +15,7 @@ JD P00ber - August 2020
     - Taken as 3 arguments seperated by a space in format: PlayerName XPos YPos.
     - If the player name has a space in it wrap the name in single or double quotes, i.e. 'player name'
     - Example: /jd_plays_set_player_spawn muppet9010 10 90
+	
 - Command to show all players spawn locations in chat, "jd_plays_get_players_spawns".
 
 March 2020 - Easter Egg Suprise
