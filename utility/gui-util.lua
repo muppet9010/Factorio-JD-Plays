@@ -25,7 +25,7 @@ GuiUtil.AddElement = function(elementDetails)
     elementDetails.name = GuiUtil.GenerateGuiElementName(elementDetails.name, elementDetails.type)
     elementDetails.caption = GuiUtil._ReplaceSelfWithGeneratedName(elementDetails, "caption")
     elementDetails.tooltip = GuiUtil._ReplaceSelfWithGeneratedName(elementDetails, "tooltip")
-    if string.sub(elementDetails.style, 1, 7) == "muppet_" then
+    if elementDetails.style ~= nil and string.sub(elementDetails.style, 1, 7) == "muppet_" then
         elementDetails.style = elementDetails.style .. StyleDataStyleVersion
     end
     local returnElements = {}
@@ -84,7 +84,7 @@ GuiUtil.AddElement = function(elementDetails)
     end
 end
 
---Gets a specific name and type from the returned elements table from the GuiUtil.AddElement() function.
+-- Gets a specific name and type from the returned elements table from the GuiUtil.AddElement() function.
 GuiUtil.GetNameFromReturnedElements = function(returnedElements, elementName, elementType)
     if returnedElements == nil then
         return nil
@@ -109,7 +109,7 @@ GuiUtil.GetElementFromPlayersReferenceStorage = function(playerIndex, storeName,
     return global.GUIUtilPlayerElementReferenceStorage[playerIndex][storeName][GuiUtil.GenerateGuiElementName(name, type)]
 end
 
---Similar options as AddElement where arguments exist. Some don't make sense for updating and so not supported.
+-- Similar options as AddElement where arguments exist. Some don't make sense for updating and so not supported.
 GuiUtil.UpdateElementFromPlayersReferenceStorage = function(playerIndex, storeName, name, type, arguments, ignoreMissingElement)
     ignoreMissingElement = ignoreMissingElement or false
     local element = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, storeName, name, type)
