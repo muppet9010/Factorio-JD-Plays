@@ -6,7 +6,6 @@ data:extend(
             collision_mask = {},
             flags = {"placeable-off-grid"},
             picture = {
-                -- Temp graphics.
                 filename = "__base__/graphics/entity/wall/wall-vertical.png",
                 priority = "extra-high",
                 width = 32,

@@ -13,12 +13,9 @@ data:extend(
             collision_mask = {
                 "ground-tile",
                 "water-tile",
-                "resource-layer",
-                "floor-layer",
                 "item-layer",
                 "object-layer",
-                "player-layer",
-                "doodad-layer"
+                "player-layer"
             },
             layer_group = refNuclearGroundTile.layer_group,
             layer = 200,

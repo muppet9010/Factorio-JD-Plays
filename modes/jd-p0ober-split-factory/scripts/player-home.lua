@@ -4,21 +4,24 @@ local Utils = require("utility/utils")
 local Logging = require("utility/logging")
 local Commands = require("utility/commands")
 local EventScheduler = require("utility/event-scheduler")
+local Interfaces = require("utility/interfaces")
 
-local SpawnXMiddle = 1 -- This is 1 so that both the 2 divider tiles are in the same chunk.
 local SpawnXOffset = 20
 
 PlayerHome.CreateGlobals = function()
     global.playerHome = global.playerHome or {}
-    global.playerHome.team = global.playerHome.team or {}
+    global.playerHome.teams = global.playerHome.teams or {}
     --[[
-        [teamId] = {
-            teamId = string team of either "west" or "east".
-            spawnPoint = spawnPoint of this team.
-            playerNames = table of player names on this team.
+        [id] = {
+            id = string team of either "west" or "east".
+            spawnPosition = position of this team's spawn.
+            playerIds = table of the player ids who have joined this team.
+            playerNames = table of player names who will join this team on first connect.
+            teleporterEntity = entity of the teleporter.
+            otherTeam = ref to the other teams global object.
         }
     ]]
-    global.playerHome.playerNameToTeam = global.playerHome.playerNameToTeam or {}
+    global.playerHome.playerIdToTeam = global.playerHome.playerIdToTeam or {}
 end
 
 PlayerHome.OnLoad = function()
@@ -27,44 +30,66 @@ PlayerHome.OnLoad = function()
 end
 
 PlayerHome.OnStartup = function()
-    if global.playerHome.team["west"] == nil then
-        PlayerHome.CreateTeam("west", SpawnXMiddle - SpawnXOffset, {"P0ober", "muppet9010"})
-    end
-    if global.playerHome.team["east"] == nil then
-        PlayerHome.CreateTeam("east", SpawnXMiddle + SpawnXOffset, {"JDPlays"})
+    Utils.DisableIntroMessage()
+    if global.playerHome.teams["west"] == nil then
+        PlayerHome.CreateTeam("west", global.divider.dividerMiddleXPos - SpawnXOffset, {"Poober"})
+        PlayerHome.CreateTeam("east", global.divider.dividerMiddleXPos + SpawnXOffset, {"JD-Plays"})
+        global.playerHome.teams["west"].otherTeam = global.playerHome.teams["east"]
+        global.playerHome.teams["east"].otherTeam = global.playerHome.teams["west"]
     end
 end
 
 PlayerHome.CreateTeam = function(teamId, spawnXPos, defaultPlayersOnTeam)
     local team = {
-        teamId = teamId,
+        id = teamId,
         spawnPosition = {x = spawnXPos, y = 0},
+        playerIds = {},
         playerNames = {}
     }
     for _, playerName in pairs(defaultPlayersOnTeam) do
-        team.playerNames[playerName] = playerName
-        global.playerHome.playerNameToTeam[playerName] = team
+        PlayerHome.AddPlayerNameToTeam(playerName, team)
     end
+    team.teleporterEntity = Interfaces.Call("Teleporter.AddTeleporter", team, game.surfaces["nauvis"], {x = spawnXPos, y = 20})
 
-    global.playerHome.team[teamId] = team
+    global.playerHome.teams[teamId] = team
+end
+
+PlayerHome.AddPlayerNameToTeam = function(playerName, team)
+    team.playerNames[playerName] = playerName
 end
 
 PlayerHome.OnPlayerCreated = function(event)
     local player = game.get_player(event.player_index)
+
     if player.controller_type == defines.controllers.cutscene then
         -- So we have a player character to teleport.
         player.exit_cutscene()
     end
+    -- Check if player is on the named list.
+    local team
+    for _, teamToCheck in pairs(global.playerHome.teams) do
+        if teamToCheck.playerNames[player.name] ~= nil then
+            team = teamToCheck
+            break
+        end
+    end
+    -- If player isn't named give them a random team.
+    if team == nil then
+        local teamNames = Utils.TableKeyToArray(global.playerHome.teams)
+        team = global.playerHome.teams[teamNames[math.random(1, 2)]]
+        PlayerHome.AddPlayerNameToTeam(player.name, team)
+        game.print("Player '" .. player.name .. "' isn't set on a team, so added to the '" .. team.id .. "' randomly")
+    end
+    --Record the player ID to the team, rather than relying on names.
+    team.playerIds[player.index] = player
+    global.playerHome.playerIdToTeam[player.index] = team
+
     PlayerHome.OnPlayerSpawn(event)
 end
 
 PlayerHome.OnPlayerSpawn = function(event)
     local player = game.get_player(event.player_index)
-    local team = global.playerHome.playerNameToTeam[player.name]
-    if team == nil then
-        game.print("Player '" .. player.name .. "' isn't on any team !!!")
-        return
-    end
+    local team = global.playerHome.playerIdToTeam[player.index]
     local targetPos, surface = team.spawnPosition, player.surface
 
     local foundPos = surface.find_non_colliding_position("character", targetPos, 0, 0.2)

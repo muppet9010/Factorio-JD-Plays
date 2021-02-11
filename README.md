@@ -16,6 +16,23 @@ There is an unpassable divide splitting the map in half; east and west. P0ober h
 - Spider vehicles will be returned if they cross the divide, although they can walk over it techncially.
 - Command to set other named player on either JD or P00ber's team.
 
+<<<<<<< HEAD
+Teleporters code and graphics copied from the Teleporters mod by Klonan. https://github.com/Klonan/Teleporters
+
+Known downsides:
+- The divider tiles will remove cliffs, but they are needed to make pathfinding simple (same as water).
+- Biters will run around the end of the wall as it only gets generated when players go near it, not whne biters run a long way.
+
+
+
+TODO:
+    - Add the 15 minute tracker post teleport.
+    - Handle Spiders, either:
+        - Track a player when in a spider vehicle and if they go over the line teleport the player out of it.
+        - Add a large entity on the divider that blocks spider legs collision so they can't step over the divider.
+    - change the divider entity graphics for a laser beam type thing...
+    - add the command to assign a player name to a team incase anyone wants to play along.
+=======
 TODO:
     - Add the teleporter behaviour.
     - Add the 15 minute tracker post teleport.
@@ -24,3 +41,4 @@ TODO:
     - change the divider entity graphics for a laswer beam type thing...
     - add the command incase anyone wants to play along.
     - confirm JD and P0obers ingame names (case sensitive)
+>>>>>>> 20.2.1
