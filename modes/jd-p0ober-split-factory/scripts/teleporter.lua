@@ -12,8 +12,7 @@ Teleporter.CreateGlobals = function()
     --[[
         [id] = {
             id = player index.
-            oldCharacter = LuaEntity of the character entity they left in their own team's side.
-            newCharacter = LuaEntity of the character entity they gained in the other team's side.
+            characterEntity = LuaEntity of the character entity they gained in the other team's side.
             timeTransfered = tick they transferred across.
             timeToDie = time of this teleported character to die.
         }
@@ -51,35 +50,49 @@ Teleporter.TeleportPlayer = function(characterEntity, teleporterEntity)
         -- Player is leaving their team's side and going to the other team's side.
         local teleportedPlayerEntry = {
             id = player.index,
-            oldCharacter = characterEntity,
             timeTransfered = game.tick,
             timeToDie = game.tick + TeleportedTTL
         }
 
-        -- Detach and handle old character entity.
-        player.character = nil
-        --TODO: find valid spot first
-        characterEntity.teleport(playerTeam.spawnPosition)
-        characterEntity.walking_state = {walking = false}
-
-        -- Move to new position and create character there.
-        --TODO: find valid spot first
-        player.teleport(playerTeam.otherTeam.spawnPosition)
-        player.create_character()
-        teleportedPlayerEntry.newCharacter = player.character
+        Teleporter.TeleportCharacter(player, playerTeam.otherTeam.spawnPosition)
+        teleportedPlayerEntry.characterEntity = player.character
 
         --TODO: schedule a return
-        --TODO: record for this newCharacter to have its death tracked and handled
+        --TODO: record for this characterEntity to have its death tracked and handled
         global.teleporter.teleportedPlayers[teleportedPlayerEntry.id] = teleportedPlayerEntry
     else
         -- Player is leaving the other team's side and returning to their team's side.
-        local teleportedPlayerEntry = global.teleporter.teleportedPlayers[player.index]
-        player.character = teleportedPlayerEntry.oldCharacter
-        --TODO: drop all inventories on the ground
-        teleportedPlayerEntry.newCharacter.destroy() -- Don't kill as messes up death statistics.
-        --TODO: end the scheduled return
+        --local teleportedPlayerEntry = global.teleporter.teleportedPlayers[player.index]
+
+        Teleporter.TeleportCharacter(player, playerTeam.spawnPosition)
+
+        --TODO: end the scheduled return and stop tracking the characters death
         global.teleporter.teleportedPlayers[player.index] = nil
     end
+end
+
+Teleporter.TeleportCharacter = function(player, targetPosition)
+    local character = player.character
+
+    -- Create corpse for player and move all items in to it.
+    local corpseEntity = character.surface.create_entity {name = "character-corpse", position = player.position, force = player.force, player_index = player.index, inventory_size = 1000, player = player}
+    local corpseInventory = corpseEntity.get_inventory(defines.inventory.character_corpse)
+    Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_main), corpseInventory, false, 1)
+    Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_guns), corpseInventory, false, 1)
+    Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_ammo), corpseInventory, false, 1)
+    Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_armor), corpseInventory, false, 1)
+    Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_vehicle), corpseInventory, false, 1)
+    Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_trash), corpseInventory, false, 1)
+    if corpseInventory.is_empty() then
+        -- If corpse inventory is empty it will auto vanish in 1 tick, so place a corpse without an inventory as well that will last.
+        corpseEntity = character.surface.create_entity {name = "character-corpse", position = player.position, force = player.force, player_index = player.index, player = player}
+    end
+    corpseEntity.character_corpse_death_cause = {"entity-name.jdplays_mode-jd_p0ober_split_factory-teleport"}
+
+    -- Teleport empty character to new location and heal.
+    local foundPosition = character.surface.find_non_colliding_position("character", targetPosition, 0, 0.2, false)
+    player.teleport(foundPosition)
+    character.health = 100000
 end
 
 return Teleporter
