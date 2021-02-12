@@ -18,7 +18,7 @@ data:extend(
                 "player-layer"
             },
             layer_group = refNuclearGroundTile.layer_group,
-            layer = 200,
+            layer = 200, -- Above ground tiles and player flooring.
             variants = refNuclearGroundTile.variants,
             map_color = refNuclearGroundTile.map_color,
             pollution_absorption_per_second = 0,

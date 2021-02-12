@@ -2,6 +2,8 @@ local Teleporter = {}
 local Events = require("utility/events")
 local Utils = require("utility/utils")
 local Interfaces = require("utility/interfaces")
+local EventScheduler = require("utility/event-scheduler")
+local Logging = require("utility/logging")
 
 local TeleportedTTL = 15 * 60 * 60
 
@@ -22,12 +24,22 @@ end
 Teleporter.OnLoad = function()
     Events.RegisterHandlerEvent(defines.events.on_script_trigger_effect, "Teleporter.OnScriptTriggerEffect", Teleporter.OnScriptTriggerEffect)
     Interfaces.RegisterInterface("Teleporter.AddTeleporter", Teleporter.AddTeleporter)
+    EventScheduler.RegisterScheduledEventType("Teleporter.OnTimeToDieReached", Teleporter.OnTimeToDieReached)
+    Events.RegisterHandlerEvent(defines.events.on_player_died, "Teleporter.OnPlayerDied", Teleporter.OnPlayerDied)
 end
 
 Teleporter.AddTeleporter = function(ownerTeam, surface, position)
     local teleporterEntity = surface.create_entity {name = "jd_plays-jd_p0ober_split_factory-teleporter", position = position, force = "player"}
     teleporterEntity.destructible = false
     global.teleporter.teleporterIdToTeam[teleporterEntity.unit_number] = ownerTeam
+
+    local hazardTilesToSet = {}
+    for x = teleporterEntity.position.x - 2, teleporterEntity.position.x + 1 do
+        for y = teleporterEntity.position.y - 2, teleporterEntity.position.y + 1 do
+            table.insert(hazardTilesToSet, {name = "hazard-concrete-left", position = {x = x, y = y}})
+        end
+    end
+    surface.set_tiles(hazardTilesToSet, true, true, false, false)
 
     return teleporterEntity
 end
@@ -57,17 +69,12 @@ Teleporter.TeleportPlayer = function(characterEntity, teleporterEntity)
         Teleporter.TeleportCharacter(player, playerTeam.otherTeam.spawnPosition)
         teleportedPlayerEntry.characterEntity = player.character
 
-        --TODO: schedule a return
-        --TODO: record for this characterEntity to have its death tracked and handled
+        EventScheduler.ScheduleEvent(teleportedPlayerEntry.timeToDie, "Teleporter.OnTimeToDieReached", teleportedPlayerEntry.id)
         global.teleporter.teleportedPlayers[teleportedPlayerEntry.id] = teleportedPlayerEntry
     else
         -- Player is leaving the other team's side and returning to their team's side.
-        --local teleportedPlayerEntry = global.teleporter.teleportedPlayers[player.index]
-
         Teleporter.TeleportCharacter(player, playerTeam.spawnPosition)
-
-        --TODO: end the scheduled return and stop tracking the characters death
-        global.teleporter.teleportedPlayers[player.index] = nil
+        Teleporter.OnPlayerDied({player_index = player.index}) -- Called as same actions to be done.
     end
 end
 
@@ -89,10 +96,36 @@ Teleporter.TeleportCharacter = function(player, targetPosition)
     end
     corpseEntity.character_corpse_death_cause = {"entity-name.jdplays_mode-jd_p0ober_split_factory-teleport"}
 
-    -- Teleport empty character to new location and heal.
+    -- Teleport now empty character to new location and reset.
     local foundPosition = character.surface.find_non_colliding_position("character", targetPosition, 0, 0.2, false)
     player.teleport(foundPosition)
     character.health = 100000
+    if character.stickers ~= nil then
+        for _, sticker in pairs(character.stickers) do
+            sticker.destroy()
+        end
+    end
+end
+
+Teleporter.OnTimeToDieReached = function(event)
+    local player = event.instanceId
+    local teleportedPlayerEntry = global.teleporter.teleportedPlayers[event.instanceId]
+    if event.tick ~= teleportedPlayerEntry.timeToDie then
+        -- Some how the event has been called on the wrong tick, likely not tidied up for some edge case. So just abort the function to be safe.
+        Logging.LogPrint("WARNING: teleport on time to die reached for player '" .. player.name .. "' when it wasn't active any more. Called on tick " .. event.tick .. ", but scheduled for this player next on tick " .. tostring(teleportedPlayerEntry.timeToDie) .. ".")
+        return
+    end
+    local playerTeam = global.playerHome.playerIdToTeam[player.index]
+    player.character.die(player.force, playerTeam.teleporterEntity)
+end
+
+Teleporter.OnPlayerDied = function(event)
+    local player = game.get_player(event.player_index)
+    local teleportedPlayerEntry = global.teleporter.teleportedPlayers[player.index]
+    if teleportedPlayerEntry ~= nil then
+        EventScheduler.RemoveScheduledEvents("Teleporter.OnTimeToDieReached", teleportedPlayerEntry.id, teleportedPlayerEntry.timeToDie)
+    end
+    global.teleporter.teleportedPlayers[player.index] = nil
 end
 
 return Teleporter

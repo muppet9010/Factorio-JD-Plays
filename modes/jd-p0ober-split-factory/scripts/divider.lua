@@ -43,6 +43,9 @@ Divider.OnChunkGenerated = function(event)
         local dividerEntity = surface.create_entity {name = "jd_plays-jd_p0ober_split_factory-divider_entity", position = {x = global.divider.dividerMiddleXPos, y = y + 0.5}, create_build_effect_smoke = false, raise_built = false}
         dividerEntity.destructible = false
     end
+
+    -- Place the beam effect. Overlap by a tile as we have overlaped all the graphics bits of the beam prototype.
+    surface.create_entity {name = "jd_plays-jd_p0ober_split_factory-divider_beam", position = {0, 0}, target_position = {x = global.divider.dividerMiddleXPos, y = event.area.left_top.y - 1}, source_position = {x = global.divider.dividerMiddleXPos, y = event.area.left_top.y + 33}}
 end
 
 Divider.OnTilePlaced = function(event)

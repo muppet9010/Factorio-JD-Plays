@@ -1,5 +1,9 @@
 -- This is copied from the Teleporters mod by Klonan. https://github.com/Klonan/Teleporters
 
+if settings.startup["jdplays_mode"].value ~= "jd_p0ober_split_factory" then
+    return
+end
+
 data:extend(
     {
         {
