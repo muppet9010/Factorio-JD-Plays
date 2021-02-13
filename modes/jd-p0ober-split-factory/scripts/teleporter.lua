@@ -79,10 +79,10 @@ Teleporter.TeleportPlayer = function(characterEntity, teleporterEntity)
 end
 
 Teleporter.TeleportCharacter = function(player, targetPosition)
-    local character = player.character
+    local character, surface = player.character, player.surface
 
     -- Create corpse for player and move all items in to it.
-    local corpseEntity = character.surface.create_entity {name = "character-corpse", position = player.position, force = player.force, player_index = player.index, inventory_size = 1000, player = player}
+    local corpseEntity = surface.create_entity {name = "character-corpse", position = player.position, force = player.force, player_index = player.index, inventory_size = 1000, player = player}
     local corpseInventory = corpseEntity.get_inventory(defines.inventory.character_corpse)
     Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_main), corpseInventory, false, 1)
     Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_guns), corpseInventory, false, 1)
@@ -92,12 +92,12 @@ Teleporter.TeleportCharacter = function(player, targetPosition)
     Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_trash), corpseInventory, false, 1)
     if corpseInventory.is_empty() then
         -- If corpse inventory is empty it will auto vanish in 1 tick, so place a corpse without an inventory as well that will last.
-        corpseEntity = character.surface.create_entity {name = "character-corpse", position = player.position, force = player.force, player_index = player.index, player = player}
+        corpseEntity = surface.create_entity {name = "character-corpse", position = player.position, force = player.force, player_index = player.index, player = player}
     end
     corpseEntity.character_corpse_death_cause = {"entity-name.jdplays_mode-jd_p0ober_split_factory-teleport"}
 
     -- Teleport now empty character to new location and reset.
-    local foundPosition = character.surface.find_non_colliding_position("character", targetPosition, 0, 0.2, false)
+    local foundPosition = surface.find_non_colliding_position("character", targetPosition, 0, 0.2, false)
     player.teleport(foundPosition)
     character.health = 100000
     if character.stickers ~= nil then
@@ -105,6 +105,8 @@ Teleporter.TeleportCharacter = function(player, targetPosition)
             sticker.destroy()
         end
     end
+
+    surface.create_entity {name = "jd_plays-jd_p0ober_split_factory-teleporter-player_moved", position = foundPosition}
 end
 
 Teleporter.OnTimeToDieReached = function(event)

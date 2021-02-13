@@ -2,8 +2,6 @@ local PlayerHome = {}
 local Events = require("utility/events")
 local Utils = require("utility/utils")
 local Logging = require("utility/logging")
-local Commands = require("utility/commands")
-local EventScheduler = require("utility/event-scheduler")
 local Interfaces = require("utility/interfaces")
 
 local SpawnXOffset = 20

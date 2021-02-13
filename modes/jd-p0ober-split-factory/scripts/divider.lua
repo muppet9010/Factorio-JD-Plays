@@ -1,9 +1,5 @@
 local Divider = {}
 local Events = require("utility/events")
-local Utils = require("utility/utils")
-local Logging = require("utility/logging")
-local Commands = require("utility/commands")
-local EventScheduler = require("utility/event-scheduler")
 
 Divider.CreateGlobals = function()
     global.divider = global.divider or {}
@@ -27,21 +23,32 @@ Divider.OnChunkGenerated = function(event)
     end
 
     -- Place the blocking land tiles down. Ignore water tiles as catch when landfill is placed.
+    -- Check beyond this chunk in the next 3 partially generated chunks (map gen weirdness) and fill them with our blocking tiles. Stops biters pathing around the top/bottom of the partially generated map.
     local surface, landTilesToReplace = event.surface, {}
+    local yMin, yMax
+    if event.area.left_top.y >= 0 then
+        yMin = event.area.left_top.y
+        yMax = event.area.left_top.y + 31 + 96
+    else
+        yMin = event.area.left_top.y - 96
+        yMax = event.area.left_top.y + 31
+    end
     for x = global.divider.dividerStartXPos, global.divider.dividerEndXPos do
-        for y = event.area.left_top.y, event.area.left_top.y + 31 do
+        for y = yMin, yMax do
             local existingTileName = surface.get_tile(x, y).name
-            if existingTileName ~= "water" and existingTileName ~= "deepwater" then
+            if existingTileName ~= "water" and existingTileName ~= "deepwater" and existingTileName ~= "jd_plays-jd_p0ober_split_factory-divider_tile_land" then
                 table.insert(landTilesToReplace, {name = "jd_plays-jd_p0ober_split_factory-divider_tile_land", position = {x = x, y = y}})
             end
         end
     end
     surface.set_tiles(landTilesToReplace, true, true, false, false)
 
-    -- Place the blocking entity in the center of the 2 tiles.
+    -- Place the blocking entities in the center of the 2 tiles.
     for y = event.area.left_top.y, event.area.left_top.y + 31 do
         local dividerEntity = surface.create_entity {name = "jd_plays-jd_p0ober_split_factory-divider_entity", position = {x = global.divider.dividerMiddleXPos, y = y + 0.5}, create_build_effect_smoke = false, raise_built = false}
         dividerEntity.destructible = false
+        local dividerEntitySpider = surface.create_entity {name = "jd_plays-jd_p0ober_split_factory-divider_entity_spider_block", position = {x = global.divider.dividerMiddleXPos, y = y + 0.5}, create_build_effect_smoke = false, raise_built = false}
+        dividerEntitySpider.destructible = false
     end
 
     -- Place the beam effect. Overlap by a tile as we have overlaped all the graphics bits of the beam prototype.

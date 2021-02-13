@@ -1,4 +1,5 @@
 -- This is copied from the Teleporters mod by Klonan. https://github.com/Klonan/Teleporters
+local Utils = require("utility/utils")
 
 if settings.startup["jdplays_mode"].value ~= "jd_p0ober_split_factory" then
     return
@@ -52,6 +53,16 @@ data:extend(
             collision_box = {{-1, -1}, {1, 1}},
             selection_box = {{-1, -1}, {1, 1}},
             map_color = {r = 0.5, g = 1, b = 1}
+        },
+        {
+            -- Used to just play the sound.
+            type = "explosion",
+            name = "jd_plays-jd_p0ober_split_factory-teleporter-player_moved",
+            animations = Utils.EmptyRotatedSprite(),
+            sound = {
+                filename = "__jd_plays__/modes/jd-p0ober-split-factory/sounds/teleporter-player-moved.ogg",
+                volume = 1
+            }
         }
     }
 )

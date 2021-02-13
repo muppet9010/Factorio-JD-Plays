@@ -20,16 +20,16 @@ local function OnLoad()
     Teleporter.OnLoad()
 end
 
-local function OnSettingChanged(event)
-    --if event == nil or event.setting == "xxxxx" then
-    --	local x = tonumber(settings.global["xxxxx"].value)
-    --end
-end
+--local function OnSettingChanged(event)
+--if event == nil or event.setting == "xxxxx" then
+--	local x = tonumber(settings.global["xxxxx"].value)
+--end
+--end
 
 local function OnStartup()
     CreateGlobals()
     OnLoad()
-    OnSettingChanged(nil)
+    --OnSettingChanged(nil)
 
     PlayerHome.OnStartup()
 end
