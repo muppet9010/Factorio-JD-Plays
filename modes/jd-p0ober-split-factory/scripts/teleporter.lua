@@ -6,7 +6,6 @@ local EventScheduler = require("utility/event-scheduler")
 local Logging = require("utility/logging")
 
 local TeleportedTTL = 15 * 60 * 60
-
 Teleporter.CreateGlobals = function()
     global.teleporter = global.teleporter or {}
     global.teleporter.teleporterIdToTeam = global.teleporter.teleporterIdToTeam or {}
@@ -19,6 +18,7 @@ Teleporter.CreateGlobals = function()
             timeToDie = time of this teleported character to die.
         }
     ]]
+    global.teleporter.teleportedPlayersToReturnHome = global.teleporter.teleportedPlayersToReturnHome or {} -- List players by index who are offline when their timer expires and so need returning home the moment they return to the server.
 end
 
 Teleporter.OnLoad = function()
@@ -26,6 +26,7 @@ Teleporter.OnLoad = function()
     Interfaces.RegisterInterface("Teleporter.AddTeleporter", Teleporter.AddTeleporter)
     EventScheduler.RegisterScheduledEventType("Teleporter.OnTimeToDieReached", Teleporter.OnTimeToDieReached)
     Events.RegisterHandlerEvent(defines.events.on_player_died, "Teleporter.OnPlayerDied", Teleporter.OnPlayerDied)
+    Events.RegisterHandlerEvent(defines.events.on_player_joined_game, "Teleporter.OnPlayerJoined", Teleporter.OnPlayerJoined)
 end
 
 Teleporter.AddTeleporter = function(ownerTeam, surface, position)
@@ -48,13 +49,13 @@ Teleporter.OnScriptTriggerEffect = function(event)
     if event.effect_id == "jd_plays-jd_p0ober_split_factory-teleporter-affected_target" then
         local triggerEntity = event.target_entity
         -- A triggerEntity with no player is a left behind character, so just ignore these.
-        if triggerEntity.valid and triggerEntity.player ~= nil then
-            Teleporter.TeleportPlayer(triggerEntity, event.source_entity)
+        if triggerEntity.valid and triggerEntity.name == "character" and triggerEntity.player ~= nil then
+            Teleporter.PlayerOnTeleporter(triggerEntity, event.source_entity)
         end
     end
 end
 
-Teleporter.TeleportPlayer = function(characterEntity, teleporterEntity)
+Teleporter.PlayerOnTeleporter = function(characterEntity, teleporterEntity)
     local player, teleporterTeam = characterEntity.player, global.teleporter.teleporterIdToTeam[teleporterEntity.unit_number]
     local playerTeam = global.playerHome.playerIdToTeam[player.index]
 
@@ -73,8 +74,7 @@ Teleporter.TeleportPlayer = function(characterEntity, teleporterEntity)
         global.teleporter.teleportedPlayers[teleportedPlayerEntry.id] = teleportedPlayerEntry
     else
         -- Player is leaving the other team's side and returning to their team's side.
-        Teleporter.TeleportCharacter(player, playerTeam.spawnPosition)
-        Teleporter.OnPlayerDied({player_index = player.index}) -- Called as same actions to be done.
+        Teleporter.ReturnPlayerHome(player)
     end
 end
 
@@ -110,24 +110,47 @@ Teleporter.TeleportCharacter = function(player, targetPosition)
 end
 
 Teleporter.OnTimeToDieReached = function(event)
-    local player = event.instanceId
+    local player = game.get_player(event.instanceId)
     local teleportedPlayerEntry = global.teleporter.teleportedPlayers[event.instanceId]
     if event.tick ~= teleportedPlayerEntry.timeToDie then
         -- Some how the event has been called on the wrong tick, likely not tidied up for some edge case. So just abort the function to be safe.
         Logging.LogPrint("WARNING: teleport on time to die reached for player '" .. player.name .. "' when it wasn't active any more. Called on tick " .. event.tick .. ", but scheduled for this player next on tick " .. tostring(teleportedPlayerEntry.timeToDie) .. ".")
         return
     end
+    if player.character then
+        Teleporter.ReturnPlayerHome(player)
+    else
+        -- Player is offline and so has no character and this event hasn't been cancelled already, so delay it for their return.
+        global.teleporter.teleportedPlayersToReturnHome[player.index] = true
+    end
+end
+
+Teleporter.ReturnPlayerHome = function(player)
     local playerTeam = global.playerHome.playerIdToTeam[player.index]
-    player.character.die(player.force, playerTeam.teleporterEntity)
+    player.driving = false
+    Teleporter.TeleportCharacter(player, playerTeam.spawnPosition)
+    Teleporter.TidyUpTeleportedEntry(player)
 end
 
 Teleporter.OnPlayerDied = function(event)
     local player = game.get_player(event.player_index)
+    Teleporter.TidyUpTeleportedEntry(player)
+end
+
+Teleporter.TidyUpTeleportedEntry = function(player)
     local teleportedPlayerEntry = global.teleporter.teleportedPlayers[player.index]
     if teleportedPlayerEntry ~= nil then
         EventScheduler.RemoveScheduledEvents("Teleporter.OnTimeToDieReached", teleportedPlayerEntry.id, teleportedPlayerEntry.timeToDie)
     end
     global.teleporter.teleportedPlayers[player.index] = nil
+end
+
+Teleporter.OnPlayerJoined = function(event)
+    if global.teleporter.teleportedPlayersToReturnHome[event.player_index] == nil then
+        return
+    end
+    local player = game.get_player(event.player_index)
+    Teleporter.ReturnPlayerHome(player)
 end
 
 return Teleporter
