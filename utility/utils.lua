@@ -54,6 +54,7 @@ function Utils.ReturnAllObjectsInArea(surface, positionedBoundingBox, collisionB
 end
 
 function Utils.KillAllKillableObjectsInArea(surface, positionedBoundingBox, killerEntity, collisionBoxOnlyEntities, onlyForceAffected, entitiesExcluded)
+    --TODO: these should all support killing force being passed in.
     for k, entity in pairs(Utils.ReturnAllObjectsInArea(surface, positionedBoundingBox, collisionBoxOnlyEntities, onlyForceAffected, true, true, entitiesExcluded)) do
         if killerEntity ~= nil then
             entity.die("neutral", killerEntity)
@@ -117,7 +118,37 @@ function Utils.TableToProperPosition(thing)
     end
 end
 
+function Utils.IsTableValidBoundingBox(thing)
+    if thing.left_top ~= nil and thing.right_bottom ~= nil then
+        if Utils.IsTableValidPosition(thing.left_top) and Utils.IsTableValidPosition(thing.right_bottom) then
+            return true
+        else
+            return false
+        end
+    end
+    if #thing ~= 2 then
+        return false
+    end
+    if Utils.IsTableValidPosition(thing[1]) and Utils.IsTableValidPosition(thing[2]) then
+        return true
+    else
+        return false
+    end
+end
+
+function Utils.TableToProperBoundingBox(thing)
+    if not Utils.IsTableValidBoundingBox(thing) then
+        return nil
+    elseif thing.left_top ~= nil and thing.right_bottom ~= nil then
+        return {left_top = Utils.TableToProperPosition(thing.left_top), right_bottom = Utils.TableToProperPosition(thing.right_bottom)}
+    else
+        return {left_top = Utils.TableToProperPosition(thing[1]), right_bottom = Utils.TableToProperPosition(thing[2])}
+    end
+end
+
 function Utils.ApplyBoundingBoxToPosition(centrePos, boundingBox, orientation)
+    centrePos = Utils.TableToProperPosition(centrePos)
+    boundingBox = Utils.TableToProperBoundingBox(boundingBox)
     if orientation == nil or orientation == 0 or orientation == 1 then
         return {
             left_top = {
@@ -143,8 +174,6 @@ function Utils.ApplyBoundingBoxToPosition(centrePos, boundingBox, orientation)
                 y = centrePos.y + rotatedBoundingBox.right_bottom.y
             }
         }
-    else
-        game.print("Error: Diagonal orientations not supported by Utils.ApplyBoundingBoxToPosition()")
     end
 end
 
@@ -171,10 +200,7 @@ function Utils.RotatePositionAround0(orientation, position)
 end
 
 function Utils.CalculateBoundingBoxFrom2Points(point1, point2)
-    local minX = nil
-    local maxX = nil
-    local minY = nil
-    local maxY = nil
+    local minX, maxX, minY, maxY = nil, nil, nil, nil
     if minX == nil or point1.x < minX then
         minX = point1.x
     end
@@ -202,18 +228,32 @@ function Utils.CalculateBoundingBoxFrom2Points(point1, point2)
     return {left_top = {x = minX, y = minY}, right_bottom = {x = maxX, y = maxY}}
 end
 
+function Utils.CalculateBoundingBoxToIncludeAllBoundingBoxs(listOfBoundingBoxs)
+    local minX, maxX, minY, maxY = nil, nil, nil, nil
+    for _, boundingBox in pairs(listOfBoundingBoxs) do
+        for _, point in pairs({boundingBox.left_top, boundingBox.right_bottom}) do
+            if minX == nil or point.x < minX then
+                minX = point.x
+            end
+            if maxX == nil or point.x > maxX then
+                maxX = point.x
+            end
+            if minY == nil or point.y < minY then
+                minY = point.y
+            end
+            if maxY == nil or point.y > maxY then
+                maxY = point.y
+            end
+        end
+    end
+    return {left_top = {x = minX, y = minY}, right_bottom = {x = maxX, y = maxY}}
+end
+
 function Utils.ApplyOffsetToPosition(position, offset)
-    position = Utils.DeepCopy(position)
-    if offset == nil then
-        return position
-    end
-    if offset.x ~= nil then
-        position.x = position.x + offset.x
-    end
-    if offset.y ~= nil then
-        position.y = position.y + offset.y
-    end
-    return position
+    return {
+        x = position.x + (offset.x or 0),
+        y = position.y + (offset.y or 0)
+    }
 end
 
 function Utils.GrowBoundingBox(boundingBox, growthX, growthY)
@@ -400,9 +440,20 @@ function Utils.CalculateTilesUnderPositionedBoundingBox(positionedBoundingBox)
 end
 
 function Utils.GetDistance(pos1, pos2)
+    pos1, pos2 = Utils.TableToProperPosition(pos1), Utils.TableToProperPosition(pos2)
     local dx = pos1.x - pos2.x
     local dy = pos1.y - pos2.y
     return math.sqrt(dx * dx + dy * dy)
+end
+
+function Utils.GetDistanceSingleAxis(pos1, pos2, axis)
+    pos1, pos2 = Utils.TableToProperPosition(pos1), Utils.TableToProperPosition(pos2)
+    return math.abs(pos1[axis] - pos2[axis])
+end
+
+function Utils.GetOffsetForPositionFromPosition(newPosition, basePosition)
+    -- Returns the offset for the first position in relation to the second position.
+    return {x = newPosition.x - basePosition.x, y = newPosition.y - basePosition.y}
 end
 
 function Utils.IsPositionInBoundingBox(position, boundingBox, safeTiling)
@@ -436,6 +487,38 @@ function Utils.TableKeyToArray(aTable)
         table.insert(newArray, key)
     end
     return newArray
+end
+
+function Utils.TableKeyToCommaString(aTable)
+    -- Doesn't support commas in values or nested tables. Really for logging.
+    local newString = ""
+    if Utils.IsTableEmpty(aTable) then
+        return newString
+    end
+    for key in pairs(aTable) do
+        if newString == "" then
+            newString = key
+        else
+            newString = newString .. ", " .. tostring(key)
+        end
+    end
+    return newString
+end
+
+function Utils.TableValueToCommaString(aTable)
+    -- Doesn't support commas in values or nested tables. Really for logging.
+    local newString = ""
+    if Utils.IsTableEmpty(aTable) then
+        return newString
+    end
+    for _, value in pairs(aTable) do
+        if newString == "" then
+            newString = value
+        else
+            newString = newString .. ", " .. tostring(value)
+        end
+    end
+    return newString
 end
 
 function Utils.TableContentsToJSON(targetTable, name, singleLineOutput)
@@ -521,6 +604,10 @@ function Utils.FormatPositionTableToString(positionTable)
     return positionTable.x .. "," .. positionTable.y
 end
 
+function Utils.FormatSurfacePositionTableToString(surfaceId, positionTable)
+    return surfaceId .. "_" .. positionTable.x .. "," .. positionTable.y
+end
+
 function Utils.GetTableKeyWithValue(theTable, value)
     for k, v in pairs(theTable) do
         if v == value then
@@ -537,6 +624,17 @@ function Utils.GetTableKeyWithInnerKeyValue(theTable, key, value)
         end
     end
     return nil
+end
+
+function Utils.TableValuesToKey(tableWithValues)
+    if tableWithValues == nil then
+        return nil
+    end
+    local newTable = {}
+    for _, value in pairs(tableWithValues) do
+        newTable[value] = value
+    end
+    return newTable
 end
 
 function Utils.GetRandomFloatInRange(lower, upper)
@@ -580,17 +678,6 @@ function Utils.GetRandomEntryFromNormalisedDataSet(dataSet, chancePropertyName)
         chanceRangeLow = chanceRangeHigh
     end
     return nil
-end
-
-function Utils.DisableSiloScript()
-    -- OnLoad
-    if remote.interfaces["silo_script"] == nil then
-        return
-    end
-    local items = remote.call("silo_script", "get_tracked_items")
-    for itemName in pairs(items) do
-        remote.call("silo_script", "remove_tracked_item", itemName)
-    end
 end
 
 function Utils.DisableWinOnRocket()
@@ -998,12 +1085,22 @@ Utils.GetBuilderInventory = function(builder)
     end
 end
 
-Utils.EmptyRotatedSprite = function()
+Utils.GetRenderPlayersForcesFromActioner = function(actioner)
+    if actioner.is_player() then
+        return {players = {actioner}, forces = nil}
+    else
+        -- Is construction bot
+        return {players = nil, forces = actioner.force}
+    end
+end
+
+Utils.EmptyRotatedSprite = function(repeat_count)
     return {
         direction_count = 1,
         filename = "__core__/graphics/empty.png",
         width = 1,
-        height = 1
+        height = 1,
+        repeat_count = repeat_count or 1
     }
 end
 
@@ -1225,5 +1322,36 @@ Utils.StringTrim = function(text)
     -- trim6 from http://lua-users.org/wiki/StringTrim
     return string.match(text, "^()%s*$") and "" or string.match(text, "^%s*(.*%S)")
 end
+
+Utils.OrientationToDirection = function(orientation)
+    return Utils.LoopIntValueWithinRange(Utils.RoundNumberToDecimalPlaces(orientation * 8, 0), 0, 7)
+end
+
+Utils.PushToList = function(list, itemsToPush)
+    -- Adds the items to the end of a list (table). Ignoring their keys.
+    for _, item in pairs(itemsToPush) do
+        table.insert(list, item)
+    end
+end
+
+Utils.DirectionValueToName = function(directionValue)
+    local names = {[0] = "north", [1] = "northeast", [2] = "east", [3] = "southeast", [4] = "south", [5] = "southwest", [6] = "west", [7] = "northwest"}
+    return names[directionValue]
+end
+
+Utils.LoopDirectionValue = function(inputValue)
+    return Utils.LoopIntValueWithinRange(inputValue, 0, 7)
+end
+
+Utils.EntityDie = function(entity, killerForce, killerCauseEntity)
+    if killerCauseEntity ~= nil then
+        entity.die(killerForce, killerCauseEntity)
+    else
+        entity.die(killerForce)
+    end
+end
+
+Utils.MaxTrainStopLimit = 4294967295 -- uint
+Utils.MaxUInt = 4294967295
 
 return Utils

@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.1
+Date: 2021-02-09
+  Features:
+    - Added mode: JD P00ber Split Factory
+  Changes:
+  Bugfixes:
+  Info:
+    - JD Plays logo is only seen when menu simulations are disabled since upgrade to Factorio.
+---------------------------------------------------------------------------------------------------
 Version: 20.2.0
 Date: 2020-12-01
   Features:
