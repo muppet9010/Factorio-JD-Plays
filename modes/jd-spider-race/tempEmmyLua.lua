@@ -1,0 +1,27 @@
+--[[
+    Generic EmmyLua classes. You don't need to require this file anywhere, EmyyLua will discover it within the workspace.
+    These are all temporary classes as the Utils version of this mod is very old and I don;t want to start hotfixing the Utils files, as that would make future updating even harder.
+--]]
+---@meta
+---@diagnostic disable
+---
+---
+---
+---@class Id : uint @ id attribute of this thing.
+---
+---@class UnitNumber : uint @ unit_number of the related entity.
+---
+---@class PlayerIndex:uint @ Player index attribute.
+---
+---@class Tick : int
+---
+---@class Second : int
+---
+---@class UtilityScheduledEvent_CallbackObject
+---@field tick Tick @ The current game tick.
+---@field name string @ The name of the scheduled event, as registered with EventScheduler.RegisterScheduledEventType().
+---@field instanceId StringOrNumber @ The instanceId the event was scheduled with.
+---@field data table @ the custom data table that was provided when the event was scheduled or an empty table if none was provided.
+---
+---@diagnostic disable-line Alias for nil value. Workaround for EmmyLua not handling nil in multi type lists correctly.
+---@class null
