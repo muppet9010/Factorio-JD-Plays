@@ -104,10 +104,10 @@ function create_boss_spidertron(arguments)
                 energy_per_hit_point = 1,
                 guns = {"spidertron-rocket-launcher-1", "spidertron-rocket-launcher-2", "spidertron-rocket-launcher-3", "spidertron-rocket-launcher-4"},
                 inventory_size = 80,
-                equipment_grid = "spidertron-equipment-grid",
+                equipment_grid = "spidertron-boss-equipment-grid", -- Changed to custom sized grid.
                 trash_inventory_size = 20,
                 height = 1 * scale * leg_scale, -- Changed height from 1.5x to 1x, as otherwsie it tended to bob up and down excessively.
-                torso_rotation_speed = 0.005,
+                torso_rotation_speed = 0.010, -- Made to rotate twice as fast.
                 chunk_exploration_radius = 3,
                 selection_priority = 51,
                 graphics_set = spidertron_torso_graphics_set(scale),
@@ -272,8 +272,18 @@ spidertronBossRemnants.animation[1].layers[1].hr_version.scale = 1
 spidertronBossRemnants.animation[1].layers[2].scale = 2
 spidertronBossRemnants.animation[1].layers[2].hr_version.scale = 1
 
+-- Make larger equipment grid. Isn't balanced, just massive so we can fit in the desired equipment.
+local spidertronBossEquipmentGrid = {
+    type = "equipment-grid",
+    name = "spidertron-boss-equipment-grid",
+    width = 20,
+    height = 20,
+    equipment_categories = {"armor"}
+}
+
 data:extend(
     {
-        spidertronBossRemnants
+        spidertronBossRemnants,
+        spidertronBossEquipmentGrid
     }
 )
