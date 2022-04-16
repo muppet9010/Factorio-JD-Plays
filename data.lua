@@ -3,3 +3,4 @@ data.raw["utility-constants"]["default"]["main_menu_background_image_location"] 
 require("utility/style-data")
 
 require("modes/jd-p0ober-split-factory/data")
+require("modes.jd-spider-race.data")
