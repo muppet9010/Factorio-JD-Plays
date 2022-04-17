@@ -102,7 +102,7 @@ function create_boss_spidertron(arguments)
                 corpse = "jd_plays-jd_spider_race-spidertron_boss_remnants", -- Changed to custom sized remnants.
                 dying_explosion = "spidertron-explosion",
                 energy_per_hit_point = 1,
-                guns = {"spidertron-rocket-launcher-1", "spidertron-rocket-launcher-2", "spidertron-rocket-launcher-3", "spidertron-rocket-launcher-4"},
+                guns = {"flamethrower"}, -- The flamer gun must be on the real spider as when it fires it clearly shows the originating point.
                 inventory_size = 80,
                 equipment_grid = "spidertron-boss-equipment-grid", -- Changed to custom sized grid.
                 trash_inventory_size = 20,
@@ -276,8 +276,8 @@ spidertronBossRemnants.animation[1].layers[2].hr_version.scale = 1
 local spidertronBossEquipmentGrid = {
     type = "equipment-grid",
     name = "spidertron-boss-equipment-grid",
-    width = 20,
-    height = 20,
+    width = 10, -- Don't make wider than 12 as it goes off the GUI screen.
+    height = 15,
     equipment_categories = {"armor"}
 }
 

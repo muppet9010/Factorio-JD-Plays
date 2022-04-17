@@ -26,6 +26,7 @@ local Commands = require("utility.commands")
 ---@field movementTargetPosition MapPosition|null @ Only populated if the spider is actively moving to this position.
 ---@field spiderPositionLastSecond MapPosition @ The spiders position last second.
 ---@field spiderPlanRenderIds Id[] -- used mainly for debugging and testing. But needs to be bleed throughout the code so made proper.
+---@field gunSpiderEntities table<BossSpider_GunType, LuaEntity>
 
 ---@class BossSpider_State
 local BossSpider_State = {
@@ -34,6 +35,51 @@ local BossSpider_State = {
     chasing = "chasing", -- Actively chasing after a military target.
     retreating = "retreating", -- Moving away from the threat.
     dead = "dead" -- Its dead.
+}
+
+---@class BossSpider_GunType
+local BossSpider_GunType = {
+    artillery = "artillery",
+    rocketLauncher = "rocketLauncher",
+    tankCannon = "tankCannon",
+    machineGun = "machineGun"
+}
+
+---@class BossSpider_GunEntityDetails
+---@field entityName string @ The entity prototype name of this gun spider.
+---@field gunFilters table<Id, string> @ A list of the gun slots and what filter they should each have (if any).
+
+---@alias BossSpider_GunDetails table<BossSpider_GunType,BossSpider_GunEntityDetails>
+local BossSpider_GunDetails = {
+    [BossSpider_GunType.artillery] = {
+        name = "jd_plays-jd_spider_race-spidertron_boss_gun-artillery_wagon_cannon",
+        gunFilters = {}
+    },
+    [BossSpider_GunType.machineGun] = {
+        name = "jd_plays-jd_spider_race-spidertron_boss_gun-machine_gun",
+        gunFilters = {
+            [1] = "firearm-magazine",
+            [2] = "piercing-rounds-magazine",
+            [3] = "uranium-rounds-magazine"
+        }
+    },
+    [BossSpider_GunType.rocketLauncher] = {
+        name = "jd_plays-jd_spider_race-spidertron_boss_gun-rocket_launcher",
+        gunFilters = {
+            [1] = "rocket",
+            [2] = "explosive-rocket",
+            [3] = "atomic-bomb"
+        }
+    },
+    [BossSpider_GunType.tankCannon] = {
+        name = "jd_plays-jd_spider_race-spidertron_boss_gun-tank_cannon",
+        gunFilters = {
+            [1] = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo",
+            [2] = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_ammo",
+            [3] = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_ammo",
+            [4] = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_ammo"
+        }
+    }
 }
 
 local Settings = {
@@ -153,7 +199,8 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTe
         roamingYMin = spidersYPos - Settings.spidersRoamingYRange,
         roamingYMax = spidersYPos + Settings.spidersRoamingYRange,
         spiderPlanRenderIds = {},
-        spiderPositionLastSecond = spiderPosition
+        spiderPositionLastSecond = spiderPosition,
+        gunSpiderEntities = {}
     }
     Spider.UpdateSpidersRoamingValues(spider)
 
@@ -168,6 +215,22 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTe
     for i = 1, 18 do
         spiderEquipmentGrid.put {name = "solar-panel-equipment"}
     end
+
+    -- Add the extra gun spiders.
+    for shortName, entityDetails in pairs(BossSpider_GunDetails) do
+        local gunSpiderEntity = global.spider.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = biterTeam}
+        if gunSpiderEntity == nil then
+            error("Failed to create gun spider " .. shortName .. " for team " .. playerTeamName .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
+        end
+        gunSpiderEntity.destructible = false
+        local ammoInventory = gunSpiderEntity.get_inventory(defines.inventory.spider_ammo)
+        for gunIndex, filterName in pairs(entityDetails.gunFilters) do
+            ammoInventory.set_filter(gunIndex, filterName)
+        end
+        spider.gunSpiderEntities[shortName] = gunSpiderEntity
+    end
+
+    Spider.GiveSpiderAmmo(spider)
 
     -- Record the spider to globals.
     global.spider.spiders[spider.id] = spider
@@ -302,6 +365,9 @@ end
 Spider.MoveSpiderToPosition = function(spider, targetPosition)
     spider.movementTargetPosition = targetPosition
     spider.bossEntity.autopilot_destination = targetPosition
+    for _, gunSpiderEntity in pairs(spider.gunSpiderEntities) do
+        gunSpiderEntity.autopilot_destination = targetPosition
+    end
 end
 
 --- Other code logic believes the spider should retreat.
@@ -415,6 +481,27 @@ Spider.SpidersMoveAwayFromSpawn_Scheduled = function(event)
 
     -- Schedule the next Minutes event. As the first instance of this schedule always occurs exactly on a minute no fancy logic is needed for each reschedule.
     EventScheduler.ScheduleEvent(event.tick + 3600, "Spider.SpidersMoveAwayFromSpawn_Scheduled")
+end
+
+--- Gives the boss spider and its gun spiders 1 set of ammo.
+---@param spider BossSpider
+Spider.GiveSpiderAmmo = function(spider)
+    if spider.state == BossSpider_State.dead then
+        return
+    end
+
+    spider.bossEntity.insert({name = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", count = 100})
+    --spider.gunSpiderEntities[BossSpider_GunType.artillery].insert({name = "artillery-shell", count = 10}) -- TODO: doesn;t work as desired, see Discord or spidertron-boss-guns for details.
+    spider.gunSpiderEntities[BossSpider_GunType.machineGun].insert({name = "firearm-magazine", count = 200})
+    spider.gunSpiderEntities[BossSpider_GunType.machineGun].insert({name = "piercing-rounds-magazine", count = 200})
+    spider.gunSpiderEntities[BossSpider_GunType.machineGun].insert({name = "uranium-rounds-magazine", count = 200})
+    spider.gunSpiderEntities[BossSpider_GunType.rocketLauncher].insert({name = "rocket", count = 200})
+    spider.gunSpiderEntities[BossSpider_GunType.rocketLauncher].insert({name = "explosive-rocket", count = 200})
+    spider.gunSpiderEntities[BossSpider_GunType.rocketLauncher].insert({name = "atomic-bomb", count = 10})
+    spider.gunSpiderEntities[BossSpider_GunType.tankCannon].insert({name = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", count = 200})
+    spider.gunSpiderEntities[BossSpider_GunType.tankCannon].insert({name = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_ammo", count = 200})
+    spider.gunSpiderEntities[BossSpider_GunType.tankCannon].insert({name = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_ammo", count = 200})
+    spider.gunSpiderEntities[BossSpider_GunType.tankCannon].insert({name = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_ammo", count = 200})
 end
 
 return Spider
