@@ -46,7 +46,7 @@ script.on_event(
         --
 
         -- If there is still damage being done to the spider then record it.
-        -- TODO: make sure the earlier damage handler functions feed back any modified final_damage_amount to this function so that knowledge can be used in making these decisions.
+        -- TODO LATER: make sure the earlier damage handler functions (in Andrews code) feed back any modified final_damage_amount to this function so that knowledge can be used in making these decisions.
         if event.final_damage_amount > 0 then
             local entityDamagedName = event.entity.name
             if entityDamagedName == "jd_plays-jd_spider_race-spidertron_boss" then

@@ -93,7 +93,7 @@ function create_boss_spidertron(arguments)
                     }
                 },
                 minimap_representation = {
-                    -- TODO: replace with custom image.
+                    -- TODO LATER: replace with custom image.
                     filename = "__base__/graphics/entity/spidertron/spidertron-map.png",
                     flags = {"icon"},
                     size = {128, 128},
@@ -193,7 +193,8 @@ function create_boss_spidertron(arguments)
                         }
                     },
                     military_target = "spidertron-military-target"
-                }
+                },
+                loot = {{item = "coin"}}
             },
             make_spidertron_leg(arguments.name, leg_scale, arguments.leg_thickness, arguments.leg_movement_speed, 1),
             make_spidertron_leg(arguments.name, leg_scale, arguments.leg_thickness, arguments.leg_movement_speed, 2),

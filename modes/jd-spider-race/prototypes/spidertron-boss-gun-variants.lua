@@ -2,7 +2,7 @@
 local Utils = require("utility.utils")
 
 -- If TRUE the spiders are visible and selectable.
-local Testing = true -- TODO
+local Testing = true -- TODO LATER
 
 --[[
     Notes:
