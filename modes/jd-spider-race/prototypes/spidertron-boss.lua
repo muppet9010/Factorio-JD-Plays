@@ -58,38 +58,38 @@ function create_boss_spidertron(arguments)
                 resistances = {
                     {
                         type = "fire",
-                        decrease = 15,
-                        percent = 60
-                    },
-                    {
-                        type = "physical",
-                        decrease = 15,
-                        percent = 60
-                    },
-                    {
-                        type = "impact",
-                        decrease = 50,
+                        decrease = 30,
                         percent = 80
                     },
                     {
+                        type = "physical",
+                        decrease = 30,
+                        percent = 80
+                    },
+                    {
+                        type = "impact",
+                        decrease = 100,
+                        percent = 90
+                    },
+                    {
                         type = "explosion",
-                        decrease = 20,
-                        percent = 75
+                        decrease = 40,
+                        percent = 85
                     },
                     {
                         type = "acid",
                         decrease = 0,
-                        percent = 70
+                        percent = 90
                     },
                     {
                         type = "laser",
                         decrease = 0,
-                        percent = 70
+                        percent = 90
                     },
                     {
                         type = "electric",
                         decrease = 0,
-                        percent = 70
+                        percent = 90
                     }
                 },
                 minimap_representation = {
