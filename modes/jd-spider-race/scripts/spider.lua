@@ -1,5 +1,7 @@
 --[[
     This code was developed independantly of other parts of the mod and so will as self contained as possible. With anything needed being hard coded in local variables at the top of the file.
+
+    The spiders mangement is done as a very light touch and as such its movements are a bit all or nothing. But it does perform far better in combat than if it just mindlessly followed a target until it was made to retreat.
 ]]
 --
 
@@ -145,7 +147,7 @@ local Settings = {
     spidersRoamingYRange = 230, -- Bit less than half the height of each teams map area.
     spidersFightingXRange = 500, -- Random limit to stop it chasing infinitely.
     spidersFightingYRange = 256, -- Spider can move right up to the edge for when looking to chase a target to fight. It shouldn't ever actually reach this far in however.
-    spidersFightingStepDistance = 3, -- How far the spider will move away from its current location when fighting per second.
+    spidersFightingStepDistance = 5, -- How far the spider will move away from its current location when fighting per second.
     distanceToCheckForEnemiesWhenBeingDamaged = 50, -- How far the spider will look for enemies when it is being damaged, but there's no enemies within its current weapon ammo range.
     showSpiderPlans = true -- If enabled the plans of a spider are rendered.
 }
@@ -158,7 +160,7 @@ if Testing then
     Settings.spidersRoamingXRange = 20
     Settings.spidersRoamingYRange = 40
     Settings.spidersFightingXRange = 200
-    Settings.spidersFightingYRange = 50
+    Settings.spidersFightingYRange = 100
     Settings.showSpiderPlans = true
     BossSpider_GunRearm[BossSpider_GunType.rocketLauncher][3] = nil -- No atomic weapons.
 end
@@ -520,6 +522,10 @@ end
 Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
     -- The spider will "dance" to keep engaging targets with its longer range weapons until its killed the real target or retreats. It will be a bit crude as otherwise it needs far more active managemnt.
 
+    -- Generic values that may be cached within the function.
+    ---@typelist float, LuaEntity
+    local spidersMaxShootingRange, nearestEnemyWithinRange
+
     -- Initial reactions based on of the spider is taking damage at present.
     if spider.damageTakenThisSecond == 0 then
         -- The spider isn't taking damage so try to move towards the target.
@@ -530,37 +536,57 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             -- Target isn't valid any more, so clear it out to make later code simplier.
             spider.lastDamagedByEntity = nil
         end
+
         -- Initial handling logic based on short term target existing.
-        if spider.lastDamagedByEntity == nil then
+        if spider.lastDamagedByEntity == nil and spider.lastDamagedFromPosition == nil then
             -- No short term target to react to at present.
             -- So do fallback behavour.
-            spider.lastDamagedFromPosition = nil
         else
-            -- There is still a short term target so check its distance.
-            local targetsCurrentPosition = spider.lastDamagedByEntity.position
-            local distanceToAttacker = Utils.GetDistance(spidersCurrentPosition, targetsCurrentPosition)
-            if distanceToAttacker <= Spider.GetSpidersEngagementRange(spider) then
-                -- Target near by so just advance a bit.
-                spider.lastDamagedFromPosition = Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition)
-                Spider.MoveSpiderToPosition(spider, spider.lastDamagedFromPosition)
+            -- There is still a short term target so look to engage with it.
+            if spider.lastDamagedByEntity ~= nil then
+                spider.lastDamagedFromPosition = spider.lastDamagedByEntity.position
+            end
+
+            -- Check if there is anything to fight at the current area. As we aren't being damaged so may as well kill anything we can.
+            spidersMaxShootingRange = spidersMaxShootingRange or Spider.GetSpidersEngagementRange(spider)
+            nearestEnemyWithinRange = nearestEnemyWithinRange or global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.biterTeam}
+            if nearestEnemyWithinRange ~= nil then
+                -- There's enemies within range at present, so just stand still and fight them.
+                Spider.MoveSpiderToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
                 return
+            end
+
+            -- Check if the spider has reached the target position and theres no entity to pursue.
+            if spider.lastDamagedByEntity == nil and Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition) < 10 then
+                -- Spider has reached its target position and theres no entity to pursue.
+                -- So do fallback behavour.
+                spider.lastDamagedByEntity = nil
+                spider.lastDamagedFromPosition = nil
             else
-                -- Target far away so try to chase it as we aren't taking damage.
-                if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, targetsCurrentPosition) then
-                    -- Target is at a chasable distance.
-                    spider.lastDamagedFromPosition = targetsCurrentPosition -- Set this as the new targetLocation in case the target entity vanishes while on route, etc.
-                    Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
+                -- Get current weapons range and distance to the target position.
+                local distanceToAttacker = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
+                if distanceToAttacker <= (spidersMaxShootingRange * 2) then
+                    -- Target near by so just advance a bit.
+                    Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.lastDamagedFromPosition, spidersCurrentPosition))
                     return
                 else
-                    -- Can't pursue short term target as its now outside of the allowed fighting area.
-                    -- So do fallback behavour.
-                    spider.lastDamagedByEntity = nil
-                    spider.lastDamagedFromPosition = nil
+                    -- Target far away so try to chase it as we aren't taking damage.
+                    if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, spider.lastDamagedFromPosition) then
+                        -- Target is at a chasable distance.
+                        Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
+                        return
+                    else
+                        -- Can't pursue short term target as its now outside of the allowed fighting area.
+                        -- So do fallback behavour.
+                        spider.lastDamagedByEntity = nil
+                        spider.lastDamagedFromPosition = nil
+                    end
                 end
             end
         end
 
-        -- Now check if there was a long term target as we aren't taking any damage.
+        -- Now check if there was a long term target. As we aren't taking any damage we may as well resume pursuing it, rather than attacking whatever happens to be near by.
+
         -- If the spider was targetting an entity check the entity is still valid.
         -- TODO: if its a player doing the damage in/out of a vehicle and they change driving state make sure it keeps tracking the player.
         if spider.chasingEntity ~= nil and not spider.chasingEntity.valid then
@@ -571,13 +597,17 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             -- No chasing target to react to at present.
             -- So do fallback behavour.
         else
-            -- There is still a chasing target so check its distance.
+            -- There is still a chasing target so look to engage with it.
+            if spider.chasingEntity ~= nil then
+                spider.chasingEntityLastPosition = spider.chasingEntity.position
+            end
+
             local targetsCurrentPosition = spider.chasingEntity.position
             local distanceToAttacker = Utils.GetDistance(spidersCurrentPosition, targetsCurrentPosition)
-            if distanceToAttacker <= Spider.GetSpidersEngagementRange(spider) then
+            spidersMaxShootingRange = spidersMaxShootingRange or Spider.GetSpidersEngagementRange(spider)
+            if distanceToAttacker <= (spidersMaxShootingRange * 2) then
                 -- Chasing target near by so just advance a bit.
-                spider.chasingEntityLastPosition = Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition)
-                Spider.MoveSpiderToPosition(spider, spider.chasingEntityLastPosition)
+                Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition))
                 return
             else
                 -- Chasing target far away so try to chase it as we aren't taking damage.
@@ -598,8 +628,8 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
         -- The spider is taking damage, so will stay in a fighting state for now. Just need to decide if to maneuver forwards or not.
 
         -- Get current weapons range and if enemy within this range.
-        local spidersMaxShootingRange = Spider.GetSpidersEngagementRange(spider)
-        local nearestEnemyWithinRange = global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.biterTeam}
+        spidersMaxShootingRange = spidersMaxShootingRange or Spider.GetSpidersEngagementRange(spider)
+        nearestEnemyWithinRange = nearestEnemyWithinRange or global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.biterTeam}
 
         -- Advance only if we are currently out of weapon range. We don't want to close in otherwise.
         if nearestEnemyWithinRange ~= nil then
@@ -610,12 +640,10 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, nearestEnemyWithinRangePosition)
             if distanceToTarget + Settings.spidersFightingStepDistance < spidersMaxShootingRange then
                 -- Step backwards to try and get out of being damaged while remaining within shooting range.
-
-                -- Don'd update the last damaged position as we will want to advance again as a default in the future.
                 Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForReversingFromTarget(spider, nearestEnemyWithinRangePosition, spidersCurrentPosition))
                 return
             else
-                -- Just stay here and fight for now.
+                -- Just stay here and fight for now. As moving forwards to use more weapons will probably get the spider shot by more defences.
                 Spider.MoveSpiderToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
                 return
             end
@@ -642,8 +670,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
                     local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, targetsCurrentPosition)
                     if distanceToTarget <= spidersMaxShootingRange then
                         -- Target near by so just advance a bit.
-                        spider.lastDamagedFromPosition = Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition)
-                        Spider.MoveSpiderToPosition(spider, spider.lastDamagedFromPosition)
+                        Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition))
                         return
                     else
                         -- Target far away and within the fighting area, so resume the chase on it. This will run away from whatever is shooting at us at present until we next take damage and then the chase will be broken.
@@ -661,9 +688,9 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
         end
     end
 
-    --As spider can't pursue the current target look for anything near by to attack, otherwise return to chasing the origional target if there was one, or return to roaming. Means the spider will attack down a line of defences, etc, before returning to a longer term behaviour.
+    -- As spider can't pursue the current target look for anything near by to attack, otherwise return to chasing the origional target if there was one, or return to roaming. Means the spider will attack down a line of defences, etc, before returning to a longer term behaviour.
 
-    -- Look for nearest target nearby.
+    -- Look for nearest target nearby and set them as the new target entity.
     spider.lastDamagedByEntity = global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = Settings.distanceToCheckForEnemiesWhenBeingDamaged, force = spider.biterTeam}
 
     -- Decide final action based on nearby target found.
@@ -680,10 +707,10 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
 
             -- React based on how far away it is.
             local distanceToAttacker = Utils.GetDistance(spidersCurrentPosition, targetsCurrentPosition)
-            if distanceToAttacker <= Spider.GetSpidersEngagementRange(spider) then
+            spidersMaxShootingRange = spidersMaxShootingRange or Spider.GetSpidersEngagementRange(spider)
+            if distanceToAttacker <= (spidersMaxShootingRange * 2) then
                 -- Target near by so just advance a bit.
-                spider.lastDamagedFromPosition = Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition)
-                Spider.MoveSpiderToPosition(spider, spider.lastDamagedFromPosition)
+                Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition))
                 return
             else
                 -- Target far away, so start chasing it.
@@ -714,10 +741,10 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
         -- There is still a chasing target so check its distance.
         local targetsCurrentPosition = spider.chasingEntity.position
         local distanceToAttacker = Utils.GetDistance(spidersCurrentPosition, targetsCurrentPosition)
-        if distanceToAttacker <= Spider.GetSpidersEngagementRange(spider) then
+        spidersMaxShootingRange = spidersMaxShootingRange or Spider.GetSpidersEngagementRange(spider)
+        if distanceToAttacker <= (spidersMaxShootingRange * 2) then
             -- Chasing target near by so just advance a bit.
-            spider.chasingEntityLastPosition = Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition)
-            Spider.MoveSpiderToPosition(spider, spider.chasingEntityLastPosition)
+            Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition))
             return
         else
             -- Chasing target far away so try to chase it as we aren't taking damage.
@@ -898,7 +925,8 @@ end
 Spider.GetSpidersEngagementRange = function(spider)
     if spider.gunSpiders[BossSpider_GunType.rocketLauncher].hasAmmo then
         if not spider.gunSpiders[BossSpider_GunType.rocketLauncher].entity.get_inventory(defines.inventory.spider_ammo).is_empty() then
-            return 36
+            -- Intentionally return the cannon range rather than the missile one. Just so the spider tries to engage with both weapons when ammo allows. As this range is still more than laser turrets.
+            return 30
         else
             spider.gunSpiders[BossSpider_GunType.rocketLauncher].hasAmmo = false
         end
@@ -912,7 +940,8 @@ Spider.GetSpidersEngagementRange = function(spider)
     end
     if spider.gunSpiders[BossSpider_GunType.machineGun].hasAmmo then
         if not spider.gunSpiders[BossSpider_GunType.machineGun].entity.get_inventory(defines.inventory.spider_ammo).is_empty() then
-            return 20
+            -- Intentionally return the flamer and laser range rather than the machine gun one. Just so the spider tries to engage with all remaining weapons given this range is less than laser turrets.
+            return 15
         else
             spider.gunSpiders[BossSpider_GunType.machineGun].hasAmmo = false
         end
