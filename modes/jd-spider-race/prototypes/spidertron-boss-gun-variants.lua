@@ -23,6 +23,7 @@ end
 gunSpiderBase.guns = {}
 gunSpiderBase.chunk_exploration_radius = 0 -- No need for this as the main boss spider will do it.
 gunSpiderBase.minimap_representation = nil
+gunSpiderBase.localised_name = {"entity-name.jd_plays-jd_spider_race-spidertron_boss"} -- Shows up when one of the gun variant spiders kills a player.
 for legCount, legObject in pairs(gunSpiderBase.spider_engine.legs) do
     -- Make a copy of the leg entity without the graphics.
     local legPrototype = Utils.DeepCopy(data.raw["spider-leg"]["jd_plays-jd_spider_race-spidertron_boss-leg-" .. legCount])
