@@ -8,8 +8,7 @@
         - Lot of LATER tags in code for things to be added as part of future wider functionality.
         - Need to reset the spiders state specific state variables when it changes state.
         - Replace all math functions with local versions as used a fair bit.
-        - Make some of the state changes do a processing cycle immediately ?
-        - Keep a reference to the origional target when goign from chase to fighting. When fighting is done and before returning to roaming check if it should pursue the orgional target. Stops a player losing a chasing spider by just running it in to sacrafical defences.
+        - Keep a reference to the origional target when going from chase to fighting. When fighting is done and before returning to roaming check if it should pursue the orgional target. Stops a player losing a chasing spider by just running it in to sacrafical defences.
 ]]
 local Spider = {}
 local Utils = require("utility.utils")
@@ -25,6 +24,8 @@ local Events = require("utility.events")
 ---@field playerTeamName string
 ---@field biterTeam LuaForce
 ---@field bossEntity LuaEntity @ The main spider boss entity.
+---@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
+---@field gunSpiders table<BossSpider_GunType, GunSpider>
 ---@field distanceFromSpawn uint @ How far from spawn the spiders area is centered on (positive number).
 ---@field damageTakenThisSecond float @ Damage taken so far this second (in between spider monitoring cycles).
 ---@field previousDamageToConsider float @ Damage taken in the previous whole seconds that the Settings.spiderDamageSecondsConsidered covers. Used whne the spider takes damage to simply track damage to consider retreat.
@@ -37,13 +38,12 @@ local Events = require("utility.events")
 ---@field fightingXMax uint @ Far right of its fighting area.
 ---@field fightingYMin uint @ Far top of its fighting area.
 ---@field fightingYMax uint @ Far bottom of its fighting area.
----@field movementTargetPosition MapPosition|null @ Only populated if the spider is actively moving to this position.
----@field spiderPositionLastSecond MapPosition @ The spiders position last second.
+---@field spiderPositionLastSecond MapPosition @ The spiders position last second. Used by various state's cycle functions.
 ---@field spiderPlanRenderIds Id[] -- used mainly for debugging and testing. But needs to be bleed throughout the code so made proper.
----@field gunSpiders table<BossSpider_GunType, GunSpider>
----@field lastDamagedByEntity LuaEntity|null @ The last known entity that caused damage to the boss spider. Recorded when the damage is done to a spider and so may become invalid during runtime, if so it will be set back to nil. Only recorded if it is within the spiders attacking range.
----@field lastDamagedFromPosition MapPosition|null @ The last known damaging entities position when it caused the damage to the boss spider. To act as a fallback for if the entity is no longer valid. Only recorded if it is within the spiders attacking range.
----@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
+---@field roamingTargetPosition MapPosition|null @ The target position the spider is roaming to.
+---@field retreatingTargetPosition MapPosition|null @ The target position the spider is retreating to.
+---@field lastDamagedByEntity LuaEntity|null @ The last known entity that caused damage to the boss spider when it wasn't fighting. Recorded when the damage is done to a spider and so may become invalid during runtime, if so it will be set back to nil. Only recorded if it is within the spiders attacking range.
+---@field lastDamagedFromPosition MapPosition|null @ The last known position of the lastDamagedByEntity. To act as a fallback for if the entity is no longer valid. Only recorded/updated if it is within the spiders attacking range.
 
 ---@class GunSpider
 ---@field type BossSpider_GunType
@@ -267,7 +267,8 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTe
         spiderPlanRenderIds = {},
         spiderPositionLastSecond = spiderPosition,
         gunSpiders = {}, -- Populated later in creation function.
-        movementTargetPosition = nil,
+        roamingTargetPosition = nil,
+        retreatingTargetPosition = nil,
         lastDamagedByEntity = nil,
         lastDamagedFromPosition = nil,
         hasAmmo = nil -- Populated later in creation function.
@@ -423,18 +424,19 @@ end
 ---@param spidersCurrentPosition MapPosition
 Spider.CheckRoamingForSecond = function(spider, spidersCurrentPosition)
     -- Do next action based on current state.
-    if spider.movementTargetPosition == nil then
+    if spider.roamingTargetPosition == nil then
         -- No current target for the spider to move too.
 
         -- CODE NOTE: Without any water being on the map every tile should be reachable for the spider. So no validation of target required.
-        Spider.MoveSpiderToPosition(spider, {x = math.random(spider.roamingXMin, spider.roamingXMax), y = math.random(spider.roamingYMin, spider.roamingYMax)})
+        spider.roamingTargetPosition = {x = math.random(spider.roamingXMin, spider.roamingXMax), y = math.random(spider.roamingYMin, spider.roamingYMax)}
+        Spider.MoveSpiderToPosition(spider, spider.roamingTargetPosition)
     else
         -- Moving to the target at present.
         if spidersCurrentPosition.x == spider.spiderPositionLastSecond.x and spidersCurrentPosition.y == spider.spiderPositionLastSecond.y then
             -- The spider has stopped moving so its arrived or got as close as it can.
             -- CODE NOTE: This should detect if it ever got jammed in 1 spot and restart the cycle to find a new movement target and hopefully un-jam it.
-            -- Clear the target position. The spider will sit here for another full second before the next cycle gives it a new position to move too.
-            spider.movementTargetPosition = nil
+            -- Clear the roaming target position. The spider will sit here for this full second before the next cycle gives it a new position to move too.
+            spider.roamingTargetPosition = nil
         end
     end
 end
@@ -447,8 +449,7 @@ Spider.CheckRetreatingForSecond = function(spider, spidersCurrentPosition)
     if spidersCurrentPosition.x == spider.spiderPositionLastSecond.x and spidersCurrentPosition.y == spider.spiderPositionLastSecond.y then
         -- The spider has stopped moving so its arrived or got as close as it can.
         -- Clear the target position and return the spider to roaming. The spider will sit here for another full second before the next cycle starts the roaming logic and a new position to move too.
-        spider.movementTargetPosition = nil
-        spider.state = BossSpider_State.roaming
+        Spider.StartRoaming(spider, spidersCurrentPosition)
     end
 end
 
@@ -471,7 +472,7 @@ Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
         if spider.lastDamagedByEntity == nil then
             -- No entity to chase, so was just moving to the position.
             -- If it's got here and hasn't already been attacked then go in to fighting mode. This will handle working out what to do next.
-            Spider.StartFighting(spider)
+            Spider.StartFighting(spider, spidersCurrentPosition)
         else
             -- Continue chasing the attacker to their new location.
             -- A spider can't "follow" another entity, it can only have its destination updated to the entities current position. This is how vanilla Factorio works.
@@ -487,7 +488,7 @@ Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
                 if Settings.showSpiderPlans then
                     rendering.draw_text {text = "target outside of fighting area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 180, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
                 end
-                spider.state = BossSpider_State.roaming
+                Spider.StartRoaming(spider, spidersCurrentPosition)
             end
         end
     else
@@ -598,7 +599,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
         if Settings.showSpiderPlans then
             rendering.draw_text {text = "no new targets to fight, so going home", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 180, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
         end
-        spider.state = BossSpider_State.roaming
+        Spider.StartRoaming(spider, spidersCurrentPosition)
         return
     else
         -- Theres a new target.
@@ -610,7 +611,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             if Settings.showSpiderPlans then
                 rendering.draw_text {text = "nearest target outside of fighting area, so going home", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 180, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
             end
-            spider.state = BossSpider_State.roaming
+            Spider.StartRoaming(spider, spidersCurrentPosition)
             return
         end
 
@@ -657,18 +658,26 @@ end
 ---@param targetPosition MapPosition
 Spider.MoveSpiderToPosition = function(spider, targetPosition)
     -- Give the various spider entities their order.
-    spider.movementTargetPosition = targetPosition
     spider.bossEntity.autopilot_destination = targetPosition
     for _, gunSpider in pairs(spider.gunSpiders) do
         gunSpider.entity.autopilot_destination = targetPosition
     end
 end
 
+--- Set the spider to start roaming.
+---@param spider BossSpider
+---@param spidersCurrentPosition MapPosition
+Spider.StartRoaming = function(spider, spidersCurrentPosition)
+    spider.state = BossSpider_State.roaming
+    Spider.CheckRoamingForSecond(spider, spidersCurrentPosition)
+end
+
 --- Make the spider retreat.
 ---@param spider BossSpider
 Spider.Retreat = function(spider)
     spider.state = BossSpider_State.retreating
-    Spider.MoveSpiderToPosition(spider, {x = spider.roamingXMin, y = math.random(spider.roamingYMin, spider.roamingYMax)})
+    spider.retreatingTargetPosition = {x = spider.roamingXMin, y = math.random(spider.roamingYMin, spider.roamingYMax)}
+    Spider.MoveSpiderToPosition(spider, spider.retreatingTargetPosition)
 end
 
 --- Set the spider to charge towards its latest attacker and start fighting there. Will starting moving there if needed, otherwise just enter fighting mode.
@@ -678,7 +687,7 @@ Spider.ChargeAtAttacker = function(spider)
     local distanceToAttacker = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
     if distanceToAttacker <= Spider.GetSpidersEngagementRange(spider) then
         -- Attacker is close enough to start fighting already.
-        Spider.StartFighting(spider)
+        Spider.StartFighting(spider, spidersCurrentPosition)
     else
         -- Spider will start moving to the position the last attacking enemy was at.
         spider.state = BossSpider_State.chasing
@@ -688,8 +697,10 @@ end
 
 --- Set the spider to start fighting in the area its currently at.
 ---@param spider BossSpider
-Spider.StartFighting = function(spider)
+---@param spidersCurrentPosition MapPosition
+Spider.StartFighting = function(spider, spidersCurrentPosition)
     spider.state = BossSpider_State.fighting
+    Spider.ManageFightingForSecond(spider, spidersCurrentPosition)
 end
 
 --- Gets the max distance the spider can fight from right now based on the weapons it has ammo for.
@@ -753,13 +764,16 @@ Spider.UpdatePlanRenders = function(spider)
     spider.spiderPlanRenderIds = {}
 
     -- Add any state specific renders for the spider.
-    if spider.state == BossSpider_State.roaming or spider.state == BossSpider_State.retreating then
-        if spider.movementTargetPosition ~= nil then
+    if spider.state == BossSpider_State.roaming then
+        if spider.roamingTargetPosition ~= nil then
             table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - moving", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.movementTargetPosition, surface = global.spider.surface})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.roamingTargetPosition, surface = global.spider.surface})
         else
             table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - arrived", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
         end
+    elseif spider.state == BossSpider_State.retreating then
+        table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state, surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+        table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.retreatingTargetPosition, surface = global.spider.surface})
     elseif spider.state == BossSpider_State.dead then
         -- The entity still exists the moment this is called, but not afterwards. So set it to the position and not the entity itself.
         table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state, surface = global.spider.surface, target = spider.bossEntity.position, color = Colors.white, scale_with_zoom = true})
