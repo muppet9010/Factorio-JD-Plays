@@ -5,17 +5,18 @@
 
 --[[
     TODO LATER:
+        - Check the TODO's in this file. Either lift them up here or do them next.
         - Lot of LATER tags in code for things to be added as part of future wider functionality.
-        - Need to reset the spiders state specific state variables when it changes state.
-        - Replace all math functions with local versions as used a fair bit.
-        - The spider should step backwards the way it came if ts taking damage. As it tends to run quite close to turrets. As they take a while to wake up and start shooting, so it gets very clsoe.
 ]]
+--
+
 local Spider = {}
 local Utils = require("utility.utils")
 local EventScheduler = require("utility/event-scheduler")
 local Colors = require("utility.colors")
 local Commands = require("utility.commands")
 local Events = require("utility.events")
+local math_min, math_max, math_floor, math_random = math.min, math.max, math.floor, math.random
 
 ---@class BossSpider
 ---@field id UnitNumber @ The UnitNumber of the boss spider entity. Also the key in global.spiders.
@@ -144,7 +145,7 @@ local Settings = {
     spidersRoamingYRange = 230, -- Bit less than half the height of each teams map area.
     spidersFightingXRange = 500, -- Random limit to stop it chasing infinitely.
     spidersFightingYRange = 256, -- Spider can move right up to the edge for when looking to chase a target to fight. It shouldn't ever actually reach this far in however.
-    spidersFightingStepDistance = 10, -- How far the spider will move away its current location when fighting at a time.
+    spidersFightingStepDistance = 3, -- How far the spider will move away from its current location when fighting per second.
     distanceToCheckForEnemiesWhenBeingDamaged = 50, -- How far the spider will look for enemies when it is being damaged, but there's no enemies within its current weapon ammo range.
     showSpiderPlans = true -- If enabled the plans of a spider are rendered.
 }
@@ -223,10 +224,10 @@ Spider.OnStartup = function()
         Spider.SetSpiderForcesTechs()
 
         -- Schedule it to occur at the start of every second. Makes later re-occuring rescheduling logic simplier as can just divide now by 60.
-        EventScheduler.ScheduleEvent((math.floor(game.tick / 60) * 60) + 60, "Spider.CheckSpiders_Scheduled")
+        EventScheduler.ScheduleEvent((math_floor(game.tick / 60) * 60) + 60, "Spider.CheckSpiders_Scheduled")
 
         -- Schedule it to occur at the start of every second. Makes later re-occuring rescheduling logic simplier as can just divide now by 60.
-        EventScheduler.ScheduleEvent((math.floor(game.tick / 3600) * 3600) + 3600, "Spider.SpidersMoveAwayFromSpawn_Scheduled")
+        EventScheduler.ScheduleEvent((math_floor(game.tick / 3600) * 3600) + 3600, "Spider.SpidersMoveAwayFromSpawn_Scheduled")
     end
 end
 
@@ -439,7 +440,7 @@ Spider.CheckRoamingForSecond = function(spider, spidersCurrentPosition)
         -- No current target for the spider to move too.
 
         -- CODE NOTE: Without any water being on the map every tile should be reachable for the spider. So no validation of target required.
-        spider.roamingTargetPosition = {x = math.random(spider.roamingXMin, spider.roamingXMax), y = math.random(spider.roamingYMin, spider.roamingYMax)}
+        spider.roamingTargetPosition = {x = math_random(spider.roamingXMin, spider.roamingXMax), y = math_random(spider.roamingYMin, spider.roamingYMax)}
         Spider.MoveSpiderToPosition(spider, spider.roamingTargetPosition)
     else
         -- Moving to the target at present.
@@ -503,7 +504,7 @@ Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
                 -- New target is outside of the allowed fighting area.
                 -- Return the spider back to roaming as it can't follow the target.
                 if Settings.showSpiderPlans then
-                    rendering.draw_text {text = "target outside of fighting area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 180, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+                    rendering.draw_text {text = "target outside of fighting area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
                 end
                 Spider.StartRoaming(spider, spidersCurrentPosition)
             end
@@ -517,7 +518,7 @@ end
 ---@param spider BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
-    -- The spider will "dance" to keep engaging targets with its longer range weapons until its killed the real target or retreats.
+    -- The spider will "dance" to keep engaging targets with its longer range weapons until its killed the real target or retreats. It will be a bit crude as otherwise it needs far more active managemnt.
 
     -- Initial reactions based on of the spider is taking damage at present.
     if spider.damageTakenThisSecond == 0 then
@@ -598,13 +599,26 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
 
         -- Get current weapons range and if enemy within this range.
         local spidersMaxShootingRange = Spider.GetSpidersEngagementRange(spider)
-        local enemiesWithinRange = global.spider.surface.find_entities_filtered {position = spidersCurrentPosition, radius = spidersMaxShootingRange, force = spider.biterTeam, is_military_target = true, limit = 1}
+        local nearestEnemyWithinRange = global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.biterTeam}
 
         -- Advance only if we are currently out of weapon range. We don't want to close in otherwise.
-        if #enemiesWithinRange == 1 then
-            -- An enemy already within weapon range so just stay here and fight for now.
-            Spider.MoveSpiderToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
-            return
+        if nearestEnemyWithinRange ~= nil then
+            -- An enemy already within weapon range.
+
+            -- Check how far away the target is and react based on this.
+            local nearestEnemyWithinRangePosition = nearestEnemyWithinRange.position
+            local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, nearestEnemyWithinRangePosition)
+            if distanceToTarget + Settings.spidersFightingStepDistance < spidersMaxShootingRange then
+                -- Step backwards to try and get out of being damaged while remaining within shooting range.
+
+                -- Don'd update the last damaged position as we will want to advance again as a default in the future.
+                Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForReversingFromTarget(spider, nearestEnemyWithinRangePosition, spidersCurrentPosition))
+                return
+            else
+                -- Just stay here and fight for now.
+                Spider.MoveSpiderToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
+                return
+            end
         else
             -- Nothing in range so advance a bit towards something...
 
@@ -661,7 +675,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
         if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, targetsCurrentPosition) then
             -- Target within fighting area.
             if Settings.showSpiderPlans then
-                rendering.draw_text {text = "found target near by to attack", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 180, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+                rendering.draw_text {text = "found target near by to attack", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
             end
 
             -- React based on how far away it is.
@@ -723,7 +737,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
 
     -- Fallback behaviour is to go home.
     if Settings.showSpiderPlans then
-        rendering.draw_text {text = "no new targets to fight or chase, so going home", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 180, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+        rendering.draw_text {text = "going home as last resort", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
     end
     Spider.StartRoaming(spider, spidersCurrentPosition)
 end
@@ -734,6 +748,10 @@ end
 ---@param targetsCurrentPosition MapPosition
 ---@param spidersCurrentPosition MapPosition
 Spider.GetNewPositionForAdvancingOnTarget = function(spider, targetsCurrentPosition, spidersCurrentPosition)
+    if Settings.showSpiderPlans then
+        rendering.draw_text {text = "advancing on target", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+    end
+
     local xPositonModifier, yPositonModifier
     if targetsCurrentPosition.x > spidersCurrentPosition.x then
         xPositonModifier = 1
@@ -746,8 +764,37 @@ Spider.GetNewPositionForAdvancingOnTarget = function(spider, targetsCurrentPosit
         yPositonModifier = -1
     end
     return {
-        x = math.max(math.min(spidersCurrentPosition.x + (Settings.spidersFightingStepDistance * xPositonModifier), spider.fightingXMax), spider.fightingXMin),
-        y = math.max(math.min(spidersCurrentPosition.y + (Settings.spidersFightingStepDistance * yPositonModifier), spider.fightingYMax), spider.fightingYMin)
+        x = math_max(math_min(spidersCurrentPosition.x + (Settings.spidersFightingStepDistance * xPositonModifier), spider.fightingXMax), spider.fightingXMin),
+        y = math_max(math_min(spidersCurrentPosition.y + (Settings.spidersFightingStepDistance * yPositonModifier), spider.fightingYMax), spider.fightingYMin)
+    }
+end
+
+--- Advance roughly away from the target. Stays within the allowed fighting area.
+--- Intended to be very basic and simple initially.
+--- The spider should step backwards the way it came. As it tends to run quite close to turrets as they take a while to wake up and start shooting, so it gets very close before its damaged and goes in to fighting mode.
+---@param spider BossSpider
+---@param targetsCurrentPosition MapPosition
+---@param spidersCurrentPosition MapPosition
+Spider.GetNewPositionForReversingFromTarget = function(spider, targetsCurrentPosition, spidersCurrentPosition)
+    if Settings.showSpiderPlans then
+        rendering.draw_text {text = "reversing from target", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+    end
+
+    -- TODO: this should actually look at the previous seconds position and go back in that direction. Once started going back just keep on going back in that same orientation until it stops going back. Use variables to store and clear this orientation.
+    local xPositonModifier, yPositonModifier
+    if targetsCurrentPosition.x > spidersCurrentPosition.x then
+        xPositonModifier = 1
+    else
+        xPositonModifier = -1
+    end
+    if targetsCurrentPosition.y > spidersCurrentPosition.y then
+        yPositonModifier = 1
+    else
+        yPositonModifier = -1
+    end
+    return {
+        x = math_max(math_min(spidersCurrentPosition.x - (Settings.spidersFightingStepDistance * xPositonModifier), spider.fightingXMax), spider.fightingXMin),
+        y = math_max(math_min(spidersCurrentPosition.y - (Settings.spidersFightingStepDistance * yPositonModifier), spider.fightingYMax), spider.fightingYMin)
     }
 end
 
@@ -766,6 +813,8 @@ end
 ---@param spider BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.StartRoaming = function(spider, spidersCurrentPosition)
+    Spider.ClearStateVariables(spider)
+
     spider.state = BossSpider_State.roaming
     Spider.CheckRoamingForSecond(spider, spidersCurrentPosition)
     if Settings.showSpiderPlans then
@@ -776,8 +825,10 @@ end
 --- Make the spider retreat.
 ---@param spider BossSpider
 Spider.Retreat = function(spider)
+    Spider.ClearStateVariables(spider)
+
     spider.state = BossSpider_State.retreating
-    spider.retreatingTargetPosition = {x = spider.roamingXMin, y = math.random(spider.roamingYMin, spider.roamingYMax)}
+    spider.retreatingTargetPosition = {x = spider.roamingXMin, y = math_random(spider.roamingYMin, spider.roamingYMax)}
     Spider.MoveSpiderToPosition(spider, spider.retreatingTargetPosition)
     if Settings.showSpiderPlans then
         Spider.UpdatePlanRenders(spider)
@@ -788,6 +839,8 @@ end
 ---@param spider BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition)
+    Spider.ClearNonFightingStateVariables(spider)
+
     -- Prioritise charging at the more recent damage causer.
     local currentTargetPosition
     if spider.lastDamagedFromPosition ~= nil then
@@ -819,6 +872,24 @@ Spider.StartFighting = function(spider, spidersCurrentPosition)
     if Settings.showSpiderPlans then
         Spider.UpdatePlanRenders(spider)
     end
+end
+
+--- Clear all state variables.
+---@param spider BossSpider
+Spider.ClearStateVariables = function(spider)
+    spider.chasingEntity = nil
+    spider.chasingEntityLastPosition = nil
+    spider.lastDamagedByEntity = nil
+    spider.lastDamagedFromPosition = nil
+    spider.retreatingTargetPosition = nil
+    spider.roamingTargetPosition = nil
+end
+
+--- Clear the non fighting state variables.
+---@param spider BossSpider
+Spider.ClearNonFightingStateVariables = function(spider)
+    spider.retreatingTargetPosition = nil
+    spider.roamingTargetPosition = nil
 end
 
 --- Gets the max distance the spider can fight from right now based on the weapons it has ammo for.
