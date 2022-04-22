@@ -7,11 +7,9 @@
 
 --[[
     TODO LATER:
-        - Lot of LATER tags in code for things to be added as part of future wider functionality.
-        - Add a command to reset a spiders state. For if it gets stuck. Reset its state variables and teleport it home.
-        - Check how a spider with only closer range weapons behaves. I suspect it will advance slowly for ages once fighting due to the *2 on weapon range check, but it may be ok. If its not add a new/changed engagement range function with appropriate hard coded values (rather than always x2) for a long and shot range spider.
-        - Can I give it a temporary speed boost while it's retreating? If not easily via API I could just add legs to it for the run home.
-        - Reversing from target: should actually look at the previous seconds position and go back in that direction. Once started going back just keep on going back in that same orientation until it stops going back. Use variables to store and clear this orientation. As at present it can get stuck backing away from targets on both sides of it.
+        - Lot of LATER tags in code for things to be added as part of future wider functionality:
+            - Guis
+            - Artillery
         - Use active danger checking when moving:
             - When we charge at a target we should target the position half weapons distance away from it. As we actually "arrive" when 10 tiles near the target position and then go in to a fighting stance if the enemy is vaguely close. This should stop the spider walking too close to turrets it knows about.
             - When the spider is chasing (moving for combat?) have it do a target scan around its current position and where it will roughly reach in the next second. Should just be looking for any enemies that will attack it. If found should go in to combat state against them. Really just to stop it running so deep in to turret lines when chasing or charging at targets. When its roaming should it do the same?
@@ -85,7 +83,7 @@ local BossSpider_GunType = {
 ---@field entityName string @ The entity prototype name of this gun spider.
 ---@field gunFilters table<Id, string> @ A list of the gun slots and what filter they should each have (if any).
 
----@alias BossSpider_GunDetails table<BossSpider_GunType,BossSpider_GunEntityDetails>
+---@type table<BossSpider_GunType, BossSpider_GunEntityDetails>
 local BossSpider_GunDetails = {
     [BossSpider_GunType.artillery] = {
         name = "jd_plays-jd_spider_race-spidertron_boss_gun-artillery_wagon_cannon",
@@ -118,12 +116,12 @@ local BossSpider_GunDetails = {
     }
 }
 
----@alias BossSpider_Rearm ItemStackDefinition[]
+---@type ItemStackDefinition[]
 local BossSpider_Rearm = {
     {name = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", count = 100}
 }
 
----@alias BossSpider_GunRearm table<BossSpider_GunType, ItemStackDefinition[]>
+---@type table<BossSpider_GunType, ItemStackDefinition[]>
 local BossSpider_GunRearm = {
     --[[    [BossSpider_GunType.artillery] = {
 {name = "artillery-shell", count = 10} -- LATER: doesn't work as desired. Plan is to use an artillery turret and teleport it to the spider frequently. Will need a really fast aiming and firing time, but a slower cooldown. Have a really large inventory size for it as if the shells were being stored in a spider. Exact stored ammo count for each weapon to be confirmed later.
@@ -131,8 +129,7 @@ local BossSpider_GunRearm = {
     [BossSpider_GunType.machineGun] = {
         {name = "firearm-magazine", count = 200},
         {name = "piercing-rounds-magazine", count = 200},
-        {name = "uranium-rounds-magazine", count = 200},
-        {name = "explosive-rocket", count = 200}
+        {name = "uranium-rounds-magazine", count = 200}
     },
     [BossSpider_GunType.rocketLauncher] = {
         {name = "rocket", count = 200},
@@ -147,6 +144,27 @@ local BossSpider_GunRearm = {
     }
 }
 
+---@class BossSpider_RconAmmoType
+---@field ammoItemName string
+---@field gunType BossSpider_GunType|null
+---@field bossSpider boolean|null
+
+---@type table<string, BossSpider_RconAmmoType> @ Friendly name to item name.
+local BossSpider_RconAmmoNames = {
+    bullet = {ammoItemName = "firearm-magazine", gunType = BossSpider_GunType.machineGun},
+    piercingBullet = {ammoItemName = "piercing-rounds-magazine", gunType = BossSpider_GunType.machineGun},
+    uraniumBullet = {ammoItemName = "uranium-rounds-magazine", gunType = BossSpider_GunType.machineGun},
+    rocket = {ammoItemName = "rocket", gunType = BossSpider_GunType.rocketLauncher},
+    explosiveRocket = {ammoItemName = "explosive-rocket", gunType = BossSpider_GunType.rocketLauncher},
+    atomicRocket = {ammoItemName = "atomic-bomb", gunType = BossSpider_GunType.rocketLauncher},
+    cannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", gunType = BossSpider_GunType.tankCannon},
+    explosiveCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_ammo", gunType = BossSpider_GunType.tankCannon},
+    uraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_ammo", gunType = BossSpider_GunType.tankCannon},
+    explosiveUraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_ammo", gunType = BossSpider_GunType.tankCannon},
+    artilleryShell = {ammoItemName = "artillery-shell", gunType = BossSpider_GunType.artillery},
+    flamethrowerAmmo = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", bossSpider = true}
+}
+
 local Settings = {
     bossSpiderStartingLeftDistance = 5000,
     bossSpiderStartingVerticalDistance = 256, -- Half the height of each teams map area.
@@ -159,21 +177,23 @@ local Settings = {
     spidersFightingStepDistance = 5, -- How far the spider will move away from its current location when fighting per second. - value of 2 or lower known to cause weird failed leg movement actions.
     distanceToCheckForEnemiesWhenBeingDamaged = 50, -- How far the spider will look for enemies when it is being damaged, but there's no enemies within its current weapon ammo range.
     showSpiderPlans = false, -- If enabled the plans of a spider are rendered.
-    markSpiderAreas = false -- If enabled the roaming and fighting areas of the spiders are marked with lines. Green for roaming and yellow for fighting.
+    markSpiderAreas = false -- If enabled the roaming and fighting areas of the spiders are marked with lines. Blue for roaming and red for fighting.
 }
 
 -- Testing is for development and is very adhoc in what it changes to allow simplier testing.
 local Testing = true
 if Testing then
-    Settings.bossSpiderStartingLeftDistance = 50
+    Settings.bossSpiderStartingLeftDistance = 100
     Settings.bossSpiderStartingVerticalDistance = 30
     Settings.spidersRoamingXRange = 20
     Settings.spidersRoamingYRange = 40
     Settings.spidersFightingXRange = 200
-    Settings.spidersFightingYRange = 80
+    Settings.spidersFightingYRange = 60
     Settings.showSpiderPlans = true
     Settings.markSpiderAreas = true
     BossSpider_GunRearm[BossSpider_GunType.rocketLauncher][3] = nil -- No atomic weapons.
+--BossSpider_GunRearm[BossSpider_GunType.rocketLauncher] = {} -- Test short range weapon spider.
+--BossSpider_GunRearm[BossSpider_GunType.tankCannon] = {} -- Test short range weapon spider.
 end
 
 -- This must be created after the first batch of testing value changes are applied.
@@ -218,10 +238,13 @@ end
 
 Spider.OnLoad = function()
     EventScheduler.RegisterScheduledEventType("Spider.CheckSpiders_Scheduled", Spider.CheckSpiders_Scheduled) -- CODE NOTE: in ideal world this would be a re-occuring scheduled event every SECOND, but this Utils version doesn't have that feature. One schedule action per second shouldn't be too UPS heavy.
-    Commands.Register("change_spider_distance", {"api-description.jd_plays-jd_spider_race-change_spider_distance"}, Spider.Command_ChangeDistanceFromSpawn, true)
-    Commands.Register("set_spider_movement_per_minute", {"api-description.jd_plays-jd_spider_race-set_spider_movement_per_minute"}, Spider.Command_SetSpiderMovementPerMinute, true)
+    Commands.Register("spider_change_distance", {"api-description.jd_plays-jd_spider_race-spider_change_distance"}, Spider.Command_ChangeDistanceFromSpawn, true)
+    Commands.Register("spider_set_movement_per_minute", {"api-description.jd_plays-jd_spider_race-spider_set_movement_per_minute"}, Spider.Command_SetSpiderMovementPerMinute, true)
     EventScheduler.RegisterScheduledEventType("Spider.SpidersMoveAwayFromSpawn_Scheduled", Spider.SpidersMoveAwayFromSpawn_Scheduled) -- CODE NOTE: in ideal world this would be a re-occuring scheduled event every MINUTE, but this Utils version doesn't have that feature. One schedule action per MINUTE shouldn't be too UPS heavy.
     Events.RegisterHandlerEvent(defines.events.on_entity_died, "Spider.OnSpiderDied", Spider.OnSpiderDied, "bossSpiders", {{filter = "name", name = "jd_plays-jd_spider_race-spidertron_boss"}})
+    Commands.Register("spider_reset_state", {"api-description.jd_plays-jd_spider_race-spider_reset_state"}, Spider.Command_ResetSpiderState, true)
+    Commands.Register("spider_full_rearm", {"api-description.jd_plays-jd_spider_race-spider_full_rearm"}, Spider.Command_RearmSpider, true)
+    Commands.Register("spider_give_ammo", {"api-description.jd_plays-jd_spider_race-spider_give_ammo"}, Spider.Command_GiveSpiderAmmo, true)
 end
 
 Spider.OnStartup = function()
@@ -323,7 +346,7 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTe
         spider.gunSpiders[shortName] = {type = shortName, entity = gunSpiderEntity, hasAmmo = true}
     end
 
-    Spider.GiveSpiderAmmo(spider)
+    Spider.GiveSpiderFullAmmo(spider)
 
     -- Record the spider to globals.
     global.spider.spiders[spider.id] = spider
@@ -354,10 +377,12 @@ Spider.UpdateSpidersRoamingValues = function(spider)
         end
         spider.spiderAreasRenderIds = {}
 
-        -- Add the current areas, do the fighting first as this is the largest and we want this underneath the smaller roaming area.
-        table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.yellow, filled = true, left_top = {x = spider.fightingXMin, y = spider.fightingYMin}, right_bottom = {x = spider.fightingXMax, y = spider.fightingYMax}, surface = global.spider.surface, draw_on_ground = true})
-        table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.green, filled = true, left_top = {x = spider.roamingXMin, y = spider.roamingYMin}, right_bottom = {x = spider.roamingXMax, y = spider.roamingYMax}, surface = global.spider.surface, draw_on_ground = true})
+        -- Add the current areas.
+        table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.blue, filled = false, width = 10, left_top = {x = spider.roamingXMin, y = spider.roamingYMin}, right_bottom = {x = spider.roamingXMax, y = spider.roamingYMax}, surface = global.spider.surface, draw_on_ground = true})
+        table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.red, filled = false, width = 10, left_top = {x = spider.fightingXMin, y = spider.fightingYMin}, right_bottom = {x = spider.fightingXMax, y = spider.fightingYMax}, surface = global.spider.surface, draw_on_ground = true})
     end
+
+    -- LATER: update distance GUI for this spider's player team.
 end
 
 --- Called when only a boss spider named entity type has been damaged.
@@ -479,7 +504,7 @@ Spider.CheckRoamingForSecond = function(spider, spidersCurrentPosition)
 
         -- CODE NOTE: Without any water being on the map every tile should be reachable for the spider. So no validation of target required.
         spider.roamingTargetPosition = {x = math_random(spider.roamingXMin, spider.roamingXMax), y = math_random(spider.roamingYMin, spider.roamingYMax)}
-        Spider.MoveSpiderToPosition(spider, spider.roamingTargetPosition)
+        Spider.OrderSpiderToStartMovingToPosition(spider, spider.roamingTargetPosition)
     else
         -- Moving to the target at present.
         if spidersCurrentPosition.x == spider.spiderPositionLastSecond.x and spidersCurrentPosition.y == spider.spiderPositionLastSecond.y then
@@ -530,7 +555,7 @@ Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
     else
         -- Spider is still moving towards its existing target location.
         -- A spider can't "follow" another entity, it can only have its destination updated to the entities current position. This is how vanilla Factorio works.
-        Spider.MoveSpiderToPosition(spider, spider.chasingEntityLastPosition)
+        Spider.OrderSpiderToStartMovingToPosition(spider, spider.chasingEntityLastPosition)
     end
 end
 
@@ -562,7 +587,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             if nearestEnemyWithinRange ~= "none" then
                 -- There's enemies within current weapons range so just stand still and fight them.
                 -- There's no movement or retargeting involved here so no need to check fighting area.
-                Spider.MoveSpiderToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
+                Spider.OrderSpiderToStartMovingToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
                 if Settings.showSpiderPlans then
                     rendering.draw_text {text = "standing to fight", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
                 end
@@ -606,11 +631,11 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, nearestEnemyWithinRangePosition)
             if distanceToTarget + Settings.spidersFightingStepDistance < spidersMaxShootingRange then
                 -- Step backwards to try and get out of being damaged while remaining within our weapons range.
-                Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForReversingFromTarget(spider, nearestEnemyWithinRangePosition, spidersCurrentPosition))
+                Spider.OrderSpiderToStartMovingToPosition(spider, Spider.GetNewPositionForReversingFromTarget(spider, nearestEnemyWithinRangePosition, spidersCurrentPosition))
                 return
             else
                 -- Just stay here and fight for now. As moving forwards to use more weapons will probably get the spider shot by more defences.
-                Spider.MoveSpiderToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
+                Spider.OrderSpiderToStartMovingToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
                 if Settings.showSpiderPlans then
                     rendering.draw_text {text = "standing to fight", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
                 end
@@ -630,7 +655,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
                 local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
                 if distanceToTarget <= (spidersMaxShootingRange * 2) then
                     -- Target near by so just advance a bit towards it.
-                    Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.lastDamagedFromPosition, spidersCurrentPosition))
+                    Spider.OrderSpiderToStartMovingToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.lastDamagedFromPosition, spidersCurrentPosition))
                     return
                 else
                     -- Target far away and within the fighting area, so resume the chase on it. This will run away from whatever is shooting at us at present until we next take damage and then the chase will be broken.
@@ -667,7 +692,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
             if distanceToTarget <= (spidersMaxShootingRange * 2) then
                 -- Target near by so just advance a bit.
-                Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.lastDamagedFromPosition, spidersCurrentPosition))
+                Spider.OrderSpiderToStartMovingToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.lastDamagedFromPosition, spidersCurrentPosition))
                 return
             else
                 -- Target far away, so start chasing it.
@@ -694,7 +719,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
         local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.chasingEntityLastPosition)
         if distanceToTarget <= (spidersMaxShootingRange * 2) then
             -- Target near by so just advance a bit.
-            Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.chasingEntityLastPosition, spidersCurrentPosition))
+            Spider.OrderSpiderToStartMovingToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.chasingEntityLastPosition, spidersCurrentPosition))
             return
         else
             -- Target far away, so start chasing it.
@@ -735,7 +760,7 @@ Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosi
         -- The spider has reached its target position and so this must be in range of the targetted entity.
 
         -- Stop here to fight the target and anything else near by.
-        Spider.MoveSpiderToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
+        Spider.OrderSpiderToStartMovingToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
         if Settings.showSpiderPlans then
             rendering.draw_text {text = "standing to fight", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
         end
@@ -747,7 +772,7 @@ Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosi
     -- React based on if the target is near by or not.
     if distanceToTarget <= (spidersMaxShootingRange * 2) then
         -- Target near by so just advance a bit.
-        Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider[positionRefName], spidersCurrentPosition))
+        Spider.OrderSpiderToStartMovingToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider[positionRefName], spidersCurrentPosition))
         return
     else
         -- Target far away so start chase it as we aren't taking damage.
@@ -870,7 +895,7 @@ end
 --- Order the spider to move to a position. This will also handle updating any hidden entities that aren't part of the boss spider.
 ---@param spider BossSpider
 ---@param targetPosition MapPosition
-Spider.MoveSpiderToPosition = function(spider, targetPosition)
+Spider.OrderSpiderToStartMovingToPosition = function(spider, targetPosition)
     -- Give the various spider entities their order.
     spider.bossEntity.autopilot_destination = targetPosition
     for _, gunSpider in pairs(spider.gunSpiders) do
@@ -898,7 +923,7 @@ Spider.Retreat = function(spider)
 
     spider.state = BossSpider_State.retreating
     spider.retreatingTargetPosition = {x = spider.roamingXMin, y = math_random(spider.roamingYMin, spider.roamingYMax)}
-    Spider.MoveSpiderToPosition(spider, spider.retreatingTargetPosition)
+    Spider.OrderSpiderToStartMovingToPosition(spider, spider.retreatingTargetPosition)
     if Settings.showSpiderPlans then
         Spider.UpdatePlanRenders(spider)
     end
@@ -925,7 +950,7 @@ Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition)
     else
         -- Spider will start moving to the position the last attacking enemy was at.
         spider.state = BossSpider_State.chasing
-        Spider.MoveSpiderToPosition(spider, currentTargetPosition)
+        Spider.OrderSpiderToStartMovingToPosition(spider, currentTargetPosition)
         if Settings.showSpiderPlans then
             Spider.UpdatePlanRenders(spider)
         end
@@ -1087,60 +1112,56 @@ Spider.UpdatePlanRenders = function(spider)
     end
 end
 
---- When the change_spider_distance command is called.
+--- When the spider_change_distance command is called.
 ---@param commandEvent CustomCommandData
 Spider.Command_ChangeDistanceFromSpawn = function(commandEvent)
     local args = Commands.GetArgumentsFromCommand(commandEvent.parameter)
-    local commandErrorMessagePrefix = "ERROR: change_spider_distance command - "
+    local commandErrorMessagePrefix = "ERROR: spider_change_distance command - "
     if args == nil or type(args) ~= "table" or #args == 0 then
         game.print(commandErrorMessagePrefix .. "No arguments provided.", Colors.lightred)
         return
     end
-    if #args < 1 or #args > 2 then
-        game.print(commandErrorMessagePrefix .. "Wrong number of arguments provided. Expected 1 or 2, got" .. #args, Colors.lightred)
+    if #args ~= 2 then
+        game.print(commandErrorMessagePrefix .. "Wrong number of arguments provided. Expected 2, got" .. #args, Colors.lightred)
         return
     end
 
-    local distanceChange = args[1] ---@type number
+    local playerTeamName = args[1] ---@type string
+    if playerTeamName ~= "both" and PlayerForcesNameToDetails[playerTeamName] == nil then
+        game.print(commandErrorMessagePrefix .. 'First argument of player team name was invalid, either "north", "south" or "both". Recieved: ' .. tostring(playerTeamName), Colors.lightred)
+        return
+    end
+
+    local distanceChange = args[2] ---@type number
     if type(distanceChange) ~= "number" then
-        game.print(commandErrorMessagePrefix .. "First argument of distance to change by must be a number, recieved: " .. tostring(distanceChange), Colors.lightred)
+        game.print(commandErrorMessagePrefix .. "Second argument of distance to change by must be a number, recieved: " .. tostring(distanceChange), Colors.lightred)
         return
-    end
-
-    local playerTeamName = args[2] ---@type string
-    if playerTeamName ~= nil and playerTeamName ~= "" then
-        -- Optional team name is provided so check its valid.
-        if PlayerForcesNameToDetails[playerTeamName] == nil then
-            game.print(commandErrorMessagePrefix .. 'Second argument of player team name was invalid, either "north", "south", or blank/nil are allowed. Recieved: ' .. tostring(playerTeamName), Colors.lightred)
-            return
-        end
     end
 
     -- Impliment command as any errors would have bene flagged by now.
-    if playerTeamName == nil then
+    if playerTeamName == "both" then
         -- Update both team's spiders.
         for _, spider in pairs(global.spider.spiders) do
             spider.distanceFromSpawn = spider.distanceFromSpawn + distanceChange
             Spider.UpdateSpidersRoamingValues(spider)
-            -- LATER: update distance GUI.
         end
+        -- LATER: show GUI message about update.
+        local x = 1
     else
         -- Just update the 1 team's spider.
         local spider = global.spider.playerTeamsSpider[playerTeamName]
         spider.distanceFromSpawn = spider.distanceFromSpawn + distanceChange
         Spider.UpdateSpidersRoamingValues(spider)
-        -- LATER: update distance GUI.
+        -- LATER: show GUI message about update.
         local x = 1
     end
-
-    -- LATER: show GUI message about update.
 end
 
---- When the set_spider_movement_per_minute command is called.
+--- When the spider_set_movement_per_minute command is called.
 ---@param commandEvent CustomCommandData
 Spider.Command_SetSpiderMovementPerMinute = function(commandEvent)
     local args = Commands.GetArgumentsFromCommand(commandEvent.parameter)
-    local commandErrorMessagePrefix = "ERROR: change_spider_distance command - "
+    local commandErrorMessagePrefix = "ERROR: spider_set_movement_per_minute command - "
     if args == nil or type(args) ~= "table" or #args == 0 then
         game.print(commandErrorMessagePrefix .. "No arguments provided.", Colors.lightred)
         return
@@ -1167,7 +1188,6 @@ Spider.SpidersMoveAwayFromSpawn_Scheduled = function(event)
     for _, spider in pairs(global.spider.spiders) do
         spider.distanceFromSpawn = spider.distanceFromSpawn + global.spider.constantMovementFromSpawnPerMinute
         Spider.UpdateSpidersRoamingValues(spider)
-        -- LATER: update distance GUI.
     end
 
     -- Schedule the next Minutes event. As the first instance of this schedule always occurs exactly on a minute no fancy logic is needed for each reschedule.
@@ -1176,7 +1196,7 @@ end
 
 --- Gives the boss spider and its gun spiders 1 set of ammo.
 ---@param spider BossSpider
-Spider.GiveSpiderAmmo = function(spider)
+Spider.GiveSpiderFullAmmo = function(spider)
     if spider.state == BossSpider_State.dead then
         return
     end
@@ -1193,6 +1213,113 @@ Spider.GiveSpiderAmmo = function(spider)
             spider.gunSpiders[bossSpiderGunType].entity.insert(ammo)
         end
         spider.gunSpiders[bossSpiderGunType].hasAmmo = true
+    end
+end
+
+--- When the spider_full_rearm command is called to give the spider a full set of ammo.
+---@param commandEvent CustomCommandData
+Spider.Command_RearmSpider = function(commandEvent)
+    local args = Commands.GetArgumentsFromCommand(commandEvent.parameter)
+    local commandErrorMessagePrefix = "ERROR: spider_full_rearm command - "
+    if args == nil or type(args) ~= "table" or #args == 0 then
+        game.print(commandErrorMessagePrefix .. "No arguments provided.", Colors.lightred)
+        return
+    end
+    if #args ~= 1 then
+        game.print(commandErrorMessagePrefix .. "Wrong number of arguments provided. Expected 1, got" .. #args, Colors.lightred)
+        return
+    end
+
+    local playerTeamName = args[1] ---@type string
+    if playerTeamName ~= "both" and PlayerForcesNameToDetails[playerTeamName] == nil then
+        game.print(commandErrorMessagePrefix .. 'First argument of player team name was invalid, either "north", "south" or "both". Recieved: ' .. tostring(playerTeamName), Colors.lightred)
+        return
+    end
+
+    -- Impliment command as any errors would have bene flagged by now.
+    if playerTeamName == "both" then
+        -- Update both team's spiders.
+        for _, spider in pairs(global.spider.spiders) do
+            Spider.GiveSpiderFullAmmo(spider)
+        end
+        -- LATER: show GUI message about update.
+        local x = 1
+    else
+        -- Just update the 1 team's spider.
+        local spider = global.spider.playerTeamsSpider[playerTeamName]
+        Spider.GiveSpiderFullAmmo(spider)
+        -- LATER: show GUI message about update.
+        local x = 1
+    end
+end
+
+--- When the spider_give_ammo command is called to give the spider a specific type and count of ammo.
+---@param commandEvent CustomCommandData
+Spider.Command_GiveSpiderAmmo = function(commandEvent)
+    local args = Commands.GetArgumentsFromCommand(commandEvent.parameter)
+    local commandErrorMessagePrefix = "ERROR: spider_full_rearm command - "
+    if args == nil or type(args) ~= "table" or #args == 0 then
+        game.print(commandErrorMessagePrefix .. "No arguments provided.", Colors.lightred)
+        return
+    end
+    if #args ~= 3 then
+        game.print(commandErrorMessagePrefix .. "Wrong number of arguments provided. Expected 3, got" .. #args, Colors.lightred)
+        return
+    end
+
+    local playerTeamName = args[1] ---@type string
+    if playerTeamName ~= "both" and PlayerForcesNameToDetails[playerTeamName] == nil then
+        game.print(commandErrorMessagePrefix .. 'First argument of player team name was invalid, either "north", "south" or "both". Recieved: ' .. tostring(playerTeamName), Colors.lightred)
+        return
+    end
+
+    local ammoFriendlyName = args[2] ---@type string
+    local rconAmmoType = BossSpider_RconAmmoNames[ammoFriendlyName]
+    if rconAmmoType == nil then
+        game.print(commandErrorMessagePrefix .. "Second argument of ammoName must be one of the specific ammo types, recieved: " .. tostring(ammoFriendlyName) .. ". Options: bullet, piercingBullet, uraniumBullet, rocket, explosiveRocket, atomicRocket, cannonShell, explosiveCannonShell, uraniumCannonShell, explosiveUraniumCannonShell, artilleryShell, flamethrowerAmmo", Colors.lightred)
+        return
+    end
+
+    local quantity = args[3] ---@type number
+    if type(quantity) ~= "number" then
+        game.print(commandErrorMessagePrefix .. "Third argument of quantity must be a number, recieved: " .. tostring(quantity), Colors.lightred)
+        return
+    end
+    quantity = math.floor(quantity)
+
+    if quantity <= 0 then
+        game.print(commandErrorMessagePrefix .. "Quantity of 0 or less is ignored, recieved after rounding down: " .. tostring(quantity), Colors.lightred)
+        return
+    end
+
+    -- Impliment command as any errors would have bene flagged by now.
+    if playerTeamName == "both" then
+        -- Update both team's spiders.
+        for _, spider in pairs(global.spider.spiders) do
+            Spider.GiveSpiderSpecificAmmo(spider, rconAmmoType, quantity)
+        end
+        -- LATER: show GUI message about update.
+        local x = 1
+    else
+        -- Just update the 1 team's spider.
+        local spider = global.spider.playerTeamsSpider[playerTeamName]
+        Spider.GiveSpiderSpecificAmmo(spider, rconAmmoType, quantity)
+        -- LATER: show GUI message about update.
+        local x = 1
+    end
+end
+
+--- Gives a spider a specific ammo type and count. Works out which entity to put the ammo in.
+---@param spider BossSpider
+---@param rconAmmoType BossSpider_RconAmmoType
+---@param quantity uint
+Spider.GiveSpiderSpecificAmmo = function(spider, rconAmmoType, quantity)
+    if rconAmmoType.bossSpider then
+        spider.bossEntity.insert({name = rconAmmoType.ammoItemName, count = quantity})
+        spider.hasAmmo = true
+    else
+        spider.gunSpiders[rconAmmoType.gunType].entity.insert({name = rconAmmoType.ammoItemName, count = quantity})
+        spider.gunSpiders[rconAmmoType.gunType].hasAmmo = true
     end
 end
 
@@ -1217,6 +1344,40 @@ Spider.OnSpiderDied = function(event)
     game.print("HYPE - boss spider of team " .. spider.playerTeamName .. " killed !!!", Colors.green)
 
     -- LATER: announce the death and do any GUI stuff, etc. Maybe freeze all spider distance changes and lock the scoreboard?
+end
+
+--- When the spider_reset_state command is called. Resets it's state variables and teleports it home to fix any odd state it may have got into.
+---@param commandEvent CustomCommandData
+Spider.Command_ResetSpiderState = function(commandEvent)
+    local args = Commands.GetArgumentsFromCommand(commandEvent.parameter)
+    local commandErrorMessagePrefix = "ERROR: spider_reset_state command - "
+    if args == nil or type(args) ~= "table" or #args == 0 then
+        game.print(commandErrorMessagePrefix .. "No arguments provided.", Colors.lightred)
+        return
+    end
+    if #args ~= 1 then
+        game.print(commandErrorMessagePrefix .. "Wrong number of arguments provided. Expected 1, got" .. #args, Colors.lightred)
+        return
+    end
+
+    local playerTeamName = args[1] ---@type string
+    if PlayerForcesNameToDetails[playerTeamName] == nil then
+        game.print(commandErrorMessagePrefix .. 'Argument of player team name was invalid, either "north" or "south". Recieved: ' .. tostring(playerTeamName), Colors.lightred)
+        return
+    end
+
+    -- Impliment command as any errors would have been flagged by now.
+    local spider = global.spider.playerTeamsSpider[playerTeamName]
+    Spider.ClearStateVariables(spider)
+    local teleportPosition = {
+        x = ((spider.roamingXMax - spider.roamingXMin) / 2) + spider.roamingXMin,
+        y = ((spider.roamingYMax - spider.roamingYMin) / 2) + spider.roamingYMin
+    }
+    spider.bossEntity.teleport(teleportPosition)
+    for _, gunSpider in pairs(spider.gunSpiders) do
+        gunSpider.entity.teleport(teleportPosition)
+    end
+    Spider.StartRoaming(spider, teleportPosition)
 end
 
 return Spider
