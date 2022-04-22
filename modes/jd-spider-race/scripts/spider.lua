@@ -1,14 +1,23 @@
 --[[
     This code was developed independantly of other parts of the mod and so will as self contained as possible. With anything needed being hard coded in local variables at the top of the file.
 
-    The spiders mangement is done as a very light touch and as such its movements are a bit all or nothing. But it does perform far better in combat than if it just mindlessly followed a target until it was made to retreat.
+    The spiders mangement is done as a very light touch and as such its movements are a bit all or nothing. But it does perform far better in combat than if it just mindlessly followed a target until it was made to retreat. Its designed to be primarily reactive, with only limited simple proactive behaviour in certain combat situations.
 ]]
 --
 
 --[[
     TODO LATER:
-        - Check the TODO's in this file. Either lift them up here or do them next.
+        - Inline WIP TODOs.
+        - Add testing setting to draw the fighting area limits.
+        - The spider used to get stuck manouvering around the fighting limits. As we apply spider.fightingXMax to the advance location, it goes back and fourth on this line. Need to check if the end target is outside of fighting area in additioanl to not advancing out of fighting area. This shows in the test as I have a small fighting area, but the same issue would apply on larger fighting areas. Also seen when chasing off a limit. Hopefully fixed in new target logic, but test.
         - Lot of LATER tags in code for things to be added as part of future wider functionality.
+        - Add a command to reset a spiders state. For if it gets stuck. Reset its state variables and teleport it home.
+        - Check how a spider with only closer range weapons behaves. I suspect it will advance slowly for ages once fighting due to the *2 on weapon range check, but it may be ok. If its not add a new/changed engagement range function with appropriate hard coded values (rather than always x2) for a long and shot range spider.
+        - Can I give it a temporary speed boost while it's retreating? If not easily via API I could just add legs to it for the run home.
+        - Reversing from target: should actually look at the previous seconds position and go back in that direction. Once started going back just keep on going back in that same orientation until it stops going back. Use variables to store and clear this orientation. As at present it can get stuck backing away from targets on both sides of it.
+        - Use active danger checking when moving:
+            - When we charge at a target we should target the position half weapons distance away from it. As we actually "arrive" when 10 tiles near the target position and then go in to a fighting stance if the enemy is vaguely close. This should stop the spider walking too close to turrets it knows about.
+            - When the spider is chasing (moving for combat?) have it do a target scan around its current position and where it will roughly reach in the next second. Should just be looking for any enemies that will attack it. If found should go in to combat state against them. Really just to stop it running so deep in to turret lines when chasing or charging at targets. When its roaming should it do the same?
 ]]
 --
 
@@ -46,8 +55,10 @@ local math_min, math_max, math_floor, math_random = math.min, math.max, math.flo
 ---@field roamingTargetPosition MapPosition|null @ The target position the spider is roaming to.
 ---@field retreatingTargetPosition MapPosition|null @ The target position the spider is retreating to.
 ---@field lastDamagedByEntity LuaEntity|null @ The last known entity that caused damage to the boss spider when it wasn't fighting. Recorded when the damage is done to a spider and so may become invalid during runtime, if so it will be set back to nil. Only recorded if it is within the spiders attacking range.
+---@field lastDamagedByPlayer LuaPlayer|null @ If the lastDamagedByEntity was a player controlled entity then this references the player to allow tracking across multiple entities (vehicles/character).
 ---@field lastDamagedFromPosition MapPosition|null @ The last known position of the lastDamagedByEntity. To act as a fallback for if the entity is no longer valid. Only recorded/updated if it is within the spiders attacking range.
 ---@field chasingEntity LuaEntity|null @ The initial target entity that the boss spider is trying to hunt down. It may get distracted and fight other things on the way to this. Recorded when the initial damage is done to a non fighting spider and so may become invalid during runtime, if so it will be set back to nil. Only recorded if it is within the spiders attacking range.
+---@field chasingPlayer LuaPlayer|null @ If the chasingEntity was a player controlled entity then this references the player to allow tracking across multiple entities (vehicles/character).
 ---@field chasingEntityLastPosition MapPosition|null @ The last known position of the chasingEntity. To act as a fallback for if the entity is no longer valid. Only recorded/updated if it is within the spiders attacking range.
 
 ---@class GunSpider
@@ -147,7 +158,7 @@ local Settings = {
     spidersRoamingYRange = 230, -- Bit less than half the height of each teams map area.
     spidersFightingXRange = 500, -- Random limit to stop it chasing infinitely.
     spidersFightingYRange = 256, -- Spider can move right up to the edge for when looking to chase a target to fight. It shouldn't ever actually reach this far in however.
-    spidersFightingStepDistance = 5, -- How far the spider will move away from its current location when fighting per second.
+    spidersFightingStepDistance = 5, -- How far the spider will move away from its current location when fighting per second. - value of 2 or lower known to cause weird failed leg movement actions.
     distanceToCheckForEnemiesWhenBeingDamaged = 50, -- How far the spider will look for enemies when it is being damaged, but there's no enemies within its current weapon ammo range.
     showSpiderPlans = true -- If enabled the plans of a spider are rendered.
 }
@@ -160,7 +171,7 @@ if Testing then
     Settings.spidersRoamingXRange = 20
     Settings.spidersRoamingYRange = 40
     Settings.spidersFightingXRange = 200
-    Settings.spidersFightingYRange = 100
+    Settings.spidersFightingYRange = 80
     Settings.showSpiderPlans = true
     BossSpider_GunRearm[BossSpider_GunType.rocketLauncher][3] = nil -- No atomic weapons.
 end
@@ -274,8 +285,10 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTe
         gunSpiders = {}, -- Populated later in creation function.
         roamingTargetPosition = nil,
         retreatingTargetPosition = nil,
+        lastDamagedByPlayer = nil,
         lastDamagedByEntity = nil,
         lastDamagedFromPosition = nil,
+        chasingPlayer = nil,
         chasingEntity = nil,
         chasingEntityLastPosition = nil,
         hasAmmo = nil -- Populated later in creation function.
@@ -325,6 +338,15 @@ Spider.SetSpiderForcesTechs = function()
     end
 end
 
+--- Called when a spider has a new distance from spawn set and we need to change it's cached roaming values.
+---@param spider BossSpider
+Spider.UpdateSpidersRoamingValues = function(spider)
+    spider.roamingXMin = -spider.distanceFromSpawn - Settings.spidersRoamingXRange
+    spider.roamingXMax = -spider.distanceFromSpawn + Settings.spidersRoamingXRange
+    spider.fightingXMax = -spider.distanceFromSpawn + Settings.spidersFightingXRange
+    -- The Y roaming values never change as they have to remain within the player team's lane.
+end
+
 --- Called when only a boss spider named entity type has been damaged.
 ---@param event on_entity_damaged
 Spider.OnBossSpiderEntityDamaged = function(event)
@@ -351,12 +373,14 @@ Spider.OnBossSpiderEntityDamaged = function(event)
     if spider.state ~= BossSpider_State.fighting and event.cause ~= nil then
         local lastDamagedFromPosition = event.cause.position
         if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, lastDamagedFromPosition) then
-            if spider.chasingEntity == nil and spider.chasingEntityLastPosition == nil then
+            if spider.chasingEntityLastPosition == nil then
                 -- Spider wasn't already chasing anything, so start now.
+                spider.chasingPlayer = Spider.GetEntitiesControllingPlayer(event.cause)
                 spider.chasingEntity = event.cause
                 spider.chasingEntityLastPosition = lastDamagedFromPosition
             else
                 -- Spider was already chasing something, so just record the damage originator for the short term fighting.
+                spider.lastDamagedByPlayer = Spider.GetEntitiesControllingPlayer(event.cause)
                 spider.lastDamagedByEntity = event.cause
                 spider.lastDamagedFromPosition = lastDamagedFromPosition
             end
@@ -366,15 +390,6 @@ Spider.OnBossSpiderEntityDamaged = function(event)
     end
 
     -- If theres no cause then theres no reaction we can take to this. So just leave the spider to continue whatever it was doing before.
-end
-
---- Called when a spider has a new distance from spawn set and we need to change it's cached roaming values.
----@param spider BossSpider
-Spider.UpdateSpidersRoamingValues = function(spider)
-    spider.roamingXMin = -spider.distanceFromSpawn - Settings.spidersRoamingXRange
-    spider.roamingXMax = -spider.distanceFromSpawn + Settings.spidersRoamingXRange
-    spider.fightingXMax = -spider.distanceFromSpawn + Settings.spidersFightingXRange
-    -- The Y roaming values never change as they have to remain within the player team's lane.
 end
 
 --- Checks both spider's states and activity over the last second.
@@ -473,248 +488,216 @@ Spider.CheckRetreatingForSecond = function(spider, spidersCurrentPosition)
     end
 end
 
---- Checks how the spiders chasing is going. If it gets damaged on route it will be changed to the fighting state as part of the damage reaction event.
+--- Checks how the spiders chasing to a target location is going and gives new orders one it reaches the target area. If it gets damaged on route it will be changed to the fighting state as part of the damage reaction event.
 ---@param spider BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
+    Spider.UpdateTargetsDetails(spider, "chasing")
+
+    -- Handle if the target is gone.
+    if spider.chasingEntityLastPosition == nil then
+        -- Chasing target is gone.
+        -- As the spider hasn't already been attacked then go in to fighting mode. This will handle working out what to do next.
+        Spider.StartFighting(spider, spidersCurrentPosition)
+        return
+    end
+
     -- Check if the spider has got close enough to its target.
     if Utils.GetDistance(spidersCurrentPosition, spider.chasingEntityLastPosition) < 10 then
         -- Spider is very close to where it's going. Set up next action rather than waiting for it to have stopped for a full second.
-
-        -- If the spider was chasing an entity check the entity is still valid.
-        -- TODO: if its a player doing the damage in/out of a vehicle and they change driving state make sure it keeps tracking the player.
-        if spider.chasingEntity ~= nil and not spider.chasingEntity.valid then
-            -- Target isn't valid any more, so clear it out to make later code simplier.
-            spider.chasingEntity = nil
-        end
-
-        -- Next action based on what the spider is chasing.
-        if spider.chasingEntity == nil then
-            -- No entity to chase, so was just moving to the position.
-            -- If it's got here and hasn't already been attacked then go in to fighting mode. This will handle working out what to do next.
-            Spider.StartFighting(spider, spidersCurrentPosition)
-        else
-            -- Continue chasing the attacker to their new location.
-            -- A spider can't "follow" another entity, it can only have its destination updated to the entities current position. This is how vanilla Factorio works.
-            -- TODO: if its a player doing the damage in/out of a vehicle and they change driving state make sure it keeps tracking the player.
-            local newTargetPosition = spider.chasingEntity.position
-            if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, newTargetPosition) then
-                -- New position is within the allowed fighting area, so set to move to this position to continue the chase.
-                spider.chasingEntityLastPosition = newTargetPosition -- Set this as the new targetLocation in case the target entity vanishes while on route, etc.
-                Spider.MoveSpiderToPosition(spider, newTargetPosition)
-            else
-                -- New target is outside of the allowed fighting area.
-                -- Return the spider back to roaming as it can't follow the target.
-                if Settings.showSpiderPlans then
-                    rendering.draw_text {text = "target outside of fighting area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
-                end
-                Spider.StartRoaming(spider, spidersCurrentPosition)
-            end
-        end
+        Spider.StartFighting(spider, spidersCurrentPosition)
     else
-        -- Spider is still moving towards its target so await a further state change or cycle check.
+        -- Spider is still moving towards its existing target location.
+        -- A spider can't "follow" another entity, it can only have its destination updated to the entities current position. This is how vanilla Factorio works.
+        Spider.MoveSpiderToPosition(spider, spider.chasingEntityLastPosition)
     end
 end
 
---- Manages the spiders fighting for this second.
+--- Handle how to fight against a specific target type which is always currently valid.
+---@param spider BossSpider
+---@param spidersCurrentPosition MapPosition
+---@param chasingOrLastDamaged '"chasing"'|'"lastDamaged"'
+---@param spidersMaxShootingRange uint
+---@return boolean completed
+---@return LuaEntity|'"none"' nearestEnemyWithinRange
+Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosition, chasingOrLastDamaged, spidersMaxShootingRange)
+    ---@typelist string, string, string
+    local playerRefname, entityRefName, positionRefName
+    if chasingOrLastDamaged == "chasing" then
+        playerRefname, entityRefName, positionRefName = "chasingPlayer", "chasingEntity", "chasingEntityLastPosition"
+    elseif chasingOrLastDamaged == "lastDamaged" then
+        playerRefname, entityRefName, positionRefName = "lastDamagedByPlayer", "lastDamagedByEntity", "lastDamagedFromPosition"
+    else
+        error("chasingOrLastDamaged not 'chasing' or 'lastDamaged'")
+    end
+
+    local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider[positionRefName])
+
+    -- Check if the spider has reached its target location.
+    if distanceToTarget < 10 then
+        -- The spider has reached its target position and so this must be in range of the targetted entity.
+
+        -- Stop here to fight the target and anything else near by.
+        Spider.MoveSpiderToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
+        if Settings.showSpiderPlans then
+            rendering.draw_text {text = "standing to fight", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+        end
+        return
+    end
+
+    -- Spider hasn't reached target area yet.
+
+    -- React based on if the target is near by or not.
+    if distanceToTarget <= (spidersMaxShootingRange * 2) then
+        -- Target near by so just advance a bit.
+        Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider[positionRefName], spidersCurrentPosition))
+        return
+    else
+        -- Target far away so start chase it as we aren't taking damage.
+        Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
+        return
+    end
+end
+
+--- Manages the spiders fighting for this second. Will react to taking damage, having things to fight or looking for near by things to attack. As a last resort it will return home.
 ---@param spider BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
     -- The spider will "dance" to keep engaging targets with its longer range weapons until its killed the real target or retreats. It will be a bit crude as otherwise it needs far more active managemnt.
 
     -- Generic values that may be cached within the function.
-    ---@typelist float, LuaEntity
-    local spidersMaxShootingRange, nearestEnemyWithinRange
+    ---@typelist LuaEntity
+    local nearestEnemyWithinRange
+
+    local spidersMaxShootingRange = Spider.GetSpidersEngagementRange(spider)
 
     -- Initial reactions based on of the spider is taking damage at present.
     if spider.damageTakenThisSecond == 0 then
         -- The spider isn't taking damage so try to move towards the target.
 
-        -- If the spider was targetting a short term entity check the entity is still valid.
-        -- TODO: if its a player doing the damage in/out of a vehicle and they change driving state make sure it keeps tracking the player.
-        if spider.lastDamagedByEntity ~= nil and not spider.lastDamagedByEntity.valid then
-            -- Target isn't valid any more, so clear it out to make later code simplier.
-            spider.lastDamagedByEntity = nil
-        end
+        -- Ensure the short term target data is valid and remove it if not.
+        Spider.UpdateTargetsDetails(spider, "lastDamaged")
 
-        -- Initial handling logic based on short term target existing.
-        if spider.lastDamagedByEntity == nil and spider.lastDamagedFromPosition == nil then
-            -- No short term target to react to at present.
-            -- So do fallback behavour.
-        else
-            -- There is still a short term target so look to engage with it.
-            if spider.lastDamagedByEntity ~= nil then
-                spider.lastDamagedFromPosition = spider.lastDamagedByEntity.position
-            end
+        -- Initial handling logic based on if a short term target exists.
+        if spider.lastDamagedByEntity == nil then
+            -- No short term target exists.
 
-            -- Check if there is anything to fight at the current area. As we aren't being damaged so may as well kill anything we can.
-            spidersMaxShootingRange = spidersMaxShootingRange or Spider.GetSpidersEngagementRange(spider)
-            nearestEnemyWithinRange = nearestEnemyWithinRange or global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.biterTeam}
-            if nearestEnemyWithinRange ~= nil then
-                -- There's enemies within range at present, so just stand still and fight them.
+            -- Check if there is anything to fight at the current location within weapons range. As we aren't being damaged so may as well kill anything we can before doing any longer term actions which may expose us to damage.
+            nearestEnemyWithinRange = nearestEnemyWithinRange or global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.biterTeam} or "none" -- The find_nearest_enemy() returns nil if nothing found, but that won't be cached correctly, so use "none" as value of last resort.
+            if nearestEnemyWithinRange ~= "none" then
+                -- There's enemies within current weapons range so just stand still and fight them.
+                -- There's no movement or retargeting involved here so no need to check fighting area.
                 Spider.MoveSpiderToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
-                return
-            end
-
-            -- Check if the spider has reached the target position and theres no entity to pursue.
-            if spider.lastDamagedByEntity == nil and Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition) < 10 then
-                -- Spider has reached its target position and theres no entity to pursue.
-                -- So do fallback behavour.
-                spider.lastDamagedByEntity = nil
-                spider.lastDamagedFromPosition = nil
-            else
-                -- Get current weapons range and distance to the target position.
-                local distanceToAttacker = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
-                if distanceToAttacker <= (spidersMaxShootingRange * 2) then
-                    -- Target near by so just advance a bit.
-                    Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.lastDamagedFromPosition, spidersCurrentPosition))
-                    return
-                else
-                    -- Target far away so try to chase it as we aren't taking damage.
-                    if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, spider.lastDamagedFromPosition) then
-                        -- Target is at a chasable distance.
-                        Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
-                        return
-                    else
-                        -- Can't pursue short term target as its now outside of the allowed fighting area.
-                        -- So do fallback behavour.
-                        spider.lastDamagedByEntity = nil
-                        spider.lastDamagedFromPosition = nil
-                    end
+                if Settings.showSpiderPlans then
+                    rendering.draw_text {text = "standing to fight", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
                 end
+                return
+            else
+                -- Nothing found within current weapon range.
+                -- So do fallback behaviour.
             end
-        end
-
-        -- Now check if there was a long term target. As we aren't taking any damage we may as well resume pursuing it, rather than attacking whatever happens to be near by.
-
-        -- If the spider was targetting an entity check the entity is still valid.
-        -- TODO: if its a player doing the damage in/out of a vehicle and they change driving state make sure it keeps tracking the player.
-        if spider.chasingEntity ~= nil and not spider.chasingEntity.valid then
-            -- Chasing target isn't valid any more, so clear it out to make later code simplier.
-            spider.chasingEntity = nil
-        end
-        if spider.chasingEntity == nil then
-            -- No chasing target to react to at present.
-            -- So do fallback behavour.
         else
-            -- There is still a chasing target so look to engage with it.
-            if spider.chasingEntity ~= nil then
-                spider.chasingEntityLastPosition = spider.chasingEntity.position
-            end
+            -- There is a short term target so handle it.
+            Spider.FightTargetTypeWhileNotBeingDamaged(spider, spidersCurrentPosition, "lastDamaged", spidersMaxShootingRange)
+            return
+        end
 
-            local targetsCurrentPosition = spider.chasingEntity.position
-            local distanceToAttacker = Utils.GetDistance(spidersCurrentPosition, targetsCurrentPosition)
-            spidersMaxShootingRange = spidersMaxShootingRange or Spider.GetSpidersEngagementRange(spider)
-            if distanceToAttacker <= (spidersMaxShootingRange * 2) then
-                -- Chasing target near by so just advance a bit.
-                Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition))
-                return
-            else
-                -- Chasing target far away so try to chase it as we aren't taking damage.
-                if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, targetsCurrentPosition) then
-                    -- Target is at a chasable distance.
-                    spider.chasingEntityLastPosition = targetsCurrentPosition -- Set this as the new targetLocation in case the target entity vanishes while on route, etc.
-                    Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
-                    return
-                else
-                    -- Can't pursue chasing target as its now outside of the allowed fighting area.
-                    -- So do fallback behavour.
-                    spider.chasingEntity = nil
-                    spider.chasingEntityLastPosition = nil
-                end
-            end
+        -- Ensure the longer term target data is valid and remove it if not.
+        Spider.UpdateTargetsDetails(spider, "chasing")
+
+        -- Now check if there was a long term target.
+        if spider.chasingEntity == nil then
+            -- No long term target exists.
+            -- No need to check if theres anything to kill within weapons range as we check for nearby enemies on next stage of fallback behaviour.
+            -- So do fallback behaviour.
+        else
+            -- There is a short term target so handle it.
+            Spider.FightTargetTypeWhileNotBeingDamaged(spider, spidersCurrentPosition, "chasing", spidersMaxShootingRange)
+            return
         end
     else
-        -- The spider is taking damage, so will stay in a fighting state for now. Just need to decide if to maneuver forwards or not.
+        -- The spider is taking damage, so will stay in a fighting state for now. Just need to decide how to maneuver in reaction to being damaged.
+        -- As we are taking damage we aren't worried about pursuing any target initially.
 
-        -- Get current weapons range and if enemy within this range.
-        spidersMaxShootingRange = spidersMaxShootingRange or Spider.GetSpidersEngagementRange(spider)
-        nearestEnemyWithinRange = nearestEnemyWithinRange or global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.biterTeam}
+        -- Check if an enemy is within current weapons range.
+        nearestEnemyWithinRange = nearestEnemyWithinRange or global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.biterTeam} or "none" -- The find_nearest_enemy() returns nil if nothing found, but that won't be cached correctly, so use "none" as value of last resort.
 
         -- Advance only if we are currently out of weapon range. We don't want to close in otherwise.
-        if nearestEnemyWithinRange ~= nil then
+        if nearestEnemyWithinRange ~= "none" then
             -- An enemy already within weapon range.
 
-            -- Check how far away the target is and react based on this.
+            -- Check how far away the target is and react based on this. We want to stay as far away from them while remaining within weapons range to return fire on them.
             local nearestEnemyWithinRangePosition = nearestEnemyWithinRange.position
             local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, nearestEnemyWithinRangePosition)
             if distanceToTarget + Settings.spidersFightingStepDistance < spidersMaxShootingRange then
-                -- Step backwards to try and get out of being damaged while remaining within shooting range.
+                -- Step backwards to try and get out of being damaged while remaining within our weapons range.
                 Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForReversingFromTarget(spider, nearestEnemyWithinRangePosition, spidersCurrentPosition))
                 return
             else
                 -- Just stay here and fight for now. As moving forwards to use more weapons will probably get the spider shot by more defences.
                 Spider.MoveSpiderToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
+                if Settings.showSpiderPlans then
+                    rendering.draw_text {text = "standing to fight", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+                end
                 return
             end
         else
             -- Nothing in range so advance a bit towards something...
 
-            -- If the spider was targetting an entity check the entity is still valid.
-            -- TODO: if its a player doing the damage in/out of a vehicle and they change driving state make sure it keeps tracking the player.
-            if spider.lastDamagedByEntity ~= nil and not spider.lastDamagedByEntity.valid then
-                -- Target isn't valid any more, so clear it out to make later code simplier.
-                spider.lastDamagedByEntity = nil
-            end
+            -- Ensure the shorter term target data is valid and remove it if not.
+            Spider.UpdateTargetsDetails(spider, "lastDamaged")
 
             -- If old target still exists try to react to it.
             if spider.lastDamagedByEntity ~= nil then
-                -- The old target is still active
+                -- The old short target is still active and thus within the fighting area.
 
-                -- If the target is within the fighting area react to it.
-                local targetsCurrentPosition = spider.lastDamagedByEntity.position
-                if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, targetsCurrentPosition) then
-                    -- Target is within fighting area.
-
-                    -- Check how far away the target is and react based on this.
-                    local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, targetsCurrentPosition)
-                    if distanceToTarget <= spidersMaxShootingRange then
-                        -- Target near by so just advance a bit.
-                        Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition))
-                        return
-                    else
-                        -- Target far away and within the fighting area, so resume the chase on it. This will run away from whatever is shooting at us at present until we next take damage and then the chase will be broken.
-                        spider.lastDamagedFromPosition = targetsCurrentPosition -- Set this as the new targetLocation in case the target entity vanishes while on route, etc.
-                        Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
-                        return
-                    end
+                -- Check how far away the target is and react based on this.
+                --TODO: does this really make much difference which is done?
+                local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
+                if distanceToTarget <= (spidersMaxShootingRange * 2) then
+                    -- Target near by so just advance a bit towards it.
+                    Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.lastDamagedFromPosition, spidersCurrentPosition))
+                    return
                 else
-                    -- Can't pursue target as its now outside of the allowed fighting area.
-                    -- So do fallback behavour.
-                    spider.lastDamagedByEntity = nil
-                    spider.lastDamagedFromPosition = nil
+                    -- Target far away and within the fighting area, so resume the chase on it. This will run away from whatever is shooting at us at present until we next take damage and then the chase will be broken.
+                    Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
+                    return
                 end
+            else
+                -- No valid target within fighting area.
+                -- So do fallback behaviour.
             end
         end
     end
 
-    -- As spider can't pursue the current target look for anything near by to attack, otherwise return to chasing the origional target if there was one, or return to roaming. Means the spider will attack down a line of defences, etc, before returning to a longer term behaviour.
+    -- As spider can't pursue the current target look for anything near by to attack first, otherwise return to chasing the origional target if there was one, or return to roaming. Means the spider will attack down a line of defences, etc, before returning to a longer term behaviour.
 
     -- Look for nearest target nearby and set them as the new target entity.
-    spider.lastDamagedByEntity = global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = Settings.distanceToCheckForEnemiesWhenBeingDamaged, force = spider.biterTeam}
+    local nearbyEnemy = global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = Settings.distanceToCheckForEnemiesWhenBeingDamaged, force = spider.biterTeam}
 
-    -- Decide final action based on nearby target found.
-    if spider.lastDamagedByEntity ~= nil then
-        -- Theres a new target.
-        local targetsCurrentPosition = spider.lastDamagedByEntity.position
+    -- Decide final action based on if a nearby target is found.
+    if nearbyEnemy ~= nil then
+        local targetsCurrentPosition = nearbyEnemy.position
 
-        -- Check the target is within the fighting area.
+        -- Check if the new target is within the fighting area.
         if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, targetsCurrentPosition) then
             -- Target within fighting area.
+
+            spider.lastDamagedByEntity = nearbyEnemy
+            spider.lastDamagedFromPosition = targetsCurrentPosition
             if Settings.showSpiderPlans then
                 rendering.draw_text {text = "found target near by to attack", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
             end
 
             -- React based on how far away it is.
-            local distanceToAttacker = Utils.GetDistance(spidersCurrentPosition, targetsCurrentPosition)
-            spidersMaxShootingRange = spidersMaxShootingRange or Spider.GetSpidersEngagementRange(spider)
-            if distanceToAttacker <= (spidersMaxShootingRange * 2) then
+            --TODO: does this really make much difference which is done?
+            local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
+            if distanceToTarget <= (spidersMaxShootingRange * 2) then
                 -- Target near by so just advance a bit.
-                Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition))
+                Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.lastDamagedFromPosition, spidersCurrentPosition))
                 return
             else
                 -- Target far away, so start chasing it.
-                spider.lastDamagedFromPosition = targetsCurrentPosition -- Set this as the new targetLocation in case the target entity vanishes while on route, etc.
                 Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
                 return
             end
@@ -724,41 +707,27 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
         end
     end
 
-    -- Theres no valid target near by the spider, so do a secondary action.
+    -- Theres no valid target found near the spider, so do a secondary action.
 
-    -- If the spider was chasing an entity check if the entity is still valid.
-    -- TODO: if its a player doing the damage in/out of a vehicle and they change driving state make sure it keeps tracking the player.
-    if spider.chasingEntity ~= nil and not spider.chasingEntity.valid then
-        -- Chasing target isn't valid any more, so clear it out to make later code simplier.
-        spider.chasingEntity = nil
-    end
+    -- Ensure the longer term target data is valid and remove it if not.
+    Spider.UpdateTargetsDetails(spider, "chasing")
 
     -- If there is something to chase look at doing that.
     if spider.chasingEntity == nil then
         -- No chasing target to react to at present.
-        -- So do fallback behavour.
+        -- So do fallback behaviour.
     else
         -- There is still a chasing target so check its distance.
-        local targetsCurrentPosition = spider.chasingEntity.position
-        local distanceToAttacker = Utils.GetDistance(spidersCurrentPosition, targetsCurrentPosition)
-        spidersMaxShootingRange = spidersMaxShootingRange or Spider.GetSpidersEngagementRange(spider)
-        if distanceToAttacker <= (spidersMaxShootingRange * 2) then
-            -- Chasing target near by so just advance a bit.
-            Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, targetsCurrentPosition, spidersCurrentPosition))
+        --TODO: does this really make much difference which is done?
+        local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.chasingEntityLastPosition)
+        if distanceToTarget <= (spidersMaxShootingRange * 2) then
+            -- Target near by so just advance a bit.
+            Spider.MoveSpiderToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.chasingEntityLastPosition, spidersCurrentPosition))
             return
         else
-            -- Chasing target far away so try to chase it as we aren't taking damage.
-            if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, targetsCurrentPosition) then
-                -- Target is at a chasable distance.
-                spider.chasingEntityLastPosition = targetsCurrentPosition -- Set this as the new targetLocation in case the target entity vanishes while on route, etc.
-                Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
-                return
-            else
-                -- Can't pursue chasing target as its now outside of the allowed fighting area.
-                -- So do fallback behavour.
-                spider.chasingEntity = nil
-                spider.chasingEntityLastPosition = nil
-            end
+            -- Target far away, so start chasing it.
+            Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
+            return
         end
     end
 
@@ -767,6 +736,65 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
         rendering.draw_text {text = "going home as last resort", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
     end
     Spider.StartRoaming(spider, spidersCurrentPosition)
+end
+
+--- Check a chased/lastDamaged target is still valid. If chasign a player it updates the target entity. Always updates target position. If the entity isn't valid or has left the fighting area it blanks out all target data. To make the chasing ad fighting logic simplier.
+---@param spider BossSpider
+---@param chasingOrLastDamaged '"chasing"'|'"lastDamaged"'
+Spider.UpdateTargetsDetails = function(spider, chasingOrLastDamaged)
+    ---@typelist string, string, string
+    local playerRefname, entityRefName, positionRefName
+    if chasingOrLastDamaged == "chasing" then
+        playerRefname, entityRefName, positionRefName = "chasingPlayer", "chasingEntity", "chasingEntityLastPosition"
+    elseif chasingOrLastDamaged == "lastDamaged" then
+        playerRefname, entityRefName, positionRefName = "lastDamagedByPlayer", "lastDamagedByEntity", "lastDamagedFromPosition"
+    else
+        error("chasingOrLastDamaged not 'chasing' or 'lastDamaged'")
+    end
+
+    -- Check if chasing a player first, then if just chasing an entity. Update the target position if player/entity is still valid. If entity ends up being invalid/blank it will have its position cleared later in code.
+    if spider[playerRefname] ~= nil then
+        -- A player was being chased.
+        if spider[playerRefname].connected then
+            -- A connected player is being chased so update the entity and position.
+            spider[entityRefName] = spider[playerRefname].vehicle or spider[playerRefname].character
+            if spider[entityRefName] == nil then
+                -- Player is dead or not in a controller state to be chased. So stop chasing them.
+                spider[playerRefname] = nil
+            end
+        else
+            -- Player isn't connected so stop chasing them.
+            spider[playerRefname] = nil
+            -- If the target player was in a vehicle check if it's still a valid target.
+            if spider[entityRefName] ~= nil and not spider[entityRefName].valid then
+                -- Target entity isn't valid any more, so clear it out.
+                spider[entityRefName] = nil
+            end
+        end
+    elseif spider[entityRefName] ~= nil then
+        -- Check if an entity being chased is still valid.
+        if not spider[entityRefName].valid then
+            -- Target entity isn't valid any more, so clear it out.
+            spider[entityRefName] = nil
+        end
+    end
+
+    -- If there's still a target entity check its new position is within the fighting area. Otherwise set the target position to blank.
+    if spider[entityRefName] ~= nil then
+        local newTargetPosition = spider[entityRefName].position
+        if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, newTargetPosition) then
+            -- Target is in a valid location.
+            spider[positionRefName] = newTargetPosition
+        else
+            -- Target isn't in valid location so forget about the target.
+            spider[positionRefName] = nil
+            spider[entityRefName] = nil
+            spider[playerRefname] = nil
+        end
+    else
+        -- No entity targetted, so blank any position value.
+        spider[positionRefName] = nil
+    end
 end
 
 --- Advance roughly towards the target. Stays within the allowed fighting area.
@@ -807,7 +835,6 @@ Spider.GetNewPositionForReversingFromTarget = function(spider, targetsCurrentPos
         rendering.draw_text {text = "reversing from target", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
     end
 
-    -- TODO: this should actually look at the previous seconds position and go back in that direction. Once started going back just keep on going back in that same orientation until it stops going back. Use variables to store and clear this orientation.
     local xPositonModifier, yPositonModifier
     if targetsCurrentPosition.x > spidersCurrentPosition.x then
         xPositonModifier = 1
@@ -901,11 +928,38 @@ Spider.StartFighting = function(spider, spidersCurrentPosition)
     end
 end
 
+--- Gets the player controlling an entity if there is one. This includes finding the primary player in a vehicle.
+---@param entity LuaEntity
+---@return LuaPlayer|null controllingPlayer
+Spider.GetEntitiesControllingPlayer = function(entity)
+    local entityType = entity.type
+    if entityType == "character" then
+        -- This will be the player controlling the character entity or nil.
+        return entity.player
+    elseif entityType == "spider-vehicle" or entityType == "car" or entityType == "artillery-wagon" or entityType == "cargo-wagon" or entityType == "fluid-wagon" or entityType == "locomotive" then
+        local driverCharacter = entity.get_driver()
+        if driverCharacter ~= nil then
+            return driverCharacter.player
+        else
+            local passengerCharacter = entity.get_passenger()
+            if passengerCharacter ~= nil then
+                return passengerCharacter.player
+            else
+                return nil
+            end
+        end
+    else
+        return nil
+    end
+end
+
 --- Clear all state variables.
 ---@param spider BossSpider
 Spider.ClearStateVariables = function(spider)
+    spider.chasingPlayer = nil
     spider.chasingEntity = nil
     spider.chasingEntityLastPosition = nil
+    spider.lastDamagedByPlayer = nil
     spider.lastDamagedByEntity = nil
     spider.lastDamagedFromPosition = nil
     spider.retreatingTargetPosition = nil
@@ -919,13 +973,13 @@ Spider.ClearNonFightingStateVariables = function(spider)
     spider.roamingTargetPosition = nil
 end
 
---- Gets the max distance the spider can fight from right now based on the weapons it has ammo for.
+--- Gets the max distance the spider can fight from right now based on the weapons it has ammo for. This is either long (30) or short (15), rather than being truely maximum single weapon range.
 ---@param spider BossSpider
 ---@return double maxEngagementRange
 Spider.GetSpidersEngagementRange = function(spider)
     if spider.gunSpiders[BossSpider_GunType.rocketLauncher].hasAmmo then
         if not spider.gunSpiders[BossSpider_GunType.rocketLauncher].entity.get_inventory(defines.inventory.spider_ammo).is_empty() then
-            -- Intentionally return the cannon range rather than the missile one. Just so the spider tries to engage with both weapons when ammo allows. As this range is still more than laser turrets.
+            -- Intentionally return the cannon range rather than the missile one. Just so the spider tries to engage with both weapons when ammo allows. As this range is still more than laser turrets. This is the long range value.
             return 30
         else
             spider.gunSpiders[BossSpider_GunType.rocketLauncher].hasAmmo = false
@@ -933,28 +987,14 @@ Spider.GetSpidersEngagementRange = function(spider)
     end
     if spider.gunSpiders[BossSpider_GunType.tankCannon].hasAmmo then
         if not spider.gunSpiders[BossSpider_GunType.tankCannon].entity.get_inventory(defines.inventory.spider_ammo).is_empty() then
+            -- This is the long range value.
             return 30
         else
             spider.gunSpiders[BossSpider_GunType.tankCannon].hasAmmo = false
         end
     end
-    if spider.gunSpiders[BossSpider_GunType.machineGun].hasAmmo then
-        if not spider.gunSpiders[BossSpider_GunType.machineGun].entity.get_inventory(defines.inventory.spider_ammo).is_empty() then
-            -- Intentionally return the flamer and laser range rather than the machine gun one. Just so the spider tries to engage with all remaining weapons given this range is less than laser turrets.
-            return 15
-        else
-            spider.gunSpiders[BossSpider_GunType.machineGun].hasAmmo = false
-        end
-    end
-    if spider.hasAmmo then
-        -- Flamer
-        if not spider.bossEntity.get_inventory(defines.inventory.spider_ammo).is_empty() then
-            return 15
-        else
-            spider.hasAmmo = false
-        end
-    end
-    -- Lasers (Personal equipment)
+
+    -- Otherwise just return the short distance.
     return 15
 end
 
@@ -996,17 +1036,23 @@ Spider.UpdatePlanRenders = function(spider)
         -- The entity still exists the moment this is called, but not afterwards. So set it to the position and not the entity itself.
         table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state, surface = global.spider.surface, target = spider.bossEntity.position, color = Colors.white, scale_with_zoom = true})
     elseif spider.state == BossSpider_State.chasing then
-        if spider.lastDamagedByEntity ~= nil and spider.lastDamagedByEntity.valid then
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent entity", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.lastDamagedByEntity, surface = global.spider.surface})
-        elseif spider.lastDamagedFromPosition ~= nil then
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+        if spider.lastDamagedFromPosition ~= nil then
+            if spider.lastDamagedByEntity ~= nil and spider.lastDamagedByEntity.valid then
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent entity", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.red, width = 2, from = spider.bossEntity, to = spider.lastDamagedByEntity, surface = global.spider.surface})
+            else
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+            end
+
             table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.lastDamagedFromPosition, surface = global.spider.surface})
-        elseif spider.chasingEntity ~= nil and spider.chasingEntity.valid then
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional entity", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.chasingEntity, surface = global.spider.surface})
         elseif spider.chasingEntityLastPosition ~= nil then
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+            if spider.chasingEntity ~= nil and spider.chasingEntity.valid then
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional entity", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.red, width = 2, from = spider.bossEntity, to = spider.chasingEntity, surface = global.spider.surface})
+            else
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+            end
+
             table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.chasingEntityLastPosition, surface = global.spider.surface})
         end
     elseif spider.state == BossSpider_State.fighting then
@@ -1060,12 +1106,14 @@ Spider.Command_ChangeDistanceFromSpawn = function(commandEvent)
         -- Update both team's spiders.
         for _, spider in pairs(global.spider.spiders) do
             spider.distanceFromSpawn = spider.distanceFromSpawn + distanceChange
+            Spider.UpdateSpidersRoamingValues(spider)
             -- LATER: update distance GUI.
         end
     else
         -- Just update the 1 team's spider.
         local spider = global.spider.playerTeamsSpider[playerTeamName]
         spider.distanceFromSpawn = spider.distanceFromSpawn + distanceChange
+        Spider.UpdateSpidersRoamingValues(spider)
         -- LATER: update distance GUI.
         local x = 1
     end
@@ -1103,6 +1151,7 @@ Spider.SpidersMoveAwayFromSpawn_Scheduled = function(event)
     -- Update both team's spiders.
     for _, spider in pairs(global.spider.spiders) do
         spider.distanceFromSpawn = spider.distanceFromSpawn + global.spider.constantMovementFromSpawnPerMinute
+        Spider.UpdateSpidersRoamingValues(spider)
         -- LATER: update distance GUI.
     end
 
