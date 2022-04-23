@@ -9,7 +9,6 @@
     TODO LATER:
         - Lot of LATER tags in code for things to be added as part of future wider functionality:
             - GUIs
-            - Artillery
         - Use active danger checking when moving:
             - When we charge at a target we should target the position half weapons distance away from it. As we actually "arrive" when 10 tiles near the target position and then go in to a fighting stance if the enemy is vaguely close. This should stop the spider walking too close to turrets it knows about.
             - When the spider is chasing (moving for combat?) have it do a target scan around its current position and where it will roughly reach in the next second. Should just be looking for any enemies that will attack it. If found should go in to combat state against them. Really just to stop it running so deep in to turret lines when chasing or charging at targets. When its roaming should it do the same?
@@ -32,7 +31,8 @@ local math_min, math_max, math_floor, math_random = math.min, math.max, math.flo
 ---@field biterTeam LuaForce
 ---@field bossEntity LuaEntity @ The main spider boss entity.
 ---@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
----@field gunSpiders table<BossSpider_GunType, GunSpider>
+---@field gunSpiders table<BossSpider_GunSpiderType, GunSpider> @ The hidden spiders that move with the main spider. They are present just to carry the extra gun types.
+---@field turrets table<BossSpider_TurretType, BossSpider_Turret> @ The hidden turrets that are moved once per second cycle to the spiders current position. The weapons on these should be happy to be out of sync with the spiders exact position.
 ---@field distanceFromSpawn uint @ How far from spawn the spiders area is centered on (positive number).
 ---@field damageTakenThisSecond float @ Damage taken so far this second (in between spider monitoring cycles).
 ---@field previousDamageToConsider float @ Damage taken in the previous whole seconds that the Settings.spiderDamageSecondsConsidered covers. Used whne the spider takes damage to simply track damage to consider retreat.
@@ -58,9 +58,13 @@ local math_min, math_max, math_floor, math_random = math.min, math.max, math.flo
 ---@field chasingEntityLastPosition MapPosition|null @ The last known position of the chasingEntity. To act as a fallback for if the entity is no longer valid. Only recorded/updated if it is within the spiders attacking range.
 
 ---@class GunSpider
----@field type BossSpider_GunType
+---@field type BossSpider_GunSpiderType
 ---@field entity LuaEntity
 ---@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
+
+---@class BossSpider_Turret
+---@field type BossSpider_TurretType
+---@field entity LuaEntity
 
 ---@class BossSpider_State
 local BossSpider_State = {
@@ -71,9 +75,8 @@ local BossSpider_State = {
     dead = "dead" -- Its dead.
 }
 
----@class BossSpider_GunType
-local BossSpider_GunType = {
-    artillery = "artillery",
+---@class BossSpider_GunSpiderType
+local BossSpider_GunSpiderType = {
     rocketLauncher = "rocketLauncher",
     tankCannon = "tankCannon",
     machineGun = "machineGun"
@@ -83,13 +86,9 @@ local BossSpider_GunType = {
 ---@field entityName string @ The entity prototype name of this gun spider.
 ---@field gunFilters table<Id, string> @ A list of the gun slots and what filter they should each have (if any).
 
----@type table<BossSpider_GunType, BossSpider_GunEntityDetails>
-local BossSpider_GunDetails = {
-    [BossSpider_GunType.artillery] = {
-        name = "jd_plays-jd_spider_race-spidertron_boss_gun-artillery_wagon_cannon",
-        gunFilters = {}
-    },
-    [BossSpider_GunType.machineGun] = {
+---@type table<BossSpider_GunSpiderType, BossSpider_GunEntityDetails>
+local BossSpider_GunSpiderDetails = {
+    [BossSpider_GunSpiderType.machineGun] = {
         name = "jd_plays-jd_spider_race-spidertron_boss_gun-machine_gun",
         gunFilters = {
             [1] = "firearm-magazine",
@@ -97,7 +96,7 @@ local BossSpider_GunDetails = {
             [3] = "uranium-rounds-magazine"
         }
     },
-    [BossSpider_GunType.rocketLauncher] = {
+    [BossSpider_GunSpiderType.rocketLauncher] = {
         name = "jd_plays-jd_spider_race-spidertron_boss_gun-rocket_launcher",
         gunFilters = {
             [1] = "rocket",
@@ -105,7 +104,7 @@ local BossSpider_GunDetails = {
             [3] = "atomic-bomb"
         }
     },
-    [BossSpider_GunType.tankCannon] = {
+    [BossSpider_GunSpiderType.tankCannon] = {
         name = "jd_plays-jd_spider_race-spidertron_boss_gun-tank_cannon",
         gunFilters = {
             [1] = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo",
@@ -116,27 +115,39 @@ local BossSpider_GunDetails = {
     }
 }
 
+---@class BossSpider_TurretType
+local BossSpider_TurretType = {
+    artillery = "artillery"
+}
+
+---@class BossSpider_TurretEntityDetails
+---@field entityName string @ The entity prototype name of this turret.
+
+---@type table<BossSpider_TurretType, BossSpider_TurretEntityDetails>
+local BossSpider_TurretDetails = {
+    [BossSpider_TurretType.artillery] = {
+        name = "jd_plays-jd_spider_race-spidertron_boss-artillery_turret"
+    }
+}
+
 ---@type ItemStackDefinition[]
 local BossSpider_Rearm = {
     {name = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", count = 100}
 }
 
----@type table<BossSpider_GunType, ItemStackDefinition[]>
-local BossSpider_GunRearm = {
-    --[[    [BossSpider_GunType.artillery] = {
-{name = "artillery-shell", count = 10} -- LATER: doesn't work as desired. Plan is to use an artillery turret and teleport it to the spider frequently. Will need a really fast aiming and firing time, but a slower cooldown. Have a really large inventory size for it as if the shells were being stored in a spider. Exact stored ammo count for each weapon to be confirmed later.
-    },   ]]
-    [BossSpider_GunType.machineGun] = {
+---@type table<BossSpider_GunSpiderType, ItemStackDefinition[]>
+local BossSpider_GunSpiderRearm = {
+    [BossSpider_GunSpiderType.machineGun] = {
         {name = "firearm-magazine", count = 200},
         {name = "piercing-rounds-magazine", count = 200},
         {name = "uranium-rounds-magazine", count = 200}
     },
-    [BossSpider_GunType.rocketLauncher] = {
+    [BossSpider_GunSpiderType.rocketLauncher] = {
         {name = "rocket", count = 200},
         {name = "explosive-rocket", count = 200},
         {name = "atomic-bomb", count = 10}
     },
-    [BossSpider_GunType.tankCannon] = {
+    [BossSpider_GunSpiderType.tankCannon] = {
         {name = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", count = 200},
         {name = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_ammo", count = 200},
         {name = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_ammo", count = 200},
@@ -144,24 +155,32 @@ local BossSpider_GunRearm = {
     }
 }
 
+---@type table<BossSpider_TurretType, ItemStackDefinition[]>
+local BossSpider_TurretRearm = {
+    [BossSpider_TurretType.artillery] = {
+        {name = "jd_plays-jd_spider_race-spidertron_boss-artillery_shell", count = 10}
+    }
+}
+
 ---@class BossSpider_RconAmmoType
 ---@field ammoItemName string
----@field gunType BossSpider_GunType|null
+---@field gunType BossSpider_GunSpiderType|null
 ---@field bossSpider boolean|null
+---@field turretType BossSpider_TurretType|null
 
----@type table<string, BossSpider_RconAmmoType> @ Friendly name to item name.
+---@type table<string, BossSpider_RconAmmoType> @ Command friendly name to item name.
 local BossSpider_RconAmmoNames = {
-    bullet = {ammoItemName = "firearm-magazine", gunType = BossSpider_GunType.machineGun},
-    piercingBullet = {ammoItemName = "piercing-rounds-magazine", gunType = BossSpider_GunType.machineGun},
-    uraniumBullet = {ammoItemName = "uranium-rounds-magazine", gunType = BossSpider_GunType.machineGun},
-    rocket = {ammoItemName = "rocket", gunType = BossSpider_GunType.rocketLauncher},
-    explosiveRocket = {ammoItemName = "explosive-rocket", gunType = BossSpider_GunType.rocketLauncher},
-    atomicRocket = {ammoItemName = "atomic-bomb", gunType = BossSpider_GunType.rocketLauncher},
-    cannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", gunType = BossSpider_GunType.tankCannon},
-    explosiveCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_ammo", gunType = BossSpider_GunType.tankCannon},
-    uraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_ammo", gunType = BossSpider_GunType.tankCannon},
-    explosiveUraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_ammo", gunType = BossSpider_GunType.tankCannon},
-    artilleryShell = {ammoItemName = "artillery-shell", gunType = BossSpider_GunType.artillery},
+    bullet = {ammoItemName = "firearm-magazine", gunType = BossSpider_GunSpiderType.machineGun},
+    piercingBullet = {ammoItemName = "piercing-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun},
+    uraniumBullet = {ammoItemName = "uranium-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun},
+    rocket = {ammoItemName = "rocket", gunType = BossSpider_GunSpiderType.rocketLauncher},
+    explosiveRocket = {ammoItemName = "explosive-rocket", gunType = BossSpider_GunSpiderType.rocketLauncher},
+    atomicRocket = {ammoItemName = "atomic-bomb", gunType = BossSpider_GunSpiderType.rocketLauncher},
+    cannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon},
+    explosiveCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon},
+    uraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon},
+    explosiveUraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon},
+    artilleryShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-artillery_shell", turretType = BossSpider_TurretType.artillery},
     flamethrowerAmmo = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", bossSpider = true}
 }
 
@@ -191,9 +210,10 @@ if Testing then
     Settings.spidersFightingYRange = 60
     Settings.showSpiderPlans = true
     Settings.markSpiderAreas = true
-    BossSpider_GunRearm[BossSpider_GunType.rocketLauncher][3] = nil -- No atomic weapons.
---BossSpider_GunRearm[BossSpider_GunType.rocketLauncher] = {} -- Test short range weapon spider.
---BossSpider_GunRearm[BossSpider_GunType.tankCannon] = {} -- Test short range weapon spider.
+    BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher][3] = nil -- No atomic weapons.
+--BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher] = {} -- Test short range weapon spider.
+--BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.tankCannon] = {} -- Test short range weapon spider.
+--BossSpider_TurretRearm[BossSpider_TurretType.artillery] = {} -- No artillery shells.
 end
 
 -- This must be created after the first batch of testing value changes are applied.
@@ -307,6 +327,7 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTe
         spiderAreasRenderIds = {},
         spiderPositionLastSecond = spiderPosition,
         gunSpiders = {}, -- Populated later in creation function.
+        turrets = {}, -- Populated later in creation function.
         roamingTargetPosition = nil,
         retreatingTargetPosition = nil,
         lastDamagedByPlayer = nil,
@@ -333,7 +354,7 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTe
     end
 
     -- Add the extra gun spiders.
-    for shortName, entityDetails in pairs(BossSpider_GunDetails) do
+    for shortName, entityDetails in pairs(BossSpider_GunSpiderDetails) do
         local gunSpiderEntity = global.spider.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = biterTeam}
         if gunSpiderEntity == nil then
             error("Failed to create gun spider " .. shortName .. " for team " .. playerTeamName .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
@@ -344,6 +365,16 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTe
             ammoInventory.set_filter(gunIndex, filterName)
         end
         spider.gunSpiders[shortName] = {type = shortName, entity = gunSpiderEntity, hasAmmo = true}
+    end
+
+    -- Add the extra turrets.
+    for shortName, entityDetails in pairs(BossSpider_TurretDetails) do
+        local turretEntity = global.spider.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = biterTeam}
+        if turretEntity == nil then
+            error("Failed to create turret " .. shortName .. " for team " .. playerTeamName .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
+        end
+        turretEntity.destructible = false
+        spider.turrets[shortName] = {type = shortName, entity = turretEntity}
     end
 
     Spider.GiveSpiderFullAmmo(spider)
@@ -475,6 +506,11 @@ Spider.CheckSpiders_Scheduled = function(event)
                 Spider.CheckChasingForSecond(spider, spidersCurrentPosition)
             elseif spider.state == BossSpider_State.fighting then
                 Spider.ManageFightingForSecond(spider, spidersCurrentPosition)
+            end
+
+            -- Move the turrets.
+            for _, turretDetails in pairs(spider.turrets) do
+                turretDetails.entity.teleport(spidersCurrentPosition)
             end
 
             -- Update the spiders old position ready for the next second cycle.
@@ -1017,20 +1053,20 @@ end
 ---@param spider BossSpider
 ---@return double maxEngagementRange
 Spider.GetSpidersEngagementRange = function(spider)
-    if spider.gunSpiders[BossSpider_GunType.rocketLauncher].hasAmmo then
-        if not spider.gunSpiders[BossSpider_GunType.rocketLauncher].entity.get_inventory(defines.inventory.spider_ammo).is_empty() then
+    if spider.gunSpiders[BossSpider_GunSpiderType.rocketLauncher].hasAmmo then
+        if not spider.gunSpiders[BossSpider_GunSpiderType.rocketLauncher].entity.get_inventory(defines.inventory.spider_ammo).is_empty() then
             -- Intentionally return the cannon range rather than the missile one. Just so the spider tries to engage with both weapons when ammo allows. As this range is still more than laser turrets. This is the long range value.
             return 30
         else
-            spider.gunSpiders[BossSpider_GunType.rocketLauncher].hasAmmo = false
+            spider.gunSpiders[BossSpider_GunSpiderType.rocketLauncher].hasAmmo = false
         end
     end
-    if spider.gunSpiders[BossSpider_GunType.tankCannon].hasAmmo then
-        if not spider.gunSpiders[BossSpider_GunType.tankCannon].entity.get_inventory(defines.inventory.spider_ammo).is_empty() then
+    if spider.gunSpiders[BossSpider_GunSpiderType.tankCannon].hasAmmo then
+        if not spider.gunSpiders[BossSpider_GunSpiderType.tankCannon].entity.get_inventory(defines.inventory.spider_ammo).is_empty() then
             -- This is the long range value.
             return 30
         else
-            spider.gunSpiders[BossSpider_GunType.tankCannon].hasAmmo = false
+            spider.gunSpiders[BossSpider_GunSpiderType.tankCannon].hasAmmo = false
         end
     end
 
@@ -1208,11 +1244,18 @@ Spider.GiveSpiderFullAmmo = function(spider)
     spider.hasAmmo = true
 
     -- Arm each of the gun spiders.
-    for bossSpiderGunType, ammoItems in pairs(BossSpider_GunRearm) do
+    for bossSpiderGunType, ammoItems in pairs(BossSpider_GunSpiderRearm) do
         for _, ammo in pairs(ammoItems) do
             spider.gunSpiders[bossSpiderGunType].entity.insert(ammo)
         end
         spider.gunSpiders[bossSpiderGunType].hasAmmo = true
+    end
+
+    -- Arm each of the turrets.
+    for turretType, ammoItems in pairs(BossSpider_TurretRearm) do
+        for _, ammo in pairs(ammoItems) do
+            spider.turrets[turretType].entity.insert(ammo)
+        end
     end
 end
 
@@ -1317,9 +1360,11 @@ Spider.GiveSpiderSpecificAmmo = function(spider, rconAmmoType, quantity)
     if rconAmmoType.bossSpider then
         spider.bossEntity.insert({name = rconAmmoType.ammoItemName, count = quantity})
         spider.hasAmmo = true
-    else
+    elseif rconAmmoType.gunType then
         spider.gunSpiders[rconAmmoType.gunType].entity.insert({name = rconAmmoType.ammoItemName, count = quantity})
         spider.gunSpiders[rconAmmoType.gunType].hasAmmo = true
+    elseif rconAmmoType.turretType then
+        spider.turrets[rconAmmoType.turretType].entity.insert({name = rconAmmoType.ammoItemName, count = quantity})
     end
 end
 
@@ -1337,9 +1382,16 @@ Spider.OnSpiderDied = function(event)
         return
     end
 
+    spider.state = BossSpider_State.dead
+    for _, gunSpiderDetails in pairs(spider.gunSpiders) do
+        gunSpiderDetails.entity.destroy()
+    end
+    for _, turretDetails in pairs(spider.turrets) do
+        turretDetails.entity.destroy()
+    end
+
     Spider.UpdatePlanRenders(spider)
 
-    spider.state = BossSpider_State.dead
     -- Coin is dropped as loot automatically.
     game.print("HYPE - boss spider of team " .. spider.playerTeamName .. " killed !!!", Colors.green)
 

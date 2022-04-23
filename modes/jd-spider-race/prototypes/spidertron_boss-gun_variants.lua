@@ -2,7 +2,7 @@
 local Utils = require("utility.utils")
 
 -- If TRUE the spiders are visible and selectable.
-local Testing = true -- TODO LATER
+local Testing = false -- TODO LATER
 
 --[[
     Notes:
@@ -49,15 +49,10 @@ local gunSpiderTankCannon = Utils.DeepCopy(gunSpiderBase)
 gunSpiderTankCannon.name = "jd_plays-jd_spider_race-spidertron_boss_gun-tank_cannon"
 gunSpiderTankCannon.guns = {"tank-cannon", "tank-cannon", "tank-cannon", "tank-cannon"}
 
-local gunSpiderArtillery = Utils.DeepCopy(gunSpiderBase)
-gunSpiderArtillery.name = "jd_plays-jd_spider_race-spidertron_boss_gun-artillery_wagon_cannon"
-gunSpiderArtillery.guns = {"jd_plays-jd_spider_race-spidertron_boss-artillery_wagon_cannon"}
-
 data:extend(
     {
         gunSpiderRocketLauncher,
         gunSpiderMachineGun,
-        gunSpiderTankCannon,
-        gunSpiderArtillery
+        gunSpiderTankCannon
     }
 )
