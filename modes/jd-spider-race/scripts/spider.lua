@@ -8,7 +8,7 @@
 --[[
     TODO LATER:
         - Lot of LATER tags in code for things to be added as part of future wider functionality:
-            - Guis
+            - GUIs
             - Artillery
         - Use active danger checking when moving:
             - When we charge at a target we should target the position half weapons distance away from it. As we actually "arrive" when 10 tiles near the target position and then go in to a fighting stance if the enemy is vaguely close. This should stop the spider walking too close to turrets it knows about.
@@ -238,7 +238,7 @@ end
 
 Spider.OnLoad = function()
     EventScheduler.RegisterScheduledEventType("Spider.CheckSpiders_Scheduled", Spider.CheckSpiders_Scheduled) -- CODE NOTE: in ideal world this would be a re-occuring scheduled event every SECOND, but this Utils version doesn't have that feature. One schedule action per second shouldn't be too UPS heavy.
-    Commands.Register("spider_change_distance", {"api-description.jd_plays-jd_spider_race-spider_change_distance"}, Spider.Command_ChangeDistanceFromSpawn, true)
+    Commands.Register("spider_incrememt_distance_from_spawn", {"api-description.jd_plays-jd_spider_race-spider_incrememt_distance_from_spawn"}, Spider.Command_IncrementDistanceFromSpawn, true)
     Commands.Register("spider_set_movement_per_minute", {"api-description.jd_plays-jd_spider_race-spider_set_movement_per_minute"}, Spider.Command_SetSpiderMovementPerMinute, true)
     EventScheduler.RegisterScheduledEventType("Spider.SpidersMoveAwayFromSpawn_Scheduled", Spider.SpidersMoveAwayFromSpawn_Scheduled) -- CODE NOTE: in ideal world this would be a re-occuring scheduled event every MINUTE, but this Utils version doesn't have that feature. One schedule action per MINUTE shouldn't be too UPS heavy.
     Events.RegisterHandlerEvent(defines.events.on_entity_died, "Spider.OnSpiderDied", Spider.OnSpiderDied, "bossSpiders", {{filter = "name", name = "jd_plays-jd_spider_race-spidertron_boss"}})
@@ -1112,11 +1112,11 @@ Spider.UpdatePlanRenders = function(spider)
     end
 end
 
---- When the spider_change_distance command is called.
+--- When the spider_incrememt_distance_from_spawn command is called.
 ---@param commandEvent CustomCommandData
-Spider.Command_ChangeDistanceFromSpawn = function(commandEvent)
+Spider.Command_IncrementDistanceFromSpawn = function(commandEvent)
     local args = Commands.GetArgumentsFromCommand(commandEvent.parameter)
-    local commandErrorMessagePrefix = "ERROR: spider_change_distance command - "
+    local commandErrorMessagePrefix = "ERROR: spider_incrememt_distance_from_spawn command - "
     if args == nil or type(args) ~= "table" or #args == 0 then
         game.print(commandErrorMessagePrefix .. "No arguments provided.", Colors.lightred)
         return

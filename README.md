@@ -9,16 +9,16 @@ General Notes
 ==============
 
 All listed modes below "should" still just work, but only the top one was tested during most recent updates.
-All modes from before Factorio 1.1 have been removed from the active mod as part of upgrade to 1.1. The code is retained in a de-activated fashion, but would require updating and testing to re-enable.
+All modes from before Factorio 1.1 have been removed from the active mod as part of the upgrade to 1.1. The code is retained in a deactivated fashion, but would require updating and testing to re-enable.
 
 
 
 JD Spider Race
 ================
 
-A race by 2 teams to hunt down a massive hostile australian spider and kill it.
+A race by 2 teams to hunt down a massive hostile australian spider and kill it on a parallel frontier style map.
 Details found here: [Google Docs](https://docs.google.com/document/d/1MvcP3bVe1VIwInf3-35lQ6SMI4_8SvNg64u9Gb68C9Y)
-
+Significant code contributions by AndrewReds.
 
 
 Easter Egg Suprise (2022)
@@ -36,7 +36,7 @@ When Biter Egg Nests are destroyed sometimes random items will be revealed as ha
 JD P0ober Split Factory
 ==============
 
-There is an unpassable divide splitting the map in half; east and west. P0ober has the west side as her home, while JD has the east side.
+There is an impassable divide splitting the map in half; east and west. P0ober has the west side as her home, while JD has the east side.
 - Both sides are on the same team, sharing research progress, etc.
 - When a player dies they will always respawn on their home side of the divide.
 - Underground belts can go under the divide, while power pole wires and robots can go over the divide.
