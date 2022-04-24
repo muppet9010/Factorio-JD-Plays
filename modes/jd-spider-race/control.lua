@@ -10,6 +10,10 @@ if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
 end
 
 local function CreateGlobals()
+    global.general = global.general or {}
+    global.general.surfaceName = "jd-spider-race"
+    global.general.surface = global.general.surface or nil ---@type LuaSurface
+
     PlayerHome.CreateGlobals()
     Divider.CreateGlobals()
     WaterBarrier.CreateGlobals()

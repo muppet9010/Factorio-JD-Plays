@@ -6,32 +6,36 @@ local Logging = require("utility/logging")
 local Utils = require("utility/utils")
 local Colors = require("utility.colors")
 
-local SpawnYOffset = 100
-local SpawnXOffset = -100
+local SpawnYOffset = 256
+local SpawnXOffset = -256
 local MapHeight = 1024 -- For both teams, so giving 512 tiles per team.
 
----@class SpiderHunt_PlayerHome_Team
----@field id Id @ String team of either "north" or "south".
+---@class JdSpiderRace_PlayerHome_Team
+---@field id JdSpiderRace_PlayerHome_PlayerTeamNames
 ---@field playerForce LuaForce @ Ref to the player force for this team.
 ---@field enemyForce LuaForce @ The biter force in this teams lane of the map.
+---@field enemyForceName string
 ---@field spawnPosition MapPosition @ Position of this team's spawn.
 ---@field players table<Id, LuaPlayer> @ Table of the player ids to player object who have joined this team.
 ---@field playerNames table<string, string> @ Table of player names (key and value) who will join this team on first connect.
----@field otherTeam SpiderHunt_PlayerHome_Team @ Ref to the other teams global object.
+---@field otherTeam JdSpiderRace_PlayerHome_Team @ Ref to the other teams global object.
+
+---@alias JdSpiderRace_PlayerHome_PlayerTeamNames '"north"'|'"south"'
 
 PlayerHome.CreateGlobals = function()
     global.playerHome = global.playerHome or {}
 
-    global.playerHome.teams = global.playerHome.teams or {} ---@type table<Id, SpiderHunt_PlayerHome_Team> @ Team name to team object.
-    global.playerHome.playerIdToTeam = global.playerHome.playerIdToTeam or {} ---@type table<Id, SpiderHunt_PlayerHome_Team> @ Player index to thier team object.
+    global.playerHome.teams = global.playerHome.teams or {} ---@type table<JdSpiderRace_PlayerHome_PlayerTeamNames, JdSpiderRace_PlayerHome_Team> @ Team name to team object.
+    global.playerHome.playerIdToTeam = global.playerHome.playerIdToTeam or {} ---@type table<Id, JdSpiderRace_PlayerHome_Team> @ Player index to thier team object.
     global.playerHome.waitingRoomPlayers = global.playerHome.waitingRoomPlayers or {} ---@type table<Id, string> @ Player's index to their initial permissions group name from before they were put in the waiting room.
 end
 
 PlayerHome.OnLoad = function()
-    Events.RegisterHandlerEvent(defines.events.on_surface_created, "PlayerHome.OnSurfaceCreated", PlayerHome.OnSurfaceCreated)
     Events.RegisterHandlerEvent(defines.events.on_player_created, "PlayerHome.OnPlayerCreated", PlayerHome.OnPlayerCreated)
     Events.RegisterHandlerEvent(defines.events.on_marked_for_deconstruction, "PlayerHome.OnMarkedForDeconstruction", PlayerHome.OnMarkedForDeconstruction)
     Events.RegisterHandlerEvent(defines.events.on_built_entity, "PlayerHome.OnBuiltEntity", PlayerHome.OnBuiltEntity)
+    Events.RegisterHandlerEvent(defines.events.on_chunk_generated, "PlayerHome.OnChunkGenerated", PlayerHome.OnChunkGenerated)
+    Events.RegisterHandlerEvent(defines.events.on_market_item_purchased, "PlayerHome.OnMarketItemPurchased", PlayerHome.OnMarketItemPurchased)
 
     Commands.Register("spider_assign_player_to_team", {"api-description.jd_plays-jd_spider_race-spider_assign_player_to_team"}, PlayerHome.Command_AssignPlayerToTeam, true)
 end
@@ -75,40 +79,22 @@ PlayerHome.OnStartup = function()
     group.set_allows_action(defines.input_action.edit_permission_group, true)
 
     -- Create the surface with the same parameters as nauvis
-    local surface = game.surfaces["jd-spider-race"]
-    if surface == nil then
+    if global.general.surface == nil then
         -- Use the nauvis settings, but with dual spawn
         local map_gen_settings = Utils.DeepCopy(game.surfaces["nauvis"].map_gen_settings)
         map_gen_settings.starting_points = {
             global.playerHome.teams["north"].spawnPosition,
             global.playerHome.teams["south"].spawnPosition
         }
-        map_gen_settings.height = MapHeight
+        map_gen_settings.height = MapHeight -- Force the map to be 1024 tall and infinitely wide.
         map_gen_settings.water = 0 -- Disable water on the map.
 
-        surface = game.create_surface("jd-spider-race", map_gen_settings)
+        global.general.surface = game.create_surface(global.general.surfaceName, map_gen_settings)
 
-        -- wft factorio. Why no surface created event fired???
-        PlayerHome.OnSurfaceCreated({surface_index = surface.index})
-    end
-end
-
----@param event on_surface_created
-PlayerHome.OnSurfaceCreated = function(event)
-    local surface
-
-    if event ~= nil then
-        surface = game.surfaces[event.surface_index]
-        if surface == nil or not surface.valid then
-            return
+        -- Set spawn points of our player forces.
+        for _, team in pairs(global.playerHome.teams) do
+            team.playerForce.set_spawn_position(team.spawnPosition, global.general.surface)
         end
-    else
-        surface = game.surfaces["nauvis"]
-    end
-
-    -- Set spawn points of our player forces.
-    for _, team in pairs(global.playerHome.teams) do
-        team.playerForce.set_spawn_position(team.spawnPosition, surface)
     end
 end
 
@@ -170,11 +156,11 @@ PlayerHome.OnEntityDamaged = function(event)
     end
 end
 
----@param teamId '"north"'|'"south"'
+---@param teamId JdSpiderRace_PlayerHome_PlayerTeamNames
 ---@param spawnYPos float
 ---@param spawnXPos float
 PlayerHome.CreateTeam = function(teamId, spawnYPos, spawnXPos)
-    ---@type SpiderHunt_PlayerHome_Team
+    ---@type JdSpiderRace_PlayerHome_Team
     local team = {
         id = teamId,
         spawnPosition = {x = spawnXPos, y = spawnYPos},
@@ -182,21 +168,24 @@ PlayerHome.CreateTeam = function(teamId, spawnYPos, spawnXPos)
         playerNames = {}
     }
     team.playerForce = game.create_force(teamId)
-    team.enemyForce = game.create_force(teamId .. "_enemy")
+    team.enemyForceName = teamId .. "_enemy"
+    team.enemyForce = game.create_force(team.enemyForceName)
 
     global.playerHome.teams[teamId] = team
+
+    team.playerForce.technologies["landfill"].enabled = false
 end
 
 --- Add a player's name to the team's list of players.
 ---@param playerName string
----@param team SpiderHunt_PlayerHome_Team
+---@param team JdSpiderRace_PlayerHome_Team
 PlayerHome.AddPlayerNameToTeam = function(playerName, team)
     team.playerNames[playerName] = playerName
 end
 
 --- Moves the player to the team.
 ---@param player LuaPlayer
----@param team SpiderHunt_PlayerHome_Team
+---@param team JdSpiderRace_PlayerHome_Team
 PlayerHome.MovePlayerToTeam = function(player, team)
     game.print("Player " .. player.name .. " is now on team: " .. team.id)
     local playerId = player.index
@@ -244,7 +233,7 @@ PlayerHome.OnPlayerCreated = function(event)
 
     -- Place player in waiting room
     player.character.destroy()
-    player.teleport({0, 0}, game.surfaces["jd-spider-race"])
+    player.teleport({0, 0}, global.general.surface)
     player.permission_group = game.permissions.get_group("JDWaitingRoom")
 
     player.print("Welcome! Waiting on an admin to put you on a team...")
@@ -333,6 +322,59 @@ PlayerHome.OnBuiltEntity = function(event)
             entity.destroy()
         end
     end
+end
+
+--- Need to pale the market once the chunk at spawn has been generated.
+---@param event on_chunk_generated
+PlayerHome.OnChunkGenerated = function(event)
+    if event.surface.name ~= global.general.surfaceName then
+        -- Not our surface.
+        return
+    end
+
+    -- If its the spawn chunk for a team create the market there.
+    for _, team in pairs(global.playerHome.teams) do
+        if event.area.left_top.x == team.spawnPosition.x and event.area.left_top.y == team.spawnPosition.y then
+            -- Spawn point is in this chunk.
+            PlayerHome.CreateMarketForTeam(team)
+        end
+    end
+end
+
+--- Create a market for the team at its spawn area. Fully configures the market.
+---@param team JdSpiderRace_PlayerHome_Team
+PlayerHome.CreateMarketForTeam = function(team)
+    -- Add a market somewhere near spawn. But we don't want it on top of ore.
+    local marketPosition = global.general.surface.find_non_colliding_position("jd_plays-jd_spider_race-market_placement_test", team.spawnPosition, 30, 1)
+    if marketPosition == nil then
+        error("No position found for market near spawn. UNACCEPTABLE")
+    end
+    local market = global.general.surface.create_entity {name = "market", position = marketPosition, force = team.playerForce, move_stuck_players = true}
+    if market == nil then
+        error("Market failed to create at found position. UNACCEPTABLE")
+    end
+    market.destructible = false
+
+    -- Add our end of game item to the market. Use an item as then when its hovered in the market we can show a picture and text.
+    market.add_market_item {price = {{"coin", 1}}, offer = {type = "give-item", item = "jd_plays-jd_spider_race-nuke_other_team"}}
+end
+
+--- Called when a player purchases an item in the market. In our mod this will only ever be to nuke the other team.
+---@param event on_market_item_purchased
+PlayerHome.OnMarketItemPurchased = function(event)
+    if remote.interfaces["JDGoesBoom"] == nil or remote.interfaces["JDGoesBoom"]["ForceGoesBoom"] == nil then
+        game.print("JD Goes Boom mod not installed, so coin wasted", Colors.lightred)
+        return
+    end
+
+    -- Trigger the nuke on the other team.
+    local otherTeamName = global.playerHome.playerIdToTeam[event.player_index].otherTeam.id
+    remote.call("JDGoesBoom", "ForceGoesBoom", otherTeamName, 50, 15)
+    game.print({"message.jd_plays-jd_spider_race-blow_up_other_team", otherTeamName}, Colors.lightgreen)
+
+    -- Remove the fake item the player just brought.
+    local player = game.get_player(event.player_index)
+    player.remove_item({name = "jd_plays-jd_spider_race-nuke_other_team"})
 end
 
 return PlayerHome

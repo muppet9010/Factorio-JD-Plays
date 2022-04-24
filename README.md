@@ -19,6 +19,7 @@ JD Spider Race
 A race by 2 teams to hunt down a massive hostile australian spider and kill it on a parallel frontier style map.
 Details found here: [Google Docs](https://docs.google.com/document/d/1MvcP3bVe1VIwInf3-35lQ6SMI4_8SvNg64u9Gb68C9Y)
 Significant code contributions by AndrewReds.
+Expects the mod: JD Goes Boom.
 
 
 Easter Egg Suprise (2022)

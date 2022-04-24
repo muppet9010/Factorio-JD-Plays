@@ -10,10 +10,10 @@ local Events = require("utility/events")
 local Utils = require("utility/utils")
 local Logging = require("utility/logging")
 
----@class Spider_WaterBarrier_BarrierOrientations
+---@class JdSpiderRace_WaterBarrier_BarrierOrientations
 local BarrierOrientations = {horizontal = "horizontal", vertical = "vertical"}
 
----@class Spider_WaterBarrier_BarrierDirections
+---@class JdSpiderRace_WaterBarrier_BarrierDirections
 local BarrierDirections = {positive = "positive", negative = "negative"}
 
 --- Options for this mods shoreline generation.

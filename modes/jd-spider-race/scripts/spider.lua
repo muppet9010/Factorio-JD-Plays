@@ -23,16 +23,15 @@ local Commands = require("utility.commands")
 local Events = require("utility.events")
 local math_min, math_max, math_floor, math_random = math.min, math.max, math.floor, math.random
 
----@class SpiderHunt_BossSpider
+---@class JdSpiderRace_BossSpider
 ---@field id UnitNumber @ The UnitNumber of the boss spider entity. Also the key in global.spiders.
----@field state SpiderHunt_BossSpider_State
----@field playerTeam LuaForce
+---@field state JdSpiderRace_BossSpider_State
+---@field playerTeam JdSpiderRace_PlayerHome_Team
 ---@field playerTeamName string
----@field biterTeam LuaForce
 ---@field bossEntity LuaEntity @ The main spider boss entity.
 ---@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
----@field gunSpiders table<SpiderHunt_BossSpider_GunSpiderType, SpiderHunt_GunSpider> @ The hidden spiders that move with the main spider. They are present just to carry the extra gun types.
----@field turrets table<SpiderHunt_BossSpider_TurretType, SpiderHunt_BossSpider_Turret> @ The hidden turrets that are moved once per second cycle to the spiders current position. The weapons on these should be happy to be out of sync with the spiders exact position.
+---@field gunSpiders table<JdSpiderRace_BossSpider_GunSpiderType, JdSpiderRace_GunSpider> @ The hidden spiders that move with the main spider. They are present just to carry the extra gun types.
+---@field turrets table<JdSpiderRace_BossSpider_TurretType, JdSpiderRace_BossSpider_Turret> @ The hidden turrets that are moved once per second cycle to the spiders current position. The weapons on these should be happy to be out of sync with the spiders exact position.
 ---@field distanceFromSpawn uint @ How far from spawn the spiders area is centered on (positive number).
 ---@field damageTakenThisSecond float @ Damage taken so far this second (in between spider monitoring cycles).
 ---@field previousDamageToConsider float @ Damage taken in the previous whole seconds that the Settings.spiderDamageSecondsConsidered covers. Used whne the spider takes damage to simply track damage to consider retreat.
@@ -57,16 +56,16 @@ local math_min, math_max, math_floor, math_random = math.min, math.max, math.flo
 ---@field chasingPlayer LuaPlayer|null @ If the chasingEntity was a player controlled entity then this references the player to allow tracking across multiple entities (vehicles/character).
 ---@field chasingEntityLastPosition MapPosition|null @ The last known position of the chasingEntity. To act as a fallback for if the entity is no longer valid. Only recorded/updated if it is within the spiders attacking range.
 
----@class SpiderHunt_GunSpider
----@field type SpiderHunt_BossSpider_GunSpiderType
+---@class JdSpiderRace_GunSpider
+---@field type JdSpiderRace_BossSpider_GunSpiderType
 ---@field entity LuaEntity
 ---@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
 
----@class SpiderHunt_BossSpider_Turret
----@field type SpiderHunt_BossSpider_TurretType
+---@class JdSpiderRace_BossSpider_Turret
+---@field type JdSpiderRace_BossSpider_TurretType
 ---@field entity LuaEntity
 
----@class SpiderHunt_BossSpider_State
+---@class JdSpiderRace_BossSpider_State
 local BossSpider_State = {
     roaming = "roaming", -- Just idling wondering its area.
     fighting = "fighting", -- Not significantly moving, but actively being managed in a combat state.
@@ -75,18 +74,18 @@ local BossSpider_State = {
     dead = "dead" -- Its dead.
 }
 
----@class SpiderHunt_BossSpider_GunSpiderType
+---@class JdSpiderRace_BossSpider_GunSpiderType
 local BossSpider_GunSpiderType = {
     rocketLauncher = "rocketLauncher",
     tankCannon = "tankCannon",
     machineGun = "machineGun"
 }
 
----@class SpiderHunt_BossSpider_GunEntityDetails
+---@class JdSpiderRace_BossSpider_GunEntityDetails
 ---@field entityName string @ The entity prototype name of this gun spider.
 ---@field gunFilters table<Id, string> @ A list of the gun slots and what filter they should each have (if any).
 
----@type table<SpiderHunt_BossSpider_GunSpiderType, SpiderHunt_BossSpider_GunEntityDetails>
+---@type table<JdSpiderRace_BossSpider_GunSpiderType, JdSpiderRace_BossSpider_GunEntityDetails>
 local BossSpider_GunSpiderDetails = {
     [BossSpider_GunSpiderType.machineGun] = {
         name = "jd_plays-jd_spider_race-spidertron_boss_gun-machine_gun",
@@ -115,15 +114,15 @@ local BossSpider_GunSpiderDetails = {
     }
 }
 
----@class SpiderHunt_BossSpider_TurretType
+---@class JdSpiderRace_BossSpider_TurretType
 local BossSpider_TurretType = {
     artillery = "artillery"
 }
 
----@class SpiderHunt_BossSpider_TurretEntityDetails
+---@class JdSpiderRace_BossSpider_TurretEntityDetails
 ---@field entityName string @ The entity prototype name of this turret.
 
----@type table<SpiderHunt_BossSpider_TurretType, SpiderHunt_BossSpider_TurretEntityDetails>
+---@type table<JdSpiderRace_BossSpider_TurretType, JdSpiderRace_BossSpider_TurretEntityDetails>
 local BossSpider_TurretDetails = {
     [BossSpider_TurretType.artillery] = {
         name = "jd_plays-jd_spider_race-spidertron_boss-artillery_turret"
@@ -135,7 +134,7 @@ local BossSpider_Rearm = {
     {name = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", count = 100}
 }
 
----@type table<SpiderHunt_BossSpider_GunSpiderType, ItemStackDefinition[]>
+---@type table<JdSpiderRace_BossSpider_GunSpiderType, ItemStackDefinition[]>
 local BossSpider_GunSpiderRearm = {
     [BossSpider_GunSpiderType.machineGun] = {
         {name = "firearm-magazine", count = 200},
@@ -155,20 +154,20 @@ local BossSpider_GunSpiderRearm = {
     }
 }
 
----@type table<SpiderHunt_BossSpider_TurretType, ItemStackDefinition[]>
+---@type table<JdSpiderRace_BossSpider_TurretType, ItemStackDefinition[]>
 local BossSpider_TurretRearm = {
     [BossSpider_TurretType.artillery] = {
         {name = "jd_plays-jd_spider_race-spidertron_boss-artillery_shell", count = 10}
     }
 }
 
----@class SpiderHunt_BossSpider_RconAmmoType
+---@class JdSpiderRace_BossSpider_RconAmmoType
 ---@field ammoItemName string
----@field gunType SpiderHunt_BossSpider_GunSpiderType|null
+---@field gunType JdSpiderRace_BossSpider_GunSpiderType|null
 ---@field bossSpider boolean|null
----@field turretType SpiderHunt_BossSpider_TurretType|null
+---@field turretType JdSpiderRace_BossSpider_TurretType|null
 
----@type table<string, SpiderHunt_BossSpider_RconAmmoType> @ Command friendly name to item name.
+---@type table<string, JdSpiderRace_BossSpider_RconAmmoType> @ Command friendly name to item name.
 local BossSpider_RconAmmoNames = {
     bullet = {ammoItemName = "firearm-magazine", gunType = BossSpider_GunSpiderType.machineGun},
     piercingBullet = {ammoItemName = "piercing-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun},
@@ -217,21 +216,18 @@ if Testing then
 end
 
 -- This must be created after the first batch of testing value changes are applied.
--- TODO: this should be linked back to the global.playerHome.teams and the developed in isolation note at the top of file removed. This use of teams will matter far more when the GUI additions are done.
----@class SpiderHunt_BossSpider_PlayerForcesDetails
+---@class JdSpiderRace_BossSpider_PlayerForcesDetails
 local PlayerForcesDetails = {
     -- Set the color alphas to half as otherwise they become very dark.
     {
         name = "north",
         biterTeamName = "north_enemy",
-        spiderStartingYPosition = -Settings.bossSpiderStartingVerticalDistance,
-        spiderColor = {0, 0, 0, 200} -- Deep black, but some highlighting still visible.
+        spiderStartingYPosition = -Settings.bossSpiderStartingVerticalDistance
     },
     {
         name = "south",
         biterTeamName = "south_enemy",
-        spiderStartingYPosition = Settings.bossSpiderStartingVerticalDistance,
-        spiderColor = {0, 0, 0, 200} -- Deep black, but some highlighting still visible.
+        spiderStartingYPosition = Settings.bossSpiderStartingVerticalDistance
     }
 }
 
@@ -243,17 +239,16 @@ if Testing then
 -- PlayerForcesDetails[2].spiderColor = {0, 100, 255, 128} -- A light blue color.
 end
 
-local PlayerForcesNameToDetails = {} ---@type table<string, SpiderHunt_BossSpider_PlayerForcesDetails>
+local PlayerForcesNameToDetails = {} ---@type table<string, JdSpiderRace_BossSpider_PlayerForcesDetails>
 for _, details in pairs(PlayerForcesDetails) do
     PlayerForcesNameToDetails[details.name] = details
 end
 
 Spider.CreateGlobals = function()
     global.spider = global.spider or {}
-    global.spider.spiders = global.spider.spiders or {} ---@type table<UnitNumber, SpiderHunt_BossSpider> @ Key'd by spiders UnitNumber
-    global.spider.playerTeamsSpider = global.spider.playerTeamsSpider or {} ---@type table<string, SpiderHunt_BossSpider> @ The player team to the spider they are fighting.
+    global.spider.spiders = global.spider.spiders or {} ---@type table<UnitNumber, JdSpiderRace_BossSpider> @ Key'd by spiders UnitNumber
+    global.spider.playerTeamsSpider = global.spider.playerTeamsSpider or {} ---@type table<string, JdSpiderRace_BossSpider> @ The player team name to the spider they are fighting.
     global.spider.showSpiderPlans = global.spider.showSpiderPlans or Settings.showSpiderPlans ---@type boolean
-    global.spider.surface = global.spider.surface or nil ---@type LuaSurface
     global.spider.constantMovementFromSpawnPerMinute = global.spider.constantMovementFromSpawnPerMinute or 3 ---@type number
 end
 
@@ -269,13 +264,10 @@ Spider.OnLoad = function()
 end
 
 Spider.OnStartup = function()
-    -- Set the cached surface reference.
-    global.spider.surface = game.surfaces["jd-spider-race"]
-
     -- Create the spiders for each team if they don't exist.
     if next(global.spider.spiders) == nil then
         for _, playerForceDetails in pairs(PlayerForcesDetails) do
-            Spider.CreateSpider(playerForceDetails.name, playerForceDetails.spiderStartingYPosition, playerForceDetails.spiderColor, playerForceDetails.biterTeamName)
+            Spider.CreateSpider(playerForceDetails.name, playerForceDetails.spiderStartingYPosition, playerForceDetails.biterTeamName)
         end
 
         Spider.SetSpiderForcesTechs()
@@ -291,27 +283,24 @@ end
 --- Create a new spidertron for the specific player team to fight against.
 ---@param playerTeamName string
 ---@param spidersYPos uint
----@param spiderColor Color
 ---@param biterTeamName string
-Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTeamName)
-    local playerteam = game.forces[playerTeamName]
-    local biterTeam = game.forces[biterTeamName]
+Spider.CreateSpider = function(playerTeamName, spidersYPos, biterTeamName)
+    local playerTeam = global.playerHome.teams[playerTeamName]
     local spiderPosition = {x = -Settings.bossSpiderStartingLeftDistance, y = spidersYPos}
     -- They can be created in chunks that don't exist as they have a radar and thus will generate the chunks around them.
-    local bossEntity = global.spider.surface.create_entity {name = "jd_plays-jd_spider_race-spidertron_boss", position = spiderPosition, force = biterTeam}
+    local bossEntity = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-spidertron_boss", position = spiderPosition, force = playerTeam.enemyForce}
     if bossEntity == nil then
         error("Failed to create boss spider for team " .. playerTeamName .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
     end
-    bossEntity.color = spiderColor
+    bossEntity.color = {0, 0, 0, 200} -- Deep black, but some highlighting still visible.
 
-    ---@type SpiderHunt_BossSpider
+    ---@type JdSpiderRace_BossSpider
     local spider = {
         id = bossEntity.unit_number,
         bossEntity = bossEntity,
         state = BossSpider_State.roaming,
-        playerTeam = playerteam,
+        playerTeam = playerTeam,
         playerTeamName = playerTeamName,
-        biterTeam = biterTeam,
         distanceFromSpawn = Settings.bossSpiderStartingLeftDistance,
         damageTakenThisSecond = 0,
         previousDamageToConsider = 0,
@@ -356,7 +345,7 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTe
 
     -- Add the extra gun spiders.
     for shortName, entityDetails in pairs(BossSpider_GunSpiderDetails) do
-        local gunSpiderEntity = global.spider.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = biterTeam}
+        local gunSpiderEntity = global.general.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = playerTeam.enemyForce}
         if gunSpiderEntity == nil then
             error("Failed to create gun spider " .. shortName .. " for team " .. playerTeamName .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
         end
@@ -370,7 +359,7 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTe
 
     -- Add the extra turrets.
     for shortName, entityDetails in pairs(BossSpider_TurretDetails) do
-        local turretEntity = global.spider.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = biterTeam}
+        local turretEntity = global.general.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = playerTeam.enemyForce}
         if turretEntity == nil then
             error("Failed to create turret " .. shortName .. " for team " .. playerTeamName .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
         end
@@ -388,14 +377,14 @@ end
 --- Give the forces of the spiders all the shooting sped upgrades, but no damage upgrades.
 Spider.SetSpiderForcesTechs = function()
     for _, spider in pairs(global.spider.spiders) do
-        local spiderForce = spider.biterTeam
+        local spiderForce = spider.playerTeam.enemyForce
         spiderForce.technologies["weapon-shooting-speed-6"].researched = true
         spiderForce.technologies["laser-shooting-speed-7"].researched = true
     end
 end
 
 --- Called when a spider has a new distance from spawn set and we need to change it's cached roaming values.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 Spider.UpdateSpidersRoamingValues = function(spider)
     spider.roamingXMin = -spider.distanceFromSpawn - Settings.spidersRoamingXRange
     spider.roamingXMax = -spider.distanceFromSpawn + Settings.spidersRoamingXRange
@@ -410,8 +399,8 @@ Spider.UpdateSpidersRoamingValues = function(spider)
         spider.spiderAreasRenderIds = {}
 
         -- Add the current areas.
-        table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.blue, filled = false, width = 10, left_top = {x = spider.roamingXMin, y = spider.roamingYMin}, right_bottom = {x = spider.roamingXMax, y = spider.roamingYMax}, surface = global.spider.surface, draw_on_ground = true})
-        table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.red, filled = false, width = 10, left_top = {x = spider.fightingXMin, y = spider.fightingYMin}, right_bottom = {x = spider.fightingXMax, y = spider.fightingYMax}, surface = global.spider.surface, draw_on_ground = true})
+        table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.blue, filled = false, width = 10, left_top = {x = spider.roamingXMin, y = spider.roamingYMin}, right_bottom = {x = spider.roamingXMax, y = spider.roamingYMax}, surface = global.general.surface, draw_on_ground = true})
+        table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.red, filled = false, width = 10, left_top = {x = spider.fightingXMin, y = spider.fightingYMin}, right_bottom = {x = spider.fightingXMax, y = spider.fightingYMax}, surface = global.general.surface, draw_on_ground = true})
     end
 
     -- LATER: update distance GUI for this spider's player team.
@@ -532,7 +521,7 @@ Spider.CheckSpiders_Scheduled = function(event)
 end
 
 --- Checks how the spiders roaming is going.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.CheckRoamingForSecond = function(spider, spidersCurrentPosition)
     -- Do next action based on current state.
@@ -554,7 +543,7 @@ Spider.CheckRoamingForSecond = function(spider, spidersCurrentPosition)
 end
 
 --- Checks how the spiders retreating is going.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.CheckRetreatingForSecond = function(spider, spidersCurrentPosition)
     -- Do nothing until the spider has reached its destination.
@@ -572,7 +561,7 @@ Spider.CheckRetreatingForSecond = function(spider, spidersCurrentPosition)
 end
 
 --- Checks how the spiders chasing to a target location is going and gives new orders one it reaches the target area. If it gets damaged on route it will be changed to the fighting state as part of the damage reaction event.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
     Spider.UpdateTargetsDetails(spider, "chasing")
@@ -597,7 +586,7 @@ Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
 end
 
 --- Manages the spiders fighting for this second. Will react to taking damage, having things to fight or looking for near by things to attack. As a last resort it will return home.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
     -- The spider will "dance" to keep engaging targets with its longer range weapons until its killed the real target or retreats. It will be a bit crude as otherwise it needs far more active managemnt.
@@ -620,13 +609,13 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             -- No short term target exists.
 
             -- Check if there is anything to fight at the current location within weapons range. As we aren't being damaged so may as well kill anything we can before doing any longer term actions which may expose us to damage.
-            nearestEnemyWithinRange = nearestEnemyWithinRange or global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.biterTeam} or "none" -- The find_nearest_enemy() returns nil if nothing found, but that won't be cached correctly, so use "none" as value of last resort.
+            nearestEnemyWithinRange = nearestEnemyWithinRange or global.general.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.playerTeam.enemyForce} or "none" -- The find_nearest_enemy() returns nil if nothing found, but that won't be cached correctly, so use "none" as value of last resort.
             if nearestEnemyWithinRange ~= "none" then
                 -- There's enemies within current weapons range so just stand still and fight them.
                 -- There's no movement or retargeting involved here so no need to check fighting area.
                 Spider.OrderSpiderToStartMovingToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
                 if Settings.showSpiderPlans then
-                    rendering.draw_text {text = "standing to fight", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+                    rendering.draw_text {text = "standing to fight", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
                 end
                 return
             else
@@ -657,7 +646,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
         -- As we are taking damage we aren't worried about pursuing any target initially.
 
         -- Check if an enemy is within current weapons range.
-        nearestEnemyWithinRange = nearestEnemyWithinRange or global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.biterTeam} or "none" -- The find_nearest_enemy() returns nil if nothing found, but that won't be cached correctly, so use "none" as value of last resort.
+        nearestEnemyWithinRange = nearestEnemyWithinRange or global.general.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.playerTeam.enemyForce} or "none" -- The find_nearest_enemy() returns nil if nothing found, but that won't be cached correctly, so use "none" as value of last resort.
 
         -- Advance only if we are currently out of weapon range. We don't want to close in otherwise.
         if nearestEnemyWithinRange ~= "none" then
@@ -674,7 +663,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
                 -- Just stay here and fight for now. As moving forwards to use more weapons will probably get the spider shot by more defences.
                 Spider.OrderSpiderToStartMovingToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
                 if Settings.showSpiderPlans then
-                    rendering.draw_text {text = "standing to fight", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+                    rendering.draw_text {text = "standing to fight", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
                 end
                 return
             end
@@ -709,7 +698,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
     -- As spider can't pursue the current target look for anything near by to attack first, otherwise return to chasing the origional target if there was one, or return to roaming. Means the spider will attack down a line of defences, etc, before returning to a longer term behaviour.
 
     -- Look for nearest target nearby and set them as the new target entity.
-    local nearbyEnemy = global.spider.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = Settings.distanceToCheckForEnemiesWhenBeingDamaged, force = spider.biterTeam}
+    local nearbyEnemy = global.general.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = Settings.distanceToCheckForEnemiesWhenBeingDamaged, force = spider.playerTeam.enemyForce}
 
     -- Decide final action based on if a nearby target is found.
     if nearbyEnemy ~= nil then
@@ -722,7 +711,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             spider.lastDamagedByEntity = nearbyEnemy
             spider.lastDamagedFromPosition = targetsCurrentPosition
             if Settings.showSpiderPlans then
-                rendering.draw_text {text = "found target near by to attack", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+                rendering.draw_text {text = "found target near by to attack", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
             end
 
             -- React based on how far away it is.
@@ -767,13 +756,13 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
 
     -- Fallback behaviour is to go home.
     if Settings.showSpiderPlans then
-        rendering.draw_text {text = "going home as last resort", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+        rendering.draw_text {text = "going home as last resort", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
     end
     Spider.StartRoaming(spider, spidersCurrentPosition)
 end
 
 --- Handle how to fight against a specific target type which is always currently valid.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
 ---@param chasingOrLastDamaged '"chasing"'|'"lastDamaged"'
 ---@param spidersMaxShootingRange uint
@@ -799,7 +788,7 @@ Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosi
         -- Stop here to fight the target and anything else near by.
         Spider.OrderSpiderToStartMovingToPosition(spider, spidersCurrentPosition) -- Cancel any current movement order of the spider so it stops here.
         if Settings.showSpiderPlans then
-            rendering.draw_text {text = "standing to fight", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+            rendering.draw_text {text = "standing to fight", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
         end
         return
     end
@@ -819,7 +808,7 @@ Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosi
 end
 
 --- Check a chased/lastDamaged target is still valid. If chasign a player it updates the target entity. Always updates target position. If the entity isn't valid or has left the fighting area it blanks out all target data. To make the chasing ad fighting logic simplier.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param chasingOrLastDamaged '"chasing"'|'"lastDamaged"'
 Spider.UpdateTargetsDetails = function(spider, chasingOrLastDamaged)
     ---@typelist string, string, string
@@ -876,12 +865,12 @@ end
 
 --- Advance roughly towards the target. Stays within the allowed fighting area.
 --- Will wobble around them when very close (within Settings.spidersFightingStepDistance) of them. Intended to be very basic and simple initially.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param targetsCurrentPosition MapPosition
 ---@param spidersCurrentPosition MapPosition
 Spider.GetNewPositionForAdvancingOnTarget = function(spider, targetsCurrentPosition, spidersCurrentPosition)
     if Settings.showSpiderPlans then
-        rendering.draw_text {text = "advancing on target", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+        rendering.draw_text {text = "advancing on target", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
     end
 
     local xPositonModifier, yPositonModifier
@@ -904,12 +893,12 @@ end
 --- Advance roughly away from the target. Stays within the allowed fighting area.
 --- Intended to be very basic and simple initially.
 --- The spider should step backwards the way it came. As it tends to run quite close to turrets as they take a while to wake up and start shooting, so it gets very close before its damaged and goes in to fighting mode.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param targetsCurrentPosition MapPosition
 ---@param spidersCurrentPosition MapPosition
 Spider.GetNewPositionForReversingFromTarget = function(spider, targetsCurrentPosition, spidersCurrentPosition)
     if Settings.showSpiderPlans then
-        rendering.draw_text {text = "reversing from target", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+        rendering.draw_text {text = "reversing from target", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
     end
 
     local xPositonModifier, yPositonModifier
@@ -930,7 +919,7 @@ Spider.GetNewPositionForReversingFromTarget = function(spider, targetsCurrentPos
 end
 
 --- Order the spider to move to a position. This will also handle updating any hidden entities that aren't part of the boss spider.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param targetPosition MapPosition
 Spider.OrderSpiderToStartMovingToPosition = function(spider, targetPosition)
     -- Give the various spider entities their order.
@@ -941,7 +930,7 @@ Spider.OrderSpiderToStartMovingToPosition = function(spider, targetPosition)
 end
 
 --- Set the spider to start roaming.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.StartRoaming = function(spider, spidersCurrentPosition)
     Spider.ClearStateVariables(spider)
@@ -954,7 +943,7 @@ Spider.StartRoaming = function(spider, spidersCurrentPosition)
 end
 
 --- Make the spider retreat.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 Spider.Retreat = function(spider)
     Spider.ClearStateVariables(spider)
 
@@ -967,7 +956,7 @@ Spider.Retreat = function(spider)
 end
 
 --- Set the spider to charge towards its latest attacker and start fighting there. Will starting moving there if needed, otherwise just enter fighting mode.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition)
     Spider.ClearNonFightingStateVariables(spider)
@@ -995,7 +984,7 @@ Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition)
 end
 
 --- Set the spider to start fighting in the area its currently at.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.StartFighting = function(spider, spidersCurrentPosition)
     spider.state = BossSpider_State.fighting
@@ -1031,7 +1020,7 @@ Spider.GetEntitiesControllingPlayer = function(entity)
 end
 
 --- Clear all state variables.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 Spider.ClearStateVariables = function(spider)
     spider.chasingPlayer = nil
     spider.chasingEntity = nil
@@ -1044,14 +1033,14 @@ Spider.ClearStateVariables = function(spider)
 end
 
 --- Clear the non fighting state variables.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 Spider.ClearNonFightingStateVariables = function(spider)
     spider.retreatingTargetPosition = nil
     spider.roamingTargetPosition = nil
 end
 
 --- Gets the max distance the spider can fight from right now based on the weapons it has ammo for. This is either long (30) or short (15), rather than being truely maximum single weapon range.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@return double maxEngagementRange
 Spider.GetSpidersEngagementRange = function(spider)
     if spider.gunSpiders[BossSpider_GunSpiderType.rocketLauncher].hasAmmo then
@@ -1076,7 +1065,7 @@ Spider.GetSpidersEngagementRange = function(spider)
 end
 
 --- Checks if the target position if its within the allowed fighting area.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 ---@param targetPosition MapPosition
 ---@return boolean positionIsValid
 Spider.IsFightingTargetPositionWithinAllowedFightingArea = function(spider, targetPosition)
@@ -1090,7 +1079,7 @@ Spider.IsFightingTargetPositionWithinAllowedFightingArea = function(spider, targ
 end
 
 --- Render the spiders current plans and remove any old ones first. This is for debugging/testing and so doesn't matter than not optimal UPS.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 Spider.UpdatePlanRenders = function(spider)
     -- Just remove all the old renders.
     for _, renderId in pairs(spider.spiderPlanRenderIds) do
@@ -1101,50 +1090,50 @@ Spider.UpdatePlanRenders = function(spider)
     -- Add any state specific renders for the spider.
     if spider.state == BossSpider_State.roaming then
         if spider.roamingTargetPosition ~= nil then
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - moving", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.roamingTargetPosition, surface = global.spider.surface})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - moving", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.roamingTargetPosition, surface = global.general.surface})
         else
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - arrived", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - arrived", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
         end
     elseif spider.state == BossSpider_State.retreating then
-        table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state, surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
-        table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.retreatingTargetPosition, surface = global.spider.surface})
+        table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state, surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+        table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.retreatingTargetPosition, surface = global.general.surface})
     elseif spider.state == BossSpider_State.dead then
         -- The entity still exists the moment this is called, but not afterwards. So set it to the position and not the entity itself.
-        table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state, surface = global.spider.surface, target = spider.bossEntity.position, color = Colors.white, scale_with_zoom = true})
+        table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state, surface = global.general.surface, target = spider.bossEntity.position, color = Colors.white, scale_with_zoom = true})
     elseif spider.state == BossSpider_State.chasing then
         if spider.lastDamagedFromPosition ~= nil then
             if spider.lastDamagedByEntity ~= nil and spider.lastDamagedByEntity.valid then
-                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent entity", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
-                table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.red, width = 2, from = spider.bossEntity, to = spider.lastDamagedByEntity, surface = global.spider.surface})
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent entity", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.red, width = 2, from = spider.bossEntity, to = spider.lastDamagedByEntity, surface = global.general.surface})
             else
-                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent area", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
             end
 
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.lastDamagedFromPosition, surface = global.spider.surface})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.lastDamagedFromPosition, surface = global.general.surface})
         elseif spider.chasingEntityLastPosition ~= nil then
             if spider.chasingEntity ~= nil and spider.chasingEntity.valid then
-                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional entity", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
-                table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.red, width = 2, from = spider.bossEntity, to = spider.chasingEntity, surface = global.spider.surface})
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional entity", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.red, width = 2, from = spider.bossEntity, to = spider.chasingEntity, surface = global.general.surface})
             else
-                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+                table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional area", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
             end
 
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.chasingEntityLastPosition, surface = global.spider.surface})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.chasingEntityLastPosition, surface = global.general.surface})
         end
     elseif spider.state == BossSpider_State.fighting then
         if spider.lastDamagedByEntity ~= nil and spider.lastDamagedByEntity.valid then
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent entity", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.lastDamagedByEntity, surface = global.spider.surface})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent entity", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.lastDamagedByEntity, surface = global.general.surface})
         elseif spider.lastDamagedFromPosition ~= nil then
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.lastDamagedFromPosition, surface = global.spider.surface})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - recent area", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.lastDamagedFromPosition, surface = global.general.surface})
         elseif spider.chasingEntity ~= nil and spider.chasingEntity.valid then
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional entity", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.chasingEntity, surface = global.spider.surface})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional entity", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.chasingEntity, surface = global.general.surface})
         elseif spider.chasingEntityLastPosition ~= nil then
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional area", surface = global.spider.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
-            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.chasingEntityLastPosition, surface = global.spider.surface})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_text {text = spider.state .. " - origional area", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true})
+            table.insert(spider.spiderPlanRenderIds, rendering.draw_line {color = Colors.white, width = 2, from = spider.bossEntity, to = spider.chasingEntityLastPosition, surface = global.general.surface})
         end
     end
 end
@@ -1232,7 +1221,7 @@ Spider.SpidersMoveAwayFromSpawn_Scheduled = function(event)
 end
 
 --- Gives the boss spider and its gun spiders 1 set of ammo.
----@param spider SpiderHunt_BossSpider
+---@param spider JdSpiderRace_BossSpider
 Spider.GiveSpiderFullAmmo = function(spider)
     if spider.state == BossSpider_State.dead then
         return
@@ -1354,8 +1343,8 @@ Spider.Command_GiveSpiderAmmo = function(commandEvent)
 end
 
 --- Gives a spider a specific ammo type and count. Works out which entity to put the ammo in.
----@param spider SpiderHunt_BossSpider
----@param rconAmmoType SpiderHunt_BossSpider_RconAmmoType
+---@param spider JdSpiderRace_BossSpider
+---@param rconAmmoType JdSpiderRace_BossSpider_RconAmmoType
 ---@param quantity uint
 Spider.GiveSpiderSpecificAmmo = function(spider, rconAmmoType, quantity)
     if rconAmmoType.bossSpider then
