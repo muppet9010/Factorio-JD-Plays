@@ -1,4 +1,7 @@
 local EventScheduler = require("utility/event-scheduler")
+local PlayerHome = require("modes/jd-spider-race/scripts/player-home")
+local Divider = require("modes/jd-spider-race/scripts/divider")
+local WaterBarrier = require("modes/jd-spider-race/scripts/water-barrier")
 local Spider = require("modes.jd-spider-race.scripts.spider")
 
 if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
@@ -6,17 +9,23 @@ if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
 end
 
 local function CreateGlobals()
+    PlayerHome.CreateGlobals()
+    Divider.CreateGlobals()
+    WaterBarrier.CreateGlobals()
     Spider.CreateGlobals()
 end
 
 local function OnLoad()
     --Any Remote Interface registration calls can go in here or in root of control.lua
+    PlayerHome.OnLoad()
     Spider.OnLoad()
+    Divider.OnLoad()
+    WaterBarrier.OnLoad()
 end
 
 --local function OnSettingChanged(event)
 --if event == nil or event.setting == "xxxxx" then
---	local x = tonumber(settings.global["xxxxx"].value)
+--  local x = tonumber(settings.global["xxxxx"].value)
 --end
 --end
 
@@ -24,6 +33,9 @@ local function OnStartup()
     CreateGlobals()
     OnLoad()
     --OnSettingChanged(nil)
+
+    PlayerHome.OnStartup()
+    WaterBarrier.OnStartup()
 
     -- DO AFTER TEAMS ARE MADE
     Spider.OnStartup()

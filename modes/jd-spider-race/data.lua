@@ -1,3 +1,7 @@
+require("modes/jd-spider-race/prototypes/divider_tile")
+require("modes/jd-spider-race/prototypes/divider_entity")
+require("modes/jd-spider-race/prototypes/divider_beam")
+
 require("modes.jd-spider-race.prototypes.spidertron_boss")
 require("modes.jd-spider-race.prototypes.spidertron_boss-gun_variants")
 require("modes.jd-spider-race.prototypes.spidertron_boss-ammos")
