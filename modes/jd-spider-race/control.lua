@@ -3,6 +3,7 @@ local PlayerHome = require("modes/jd-spider-race/scripts/player-home")
 local Divider = require("modes/jd-spider-race/scripts/divider")
 local WaterBarrier = require("modes/jd-spider-race/scripts/water-barrier")
 local Spider = require("modes.jd-spider-race.scripts.spider")
+local Utils = require("utility/utils")
 
 if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
     return
@@ -34,10 +35,13 @@ local function OnStartup()
     OnLoad()
     --OnSettingChanged(nil)
 
-    PlayerHome.OnStartup()
-    WaterBarrier.OnStartup()
+    Utils.DisableIntroMessage()
 
-    -- DO AFTER TEAMS ARE MADE
+    -- Do first as sets teams and surfaces.
+    PlayerHome.OnStartup()
+
+    -- Regular startup (non ordered).
+    WaterBarrier.OnStartup()
     Spider.OnStartup()
 end
 
@@ -52,18 +56,22 @@ script.on_event(
     defines.events.on_entity_damaged,
     ---@param event on_entity_damaged
     function(event)
-        --[[
-            Other code does its reactions to the damage event.
-        ]]
-        --
+        -- Check all events for the cross player damage.
+        PlayerHome.OnEntityDamaged(event)
 
-        -- If there is still damage being done to the spider then record it.
-        -- TODO LATER: make sure the earlier damage handler functions (in Andrews code) feed back any modified final_damage_amount to this function so that knowledge can be used in making these decisions.
+        -- Very limtied cases need the boss spider damage reaction run.
         if event.final_damage_amount > 0 then
             local entityDamagedName = event.entity.name
             if entityDamagedName == "jd_plays-jd_spider_race-spidertron_boss" then
                 Spider.OnBossSpiderEntityDamaged(event)
             end
         end
-    end
+    end,
+    {
+        -- Don't give us events when biter units or spawners are damaged. We only care about player force type entities.
+        -- Worms are "turrets", so this blacklist filter can't exclude them :(
+        {filter = "type", type = "unit", invert = true},
+        {filter = "type", type = "unit-spawner", invert = true, mode = "and"}
+        -- As the spidertron is a player type entity, the biter unit and spawner exclusion filters work appropriately for it also.
+    }
 )

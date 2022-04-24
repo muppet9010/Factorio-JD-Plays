@@ -1,26 +1,46 @@
+--[[
+    Notes:
+        - This is a copy of an older water barrier feature from the JD-Plays mod. Its being used on a different orientation (added) and doesn't have the killing fog effect.
+        - The code is fundermentally unchanged and has just had some readability improvements made to it.
+]]
+--
+
 local WaterBarrier = {}
 local Events = require("utility/events")
 local Utils = require("utility/utils")
 local Logging = require("utility/logging")
-local Constants = require("constants")
 
-local barrierOrientations = {horizontal = "horizontal", vertical = "vertical"}
-local barrierDirections = {positive = "positive", negative = "negative"}
+---@class Spider_WaterBarrier_BarrierOrientations
+local BarrierOrientations = {horizontal = "horizontal", vertical = "vertical"}
 
-local barrierOrientation = barrierOrientations.vertical
-local barrierDirection = barrierDirections.positive
-local barrierChunkStart = 2 --math.floor(200 / 32)
-local edgeVariation = 20
-local firstWaterTypeWidthMin = 3
-local firstWaterTypeWidthMax = 20
-local coastlinePerTileVariation = 1
-local damageDistanceModifier = 0.1
+---@class Spider_WaterBarrier_BarrierDirections
+local BarrierDirections = {positive = "positive", negative = "negative"}
+
+--- Options for this mods shoreline generation.
+local BarrierOrientation = BarrierOrientations.vertical
+local barrierDirection = BarrierDirections.positive
+local BarrierChunkStart = 2 --math.floor(200 / 32)
+local EdgeVariation = 20
+local FirstWaterTypeWidthMin = 3
+local FirstWaterTypeWidthMax = 20
+local CoastlinePerTileVariation = 1
 
 WaterBarrier.CreateGlobals = function()
     global.WaterBarrier = global.WaterBarrier or {}
+
     --These must be -1 so that when we check the top left corner tile of new chunks we generate both sides.
-    global.WaterBarrier.barrierVectorEdgeMinCalculated = global.WaterBarrier.barrierVectorEdgeMinCalculated or -1
-    global.WaterBarrier.barrierVectorEdgeMaxCalculated = global.WaterBarrier.barrierVectorEdgeMaxCalculated or -1
+    global.WaterBarrier.barrierVectorEdgeMinCalculated = global.WaterBarrier.barrierVectorEdgeMinCalculated or -1 ---@type int
+    global.WaterBarrier.barrierVectorEdgeMaxCalculated = global.WaterBarrier.barrierVectorEdgeMaxCalculated or -1 ---@type int
+
+    -- Just placeholders so I can type them.
+    global.WaterBarrier.waterChunkXStart = global.WaterBarrier.waterChunkXStart or nil ---@type int
+    global.WaterBarrier.waterTileXMin = global.WaterBarrier.waterTileXMin or nil ---@type int
+    global.WaterBarrier.waterTileXMax = global.WaterBarrier.waterTileXMax or nil ---@type int
+    global.WaterBarrier.waterChunkYStart = global.WaterBarrier.waterChunkYStart or nil ---@type int
+    global.WaterBarrier.waterTileYMin = global.WaterBarrier.waterTileYMin or nil ---@type int
+    global.WaterBarrier.waterTileYMax = global.WaterBarrier.waterTileYMax or nil ---@type int
+    global.WaterBarrier.waterInnerEdgeTiles = global.WaterBarrier.waterInnerEdgeTiles or nil ---@type table<int, int> @ Mapping of shoreline axis (x or y) to the distance the water is from the minimum position on the other axis.
+    global.WaterBarrier.deepWaterInnerEdgeTiles = global.WaterBarrier.deepWaterInnerEdgeTiles or nil ---@type table<int, int> @ Mapping of shoreline axis (x or y) to the distance the deep water is from the minimum position on the other axis.
 end
 
 WaterBarrier.OnLoad = function()
@@ -28,29 +48,30 @@ WaterBarrier.OnLoad = function()
 end
 
 WaterBarrier.OnStartup = function()
-    if barrierOrientation == barrierOrientations.horizontal then
-        if barrierDirection == barrierDirections.positive then
-            global.WaterBarrier.waterChunkYStart = 0 + barrierChunkStart
+    if BarrierOrientation == BarrierOrientations.horizontal then
+        if barrierDirection == BarrierDirections.positive then
+            global.WaterBarrier.waterChunkYStart = 0 + BarrierChunkStart
             global.WaterBarrier.waterTileYMin = global.WaterBarrier.waterChunkYStart * 32
-            global.WaterBarrier.waterTileYMax = global.WaterBarrier.waterTileYMin + edgeVariation
-            global.WaterBarrier.waterInnerEdgeTiles = global.WaterBarrier.waterInnerEdgeTiles or {[-1] = global.WaterBarrier.waterTileYMin + math.random(edgeVariation)}
-            global.WaterBarrier.deepWaterInnerEdgeTiles = global.WaterBarrier.deepWaterInnerEdgeTiles or {[-1] = global.WaterBarrier.waterInnerEdgeTiles[-1] + math.random(firstWaterTypeWidthMin, firstWaterTypeWidthMax)}
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.horizontal barrierDirections.negative NOT DONE YET")
+            global.WaterBarrier.waterTileYMax = global.WaterBarrier.waterTileYMin + EdgeVariation
+            global.WaterBarrier.waterInnerEdgeTiles = global.WaterBarrier.waterInnerEdgeTiles or {[-1] = global.WaterBarrier.waterTileYMin + math.random(EdgeVariation)}
+            global.WaterBarrier.deepWaterInnerEdgeTiles = global.WaterBarrier.deepWaterInnerEdgeTiles or {[-1] = global.WaterBarrier.waterInnerEdgeTiles[-1] + math.random(FirstWaterTypeWidthMin, FirstWaterTypeWidthMax)}
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.horizontal BarrierDirections.negative NOT DONE YET")
         end
-    elseif barrierOrientation == barrierOrientations.vertical then
-        if barrierDirection == barrierDirections.positive then
-            global.WaterBarrier.waterChunkXStart = 0 + barrierChunkStart
+    elseif BarrierOrientation == BarrierOrientations.vertical then
+        if barrierDirection == BarrierDirections.positive then
+            global.WaterBarrier.waterChunkXStart = 0 + BarrierChunkStart
             global.WaterBarrier.waterTileXMin = global.WaterBarrier.waterChunkXStart * 32
-            global.WaterBarrier.waterTileXMax = global.WaterBarrier.waterTileXMin + edgeVariation
-            global.WaterBarrier.waterInnerEdgeTiles = global.WaterBarrier.waterInnerEdgeTiles or {[-1] = global.WaterBarrier.waterTileXMin + math.random(edgeVariation)}
-            global.WaterBarrier.deepWaterInnerEdgeTiles = global.WaterBarrier.deepWaterInnerEdgeTiles or {[-1] = global.WaterBarrier.waterInnerEdgeTiles[-1] + math.random(firstWaterTypeWidthMin, firstWaterTypeWidthMax)}
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.vertical barrierDirections.negative NOT DONE YET")
+            global.WaterBarrier.waterTileXMax = global.WaterBarrier.waterTileXMin + EdgeVariation
+            global.WaterBarrier.waterInnerEdgeTiles = global.WaterBarrier.waterInnerEdgeTiles or {[-1] = global.WaterBarrier.waterTileXMin + math.random(EdgeVariation)}
+            global.WaterBarrier.deepWaterInnerEdgeTiles = global.WaterBarrier.deepWaterInnerEdgeTiles or {[-1] = global.WaterBarrier.waterInnerEdgeTiles[-1] + math.random(FirstWaterTypeWidthMin, FirstWaterTypeWidthMax)}
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.vertical BarrierDirections.negative NOT DONE YET")
         end
     end
 end
 
+---@param event on_chunk_generated
 WaterBarrier.OnChunkGenerated = function(event)
     local leftTopTileInChunk = event.area.left_top
     local chunkPos = Utils.GetChunkPositionForTilePosition(leftTopTileInChunk)
@@ -61,34 +82,37 @@ WaterBarrier.OnChunkGenerated = function(event)
     end
 end
 
+---@param chunkPos ChunkPosition
+---@return boolean
 WaterBarrier.IsChunkBeyondBarrierChunkStart = function(chunkPos)
-    if barrierOrientation == barrierOrientations.horizontal then
-        if barrierDirection == barrierDirections.positive then
+    if BarrierOrientation == BarrierOrientations.horizontal then
+        if barrierDirection == BarrierDirections.positive then
             if chunkPos.y >= global.WaterBarrier.waterChunkYStart then
                 return true
             else
                 return false
             end
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.horizontal barrierDirections.negative NOT DONE YET")
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.horizontal BarrierDirections.negative NOT DONE YET")
         end
-    elseif barrierOrientation == barrierOrientations.vertical then
-        if barrierDirection == barrierDirections.positive then
+    elseif BarrierOrientation == BarrierOrientations.vertical then
+        if barrierDirection == BarrierDirections.positive then
             if chunkPos.x >= global.WaterBarrier.waterChunkXStart then
                 return true
             else
                 return false
             end
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.vertical barrierDirections.negative NOT DONE YET")
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.vertical BarrierDirections.negative NOT DONE YET")
         end
     end
 end
 
+---@param leftTopTileInChunk MapPosition
 WaterBarrier.CalculateShorelinesForVector = function(leftTopTileInChunk)
     local debug = false
-    if barrierOrientation == barrierOrientations.horizontal then
-        if barrierDirection == barrierDirections.positive then
+    if BarrierOrientation == BarrierOrientations.horizontal then
+        if barrierDirection == BarrierDirections.positive then
             local leftTopTileInChunkX = leftTopTileInChunk.x
             Logging.Log("new chunk X range: " .. leftTopTileInChunkX .. " to " .. (leftTopTileInChunkX + 31), debug)
             if global.WaterBarrier.waterInnerEdgeTiles[leftTopTileInChunkX] == nil then
@@ -124,11 +148,11 @@ WaterBarrier.CalculateShorelinesForVector = function(leftTopTileInChunk)
                     Logging.Log("ending data: " .. Utils.TableContentsToJSON(global.WaterBarrier.waterInnerEdgeTiles) .. "\r\n" .. Utils.TableContentsToJSON(global.WaterBarrier.deepWaterInnerEdgeTiles), debug)
                 end
             end
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.horizontal barrierDirections.negative NOT DONE YET")
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.horizontal BarrierDirections.negative NOT DONE YET")
         end
-    elseif barrierOrientation == barrierOrientations.vertical then
-        if barrierDirection == barrierDirections.positive then
+    elseif BarrierOrientation == BarrierOrientations.vertical then
+        if barrierDirection == BarrierDirections.positive then
             local leftTopTileInChunkY = leftTopTileInChunk.y
             Logging.Log("new chunk Y range: " .. leftTopTileInChunkY .. " to " .. (leftTopTileInChunkY + 31), debug)
             if global.WaterBarrier.waterInnerEdgeTiles[leftTopTileInChunkY] == nil then
@@ -164,56 +188,64 @@ WaterBarrier.CalculateShorelinesForVector = function(leftTopTileInChunk)
                     Logging.Log("ending data: " .. Utils.TableContentsToJSON(global.WaterBarrier.waterInnerEdgeTiles) .. "\r\n" .. Utils.TableContentsToJSON(global.WaterBarrier.deepWaterInnerEdgeTiles), debug)
                 end
             end
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.vertical barrierDirections.negative NOT DONE YET")
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.vertical BarrierDirections.negative NOT DONE YET")
         end
     end
 end
 
+---@param lastWaterDistance int
+---@return int nextWaterDistance
 WaterBarrier.GetNextWaterDistance = function(lastWaterDistance)
     local nextDistanceOptions = {lastWaterDistance}
-    if barrierOrientation == barrierOrientations.horizontal then
-        if barrierDirection == barrierDirections.positive then
-            table.insert(nextDistanceOptions, math.random(math.max(global.WaterBarrier.waterTileYMin, lastWaterDistance - coastlinePerTileVariation), math.min(global.WaterBarrier.waterTileYMax, lastWaterDistance + coastlinePerTileVariation)))
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.horizontal barrierDirections.negative NOT DONE YET")
+    if BarrierOrientation == BarrierOrientations.horizontal then
+        if barrierDirection == BarrierDirections.positive then
+            table.insert(nextDistanceOptions, math.random(math.max(global.WaterBarrier.waterTileYMin, lastWaterDistance - CoastlinePerTileVariation), math.min(global.WaterBarrier.waterTileYMax, lastWaterDistance + CoastlinePerTileVariation)))
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.horizontal BarrierDirections.negative NOT DONE YET")
         end
-    elseif barrierOrientation == barrierOrientations.vertical then
-        if barrierDirection == barrierDirections.positive then
-            table.insert(nextDistanceOptions, math.random(math.max(global.WaterBarrier.waterTileXMin, lastWaterDistance - coastlinePerTileVariation), math.min(global.WaterBarrier.waterTileXMax, lastWaterDistance + coastlinePerTileVariation)))
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.vertical barrierDirections.negative NOT DONE YET")
+    elseif BarrierOrientation == BarrierOrientations.vertical then
+        if barrierDirection == BarrierDirections.positive then
+            table.insert(nextDistanceOptions, math.random(math.max(global.WaterBarrier.waterTileXMin, lastWaterDistance - CoastlinePerTileVariation), math.min(global.WaterBarrier.waterTileXMax, lastWaterDistance + CoastlinePerTileVariation)))
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.vertical BarrierDirections.negative NOT DONE YET")
         end
     end
     return nextDistanceOptions[math.random(#nextDistanceOptions)]
 end
 
+---@param lastWaterDistance int
+---@param lastDeepWaterDistance int
+---@return int nextDeepWaterDistance
 WaterBarrier.GetNextDeepWaterDistance = function(lastWaterDistance, lastDeepWaterDistance)
     local nextDistanceOptions = {}
-    if barrierOrientation == barrierOrientations.horizontal then
-        if barrierDirection == barrierDirections.positive then
-            local min = math.min(math.max(lastWaterDistance + firstWaterTypeWidthMin, lastDeepWaterDistance - coastlinePerTileVariation), lastWaterDistance + firstWaterTypeWidthMax)
-            local max = math.min(lastWaterDistance + firstWaterTypeWidthMax, lastDeepWaterDistance + coastlinePerTileVariation)
+    if BarrierOrientation == BarrierOrientations.horizontal then
+        if barrierDirection == BarrierDirections.positive then
+            local min = math.min(math.max(lastWaterDistance + FirstWaterTypeWidthMin, lastDeepWaterDistance - CoastlinePerTileVariation), lastWaterDistance + FirstWaterTypeWidthMax)
+            local max = math.min(lastWaterDistance + FirstWaterTypeWidthMax, lastDeepWaterDistance + CoastlinePerTileVariation)
             table.insert(nextDistanceOptions, math.random(min, max))
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.horizontal barrierDirections.negative NOT DONE YET")
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.horizontal BarrierDirections.negative NOT DONE YET")
         end
-    elseif barrierOrientation == barrierOrientations.vertical then
-        if barrierDirection == barrierDirections.positive then
-            local min = math.min(math.max(lastWaterDistance + firstWaterTypeWidthMin, lastDeepWaterDistance - coastlinePerTileVariation), lastWaterDistance + firstWaterTypeWidthMax)
-            local max = math.min(lastWaterDistance + firstWaterTypeWidthMax, lastDeepWaterDistance + coastlinePerTileVariation)
+    elseif BarrierOrientation == BarrierOrientations.vertical then
+        if barrierDirection == BarrierDirections.positive then
+            local min = math.min(math.max(lastWaterDistance + FirstWaterTypeWidthMin, lastDeepWaterDistance - CoastlinePerTileVariation), lastWaterDistance + FirstWaterTypeWidthMax)
+            local max = math.min(lastWaterDistance + FirstWaterTypeWidthMax, lastDeepWaterDistance + CoastlinePerTileVariation)
             table.insert(nextDistanceOptions, math.random(min, max))
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.vertical barrierDirections.negative NOT DONE YET")
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.vertical BarrierDirections.negative NOT DONE YET")
         end
     end
     return nextDistanceOptions[math.random(#nextDistanceOptions)]
 end
 
+---@param leftTopTileInChunk MapPosition
+---@param surface LuaSurface
+---@param chunkPos ChunkPosition
 WaterBarrier.ApplyBarrierTiles = function(leftTopTileInChunk, surface, chunkPos)
     local tilesToChange = {}
-    if barrierOrientation == barrierOrientations.horizontal then
-        if barrierDirection == barrierDirections.positive then
+    if BarrierOrientation == BarrierOrientations.horizontal then
+        if barrierDirection == BarrierDirections.positive then
             local xVectorFoundLand = {}
             local mapWidthMin = 0 - (surface.map_gen_settings.width / 2)
             local mapWidthMax = surface.map_gen_settings.width / 2
@@ -252,11 +284,11 @@ WaterBarrier.ApplyBarrierTiles = function(leftTopTileInChunk, surface, chunkPos)
                     end
                 end
             end
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.horizontal barrierDirections.negative NOT DONE YET")
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.horizontal BarrierDirections.negative NOT DONE YET")
         end
-    elseif barrierOrientation == barrierOrientations.vertical then
-        if barrierDirection == barrierDirections.positive then
+    elseif BarrierOrientation == BarrierOrientations.vertical then
+        if barrierDirection == BarrierDirections.positive then
             local yVectorFoundLand = {}
             local mapWidthMin = 0 - (surface.map_gen_settings.width / 2)
             local mapWidthMax = surface.map_gen_settings.width / 2
@@ -295,8 +327,8 @@ WaterBarrier.ApplyBarrierTiles = function(leftTopTileInChunk, surface, chunkPos)
                     end
                 end
             end
-        elseif barrierDirection == barrierDirections.negative then
-            Logging.LogPrint("barrierOrientations.vertical barrierDirections.negative NOT DONE YET")
+        elseif barrierDirection == BarrierDirections.negative then
+            Logging.LogPrint("BarrierOrientations.vertical BarrierDirections.negative NOT DONE YET")
         end
     end
     surface.set_tiles(tilesToChange)

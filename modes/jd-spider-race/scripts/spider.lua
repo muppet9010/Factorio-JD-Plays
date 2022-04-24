@@ -23,16 +23,16 @@ local Commands = require("utility.commands")
 local Events = require("utility.events")
 local math_min, math_max, math_floor, math_random = math.min, math.max, math.floor, math.random
 
----@class BossSpider
+---@class SpiderHunt_BossSpider
 ---@field id UnitNumber @ The UnitNumber of the boss spider entity. Also the key in global.spiders.
----@field state BossSpider_State
+---@field state SpiderHunt_BossSpider_State
 ---@field playerTeam LuaForce
 ---@field playerTeamName string
 ---@field biterTeam LuaForce
 ---@field bossEntity LuaEntity @ The main spider boss entity.
 ---@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
----@field gunSpiders table<BossSpider_GunSpiderType, GunSpider> @ The hidden spiders that move with the main spider. They are present just to carry the extra gun types.
----@field turrets table<BossSpider_TurretType, BossSpider_Turret> @ The hidden turrets that are moved once per second cycle to the spiders current position. The weapons on these should be happy to be out of sync with the spiders exact position.
+---@field gunSpiders table<SpiderHunt_BossSpider_GunSpiderType, SpiderHunt_GunSpider> @ The hidden spiders that move with the main spider. They are present just to carry the extra gun types.
+---@field turrets table<SpiderHunt_BossSpider_TurretType, SpiderHunt_BossSpider_Turret> @ The hidden turrets that are moved once per second cycle to the spiders current position. The weapons on these should be happy to be out of sync with the spiders exact position.
 ---@field distanceFromSpawn uint @ How far from spawn the spiders area is centered on (positive number).
 ---@field damageTakenThisSecond float @ Damage taken so far this second (in between spider monitoring cycles).
 ---@field previousDamageToConsider float @ Damage taken in the previous whole seconds that the Settings.spiderDamageSecondsConsidered covers. Used whne the spider takes damage to simply track damage to consider retreat.
@@ -57,16 +57,16 @@ local math_min, math_max, math_floor, math_random = math.min, math.max, math.flo
 ---@field chasingPlayer LuaPlayer|null @ If the chasingEntity was a player controlled entity then this references the player to allow tracking across multiple entities (vehicles/character).
 ---@field chasingEntityLastPosition MapPosition|null @ The last known position of the chasingEntity. To act as a fallback for if the entity is no longer valid. Only recorded/updated if it is within the spiders attacking range.
 
----@class GunSpider
----@field type BossSpider_GunSpiderType
+---@class SpiderHunt_GunSpider
+---@field type SpiderHunt_BossSpider_GunSpiderType
 ---@field entity LuaEntity
 ---@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
 
----@class BossSpider_Turret
----@field type BossSpider_TurretType
+---@class SpiderHunt_BossSpider_Turret
+---@field type SpiderHunt_BossSpider_TurretType
 ---@field entity LuaEntity
 
----@class BossSpider_State
+---@class SpiderHunt_BossSpider_State
 local BossSpider_State = {
     roaming = "roaming", -- Just idling wondering its area.
     fighting = "fighting", -- Not significantly moving, but actively being managed in a combat state.
@@ -75,18 +75,18 @@ local BossSpider_State = {
     dead = "dead" -- Its dead.
 }
 
----@class BossSpider_GunSpiderType
+---@class SpiderHunt_BossSpider_GunSpiderType
 local BossSpider_GunSpiderType = {
     rocketLauncher = "rocketLauncher",
     tankCannon = "tankCannon",
     machineGun = "machineGun"
 }
 
----@class BossSpider_GunEntityDetails
+---@class SpiderHunt_BossSpider_GunEntityDetails
 ---@field entityName string @ The entity prototype name of this gun spider.
 ---@field gunFilters table<Id, string> @ A list of the gun slots and what filter they should each have (if any).
 
----@type table<BossSpider_GunSpiderType, BossSpider_GunEntityDetails>
+---@type table<SpiderHunt_BossSpider_GunSpiderType, SpiderHunt_BossSpider_GunEntityDetails>
 local BossSpider_GunSpiderDetails = {
     [BossSpider_GunSpiderType.machineGun] = {
         name = "jd_plays-jd_spider_race-spidertron_boss_gun-machine_gun",
@@ -115,15 +115,15 @@ local BossSpider_GunSpiderDetails = {
     }
 }
 
----@class BossSpider_TurretType
+---@class SpiderHunt_BossSpider_TurretType
 local BossSpider_TurretType = {
     artillery = "artillery"
 }
 
----@class BossSpider_TurretEntityDetails
+---@class SpiderHunt_BossSpider_TurretEntityDetails
 ---@field entityName string @ The entity prototype name of this turret.
 
----@type table<BossSpider_TurretType, BossSpider_TurretEntityDetails>
+---@type table<SpiderHunt_BossSpider_TurretType, SpiderHunt_BossSpider_TurretEntityDetails>
 local BossSpider_TurretDetails = {
     [BossSpider_TurretType.artillery] = {
         name = "jd_plays-jd_spider_race-spidertron_boss-artillery_turret"
@@ -135,7 +135,7 @@ local BossSpider_Rearm = {
     {name = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", count = 100}
 }
 
----@type table<BossSpider_GunSpiderType, ItemStackDefinition[]>
+---@type table<SpiderHunt_BossSpider_GunSpiderType, ItemStackDefinition[]>
 local BossSpider_GunSpiderRearm = {
     [BossSpider_GunSpiderType.machineGun] = {
         {name = "firearm-magazine", count = 200},
@@ -155,20 +155,20 @@ local BossSpider_GunSpiderRearm = {
     }
 }
 
----@type table<BossSpider_TurretType, ItemStackDefinition[]>
+---@type table<SpiderHunt_BossSpider_TurretType, ItemStackDefinition[]>
 local BossSpider_TurretRearm = {
     [BossSpider_TurretType.artillery] = {
         {name = "jd_plays-jd_spider_race-spidertron_boss-artillery_shell", count = 10}
     }
 }
 
----@class BossSpider_RconAmmoType
+---@class SpiderHunt_BossSpider_RconAmmoType
 ---@field ammoItemName string
----@field gunType BossSpider_GunSpiderType|null
+---@field gunType SpiderHunt_BossSpider_GunSpiderType|null
 ---@field bossSpider boolean|null
----@field turretType BossSpider_TurretType|null
+---@field turretType SpiderHunt_BossSpider_TurretType|null
 
----@type table<string, BossSpider_RconAmmoType> @ Command friendly name to item name.
+---@type table<string, SpiderHunt_BossSpider_RconAmmoType> @ Command friendly name to item name.
 local BossSpider_RconAmmoNames = {
     bullet = {ammoItemName = "firearm-magazine", gunType = BossSpider_GunSpiderType.machineGun},
     piercingBullet = {ammoItemName = "piercing-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun},
@@ -202,12 +202,12 @@ local Settings = {
 -- Testing is for development and is very adhoc in what it changes to allow simplier testing.
 local Testing = true
 if Testing then
-    Settings.bossSpiderStartingLeftDistance = 100
-    Settings.bossSpiderStartingVerticalDistance = 30
-    Settings.spidersRoamingXRange = 20
-    Settings.spidersRoamingYRange = 40
+    Settings.bossSpiderStartingLeftDistance = 400
+    --Settings.bossSpiderStartingVerticalDistance = 30
+    --Settings.spidersRoamingXRange = 20
+    --Settings.spidersRoamingYRange = 40
     Settings.spidersFightingXRange = 200
-    Settings.spidersFightingYRange = 60
+    --Settings.spidersFightingYRange = 60
     Settings.showSpiderPlans = true
     Settings.markSpiderAreas = true
     BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher][3] = nil -- No atomic weapons.
@@ -217,7 +217,8 @@ if Testing then
 end
 
 -- This must be created after the first batch of testing value changes are applied.
----@class PlayerForcesDetails
+-- TODO: this should be linked back to the global.playerHome.teams and the developed in isolation note at the top of file removed. This use of teams will matter far more when the GUI additions are done.
+---@class SpiderHunt_BossSpider_PlayerForcesDetails
 local PlayerForcesDetails = {
     -- Set the color alphas to half as otherwise they become very dark.
     {
@@ -236,21 +237,21 @@ local PlayerForcesDetails = {
 
 -- This testing manipualtes the PlayerForcesDetails table before its used for anything.
 if Testing then
-    PlayerForcesDetails[1].biterTeamName = "enemy" -- Theres no extra enemy force in this code yet.
-    PlayerForcesDetails[2] = nil -- Just 1 spider for simplier movement testing.
+--PlayerForcesDetails[1].biterTeamName = "enemy" -- Theres no extra enemy force in this code yet.
+--PlayerForcesDetails[2] = nil -- Just 1 spider for simplier movement testing.
 -- PlayerForcesDetails[2].biterTeamName = "player" -- So the 2 spiders fight and we can see them in combat.
 -- PlayerForcesDetails[2].spiderColor = {0, 100, 255, 128} -- A light blue color.
 end
 
-local PlayerForcesNameToDetails = {} ---@type table<string, PlayerForcesDetails>
+local PlayerForcesNameToDetails = {} ---@type table<string, SpiderHunt_BossSpider_PlayerForcesDetails>
 for _, details in pairs(PlayerForcesDetails) do
     PlayerForcesNameToDetails[details.name] = details
 end
 
 Spider.CreateGlobals = function()
     global.spider = global.spider or {}
-    global.spider.spiders = global.spider.spiders or {} ---@type table<UnitNumber, BossSpider> @ Key'd by spiders UnitNumber
-    global.spider.playerTeamsSpider = global.spider.playerTeamsSpider or {} ---@type table<string, BossSpider> @ The player team to the spider they are fighting.
+    global.spider.spiders = global.spider.spiders or {} ---@type table<UnitNumber, SpiderHunt_BossSpider> @ Key'd by spiders UnitNumber
+    global.spider.playerTeamsSpider = global.spider.playerTeamsSpider or {} ---@type table<string, SpiderHunt_BossSpider> @ The player team to the spider they are fighting.
     global.spider.showSpiderPlans = global.spider.showSpiderPlans or Settings.showSpiderPlans ---@type boolean
     global.spider.surface = global.spider.surface or nil ---@type LuaSurface
     global.spider.constantMovementFromSpawnPerMinute = global.spider.constantMovementFromSpawnPerMinute or 3 ---@type number
@@ -269,7 +270,7 @@ end
 
 Spider.OnStartup = function()
     -- Set the cached surface reference.
-    global.spider.surface = game.surfaces[1] -- LATER: this may need updating to the one we use with the map generation settings when merged in to the main code.
+    global.spider.surface = game.surfaces["jd-spider-race"]
 
     -- Create the spiders for each team if they don't exist.
     if next(global.spider.spiders) == nil then
@@ -303,7 +304,7 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, spiderColor, biterTe
     end
     bossEntity.color = spiderColor
 
-    ---@type BossSpider
+    ---@type SpiderHunt_BossSpider
     local spider = {
         id = bossEntity.unit_number,
         bossEntity = bossEntity,
@@ -394,7 +395,7 @@ Spider.SetSpiderForcesTechs = function()
 end
 
 --- Called when a spider has a new distance from spawn set and we need to change it's cached roaming values.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 Spider.UpdateSpidersRoamingValues = function(spider)
     spider.roamingXMin = -spider.distanceFromSpawn - Settings.spidersRoamingXRange
     spider.roamingXMax = -spider.distanceFromSpawn + Settings.spidersRoamingXRange
@@ -531,7 +532,7 @@ Spider.CheckSpiders_Scheduled = function(event)
 end
 
 --- Checks how the spiders roaming is going.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.CheckRoamingForSecond = function(spider, spidersCurrentPosition)
     -- Do next action based on current state.
@@ -553,7 +554,7 @@ Spider.CheckRoamingForSecond = function(spider, spidersCurrentPosition)
 end
 
 --- Checks how the spiders retreating is going.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.CheckRetreatingForSecond = function(spider, spidersCurrentPosition)
     -- Do nothing until the spider has reached its destination.
@@ -571,7 +572,7 @@ Spider.CheckRetreatingForSecond = function(spider, spidersCurrentPosition)
 end
 
 --- Checks how the spiders chasing to a target location is going and gives new orders one it reaches the target area. If it gets damaged on route it will be changed to the fighting state as part of the damage reaction event.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
     Spider.UpdateTargetsDetails(spider, "chasing")
@@ -596,14 +597,14 @@ Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
 end
 
 --- Manages the spiders fighting for this second. Will react to taking damage, having things to fight or looking for near by things to attack. As a last resort it will return home.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
     -- The spider will "dance" to keep engaging targets with its longer range weapons until its killed the real target or retreats. It will be a bit crude as otherwise it needs far more active managemnt.
 
     -- Generic values that may be cached within the function.
     ---@typelist LuaEntity
-    local nearestEnemyWithinRange
+    local nearestEnemyWithinRange = nil
 
     local spidersMaxShootingRange = Spider.GetSpidersEngagementRange(spider)
 
@@ -772,7 +773,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
 end
 
 --- Handle how to fight against a specific target type which is always currently valid.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param spidersCurrentPosition MapPosition
 ---@param chasingOrLastDamaged '"chasing"'|'"lastDamaged"'
 ---@param spidersMaxShootingRange uint
@@ -818,7 +819,7 @@ Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosi
 end
 
 --- Check a chased/lastDamaged target is still valid. If chasign a player it updates the target entity. Always updates target position. If the entity isn't valid or has left the fighting area it blanks out all target data. To make the chasing ad fighting logic simplier.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param chasingOrLastDamaged '"chasing"'|'"lastDamaged"'
 Spider.UpdateTargetsDetails = function(spider, chasingOrLastDamaged)
     ---@typelist string, string, string
@@ -875,7 +876,7 @@ end
 
 --- Advance roughly towards the target. Stays within the allowed fighting area.
 --- Will wobble around them when very close (within Settings.spidersFightingStepDistance) of them. Intended to be very basic and simple initially.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param targetsCurrentPosition MapPosition
 ---@param spidersCurrentPosition MapPosition
 Spider.GetNewPositionForAdvancingOnTarget = function(spider, targetsCurrentPosition, spidersCurrentPosition)
@@ -903,7 +904,7 @@ end
 --- Advance roughly away from the target. Stays within the allowed fighting area.
 --- Intended to be very basic and simple initially.
 --- The spider should step backwards the way it came. As it tends to run quite close to turrets as they take a while to wake up and start shooting, so it gets very close before its damaged and goes in to fighting mode.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param targetsCurrentPosition MapPosition
 ---@param spidersCurrentPosition MapPosition
 Spider.GetNewPositionForReversingFromTarget = function(spider, targetsCurrentPosition, spidersCurrentPosition)
@@ -929,7 +930,7 @@ Spider.GetNewPositionForReversingFromTarget = function(spider, targetsCurrentPos
 end
 
 --- Order the spider to move to a position. This will also handle updating any hidden entities that aren't part of the boss spider.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param targetPosition MapPosition
 Spider.OrderSpiderToStartMovingToPosition = function(spider, targetPosition)
     -- Give the various spider entities their order.
@@ -940,7 +941,7 @@ Spider.OrderSpiderToStartMovingToPosition = function(spider, targetPosition)
 end
 
 --- Set the spider to start roaming.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.StartRoaming = function(spider, spidersCurrentPosition)
     Spider.ClearStateVariables(spider)
@@ -953,7 +954,7 @@ Spider.StartRoaming = function(spider, spidersCurrentPosition)
 end
 
 --- Make the spider retreat.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 Spider.Retreat = function(spider)
     Spider.ClearStateVariables(spider)
 
@@ -966,7 +967,7 @@ Spider.Retreat = function(spider)
 end
 
 --- Set the spider to charge towards its latest attacker and start fighting there. Will starting moving there if needed, otherwise just enter fighting mode.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition)
     Spider.ClearNonFightingStateVariables(spider)
@@ -994,7 +995,7 @@ Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition)
 end
 
 --- Set the spider to start fighting in the area its currently at.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param spidersCurrentPosition MapPosition
 Spider.StartFighting = function(spider, spidersCurrentPosition)
     spider.state = BossSpider_State.fighting
@@ -1030,7 +1031,7 @@ Spider.GetEntitiesControllingPlayer = function(entity)
 end
 
 --- Clear all state variables.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 Spider.ClearStateVariables = function(spider)
     spider.chasingPlayer = nil
     spider.chasingEntity = nil
@@ -1043,14 +1044,14 @@ Spider.ClearStateVariables = function(spider)
 end
 
 --- Clear the non fighting state variables.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 Spider.ClearNonFightingStateVariables = function(spider)
     spider.retreatingTargetPosition = nil
     spider.roamingTargetPosition = nil
 end
 
 --- Gets the max distance the spider can fight from right now based on the weapons it has ammo for. This is either long (30) or short (15), rather than being truely maximum single weapon range.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@return double maxEngagementRange
 Spider.GetSpidersEngagementRange = function(spider)
     if spider.gunSpiders[BossSpider_GunSpiderType.rocketLauncher].hasAmmo then
@@ -1075,7 +1076,7 @@ Spider.GetSpidersEngagementRange = function(spider)
 end
 
 --- Checks if the target position if its within the allowed fighting area.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 ---@param targetPosition MapPosition
 ---@return boolean positionIsValid
 Spider.IsFightingTargetPositionWithinAllowedFightingArea = function(spider, targetPosition)
@@ -1089,7 +1090,7 @@ Spider.IsFightingTargetPositionWithinAllowedFightingArea = function(spider, targ
 end
 
 --- Render the spiders current plans and remove any old ones first. This is for debugging/testing and so doesn't matter than not optimal UPS.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 Spider.UpdatePlanRenders = function(spider)
     -- Just remove all the old renders.
     for _, renderId in pairs(spider.spiderPlanRenderIds) do
@@ -1231,7 +1232,7 @@ Spider.SpidersMoveAwayFromSpawn_Scheduled = function(event)
 end
 
 --- Gives the boss spider and its gun spiders 1 set of ammo.
----@param spider BossSpider
+---@param spider SpiderHunt_BossSpider
 Spider.GiveSpiderFullAmmo = function(spider)
     if spider.state == BossSpider_State.dead then
         return
@@ -1353,8 +1354,8 @@ Spider.Command_GiveSpiderAmmo = function(commandEvent)
 end
 
 --- Gives a spider a specific ammo type and count. Works out which entity to put the ammo in.
----@param spider BossSpider
----@param rconAmmoType BossSpider_RconAmmoType
+---@param spider SpiderHunt_BossSpider
+---@param rconAmmoType SpiderHunt_BossSpider_RconAmmoType
 ---@param quantity uint
 Spider.GiveSpiderSpecificAmmo = function(spider, rconAmmoType, quantity)
     if rconAmmoType.bossSpider then

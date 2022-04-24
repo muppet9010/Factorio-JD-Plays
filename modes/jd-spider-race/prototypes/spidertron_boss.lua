@@ -13,7 +13,7 @@ end
     Copy of spidertron generation functions from vanilla Factorio, but with some changes (commented): base\prototypes\entity\entities.lua
 ]]
 --
-function create_boss_spidertron(arguments)
+local function create_boss_spidertron(arguments)
     local scale = arguments.scale
     local leg_scale = scale * arguments.leg_scale
     data:extend(
@@ -208,7 +208,7 @@ function create_boss_spidertron(arguments)
     )
 end
 
-function get_leg_hit_the_ground_trigger()
+local function get_leg_hit_the_ground_trigger()
     return {
         {
             type = "create-trivial-smoke",
@@ -222,7 +222,7 @@ function get_leg_hit_the_ground_trigger()
     }
 end
 
-function make_spidertron_leg(spidertron_name, scale, leg_thickness, movement_speed, number, base_sprite, ending_sprite)
+local function make_spidertron_leg(spidertron_name, scale, leg_thickness, movement_speed, number, base_sprite, ending_sprite)
     return {
         type = "spider-leg",
         name = spidertron_name .. "-leg-" .. number,

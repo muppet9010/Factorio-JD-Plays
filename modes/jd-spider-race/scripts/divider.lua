@@ -1,7 +1,11 @@
+--[[
+    Notes:
+        - This is based on a copy of an older divider feature from the JD-Plays mod with many changes and additions made to it.
+]]
+--
+
 local Divider = {}
 local Events = require("utility/events")
-local Logging = require("utility/logging")
-local Utils = require("utility/utils")
 
 Divider.CreateGlobals = function()
     global.divider = global.divider or {}
@@ -19,12 +23,12 @@ Divider.OnLoad = function()
     Events.RegisterHandlerEvent(defines.events.on_robot_built_tile, "Divider.OnTilePlaced", Divider.OnTilePlaced)
 end
 
+---@param event on_chunk_generated
 Divider.OnChunkGenerated = function(event)
     local surface, area = event.surface, event.area
 
     -- Force biters to be on the correct force
-    local area, surface = event.area, event.surface
-    for _, base_entity in pairs(surface.find_entities_filtered({area=area, force="enemy"})) do
+    for _, base_entity in pairs(surface.find_entities_filtered({area = area, force = "enemy"})) do
         if base_entity.valid then
             if base_entity.position.y <= 0 then
                 base_entity.force = "north_enemy"
@@ -42,7 +46,7 @@ Divider.OnChunkGenerated = function(event)
     -- Place the blocking land tiles down. Ignore water tiles as catch when landfill is placed.
     -- Check beyond this chunk in the next 3 partially generated chunks (map gen weirdness) and fill them with our blocking tiles. Stops biters pathing around the top/bottom of the partially generated map.
     local landTilesToReplace = {}
-    local yMin, yMax
+    local xMin, xMax
     if event.area.left_top.x >= 0 then
         xMin = event.area.left_top.x
         xMax = event.area.left_top.x + 31 + 96
@@ -62,18 +66,19 @@ Divider.OnChunkGenerated = function(event)
 
     -- Place the blocking entities in the center of the 2 tiles.
     for x = event.area.left_top.x, event.area.left_top.x + 31 do
+        --TODO: this is failing to place on the tile right next to water. Leaving a gap the player can walk through. May as well just contineu it over the water.
         local dividerEntity = surface.create_entity {name = "jd_plays-jd_spider_race-divider_entity", position = {x = x + 0.5, y = global.divider.dividerMiddleYPos}, create_build_effect_smoke = false, raise_built = false}
         dividerEntity.destructible = false
+        --TODO: spider blocking entity needs rotating. Also check it goes ok on water as otherwise the coast could be a C shape across the divide and thus spiders could cross on the side of the land across the water gap.
         local dividerEntitySpider = surface.create_entity {name = "jd_plays-jd_spider_race-divider_entity_spider_block", position = {x = x + 0.5, y = global.divider.dividerMiddleYPos}, create_build_effect_smoke = false, raise_built = false}
         dividerEntitySpider.destructible = false
     end
 
     -- Place the beam effect. Overlap by a tile as we have overlaped all the graphics bits of the beam prototype.
     surface.create_entity {name = "jd_plays-jd_spider_race-divider_beam", position = {0, 0}, target_position = {x = event.area.left_top.x - 1, y = global.divider.dividerMiddleYPos}, source_position = {x = event.area.left_top.x + 33, y = global.divider.dividerMiddleYPos}}
-
 end
 
-
+---@param event on_player_built_tile|on_robot_built_tile
 Divider.OnTilePlaced = function(event)
     if event.tile.name ~= "landfill" then
         return
