@@ -66,10 +66,8 @@ Divider.OnChunkGenerated = function(event)
 
     -- Place the blocking entities in the center of the 2 tiles.
     for x = event.area.left_top.x, event.area.left_top.x + 31 do
-        --TODO: this is failing to place on the tile right next to water. Leaving a gap the player can walk through. May as well just contineu it over the water.
         local dividerEntity = surface.create_entity {name = "jd_plays-jd_spider_race-divider_entity", position = {x = x + 0.5, y = global.divider.dividerMiddleYPos}, create_build_effect_smoke = false, raise_built = false}
         dividerEntity.destructible = false
-        --TODO: spider blocking entity needs rotating. Also check it goes ok on water as otherwise the coast could be a C shape across the divide and thus spiders could cross on the side of the land across the water gap.
         local dividerEntitySpider = surface.create_entity {name = "jd_plays-jd_spider_race-divider_entity_spider_block", position = {x = x + 0.5, y = global.divider.dividerMiddleYPos}, create_build_effect_smoke = false, raise_built = false}
         dividerEntitySpider.destructible = false
     end

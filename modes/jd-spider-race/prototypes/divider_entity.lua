@@ -13,9 +13,9 @@ data:extend(
         {
             type = "simple-entity",
             name = "jd_plays-jd_spider_race-divider_entity",
-            collision_box = {{-0.5, -0.5}, {0.5, 0.5}},
+            collision_box = {{-0.49999, -0.49999}, {0.49999, 0.49999}}, -- By being a fraction under 0.5 it can be placed next to water tiles. If it was at 0.5 it would collide with the water tile and thus a gap is left that players can walk through on the coast.
             collision_mask = {
-                "water-tile",
+                "water-tile", -- Needed to ensure it collides with everything it should.
                 "item-layer",
                 "object-layer",
                 "player-layer"
@@ -26,7 +26,7 @@ data:extend(
         {
             type = "simple-entity",
             name = "jd_plays-jd_spider_race-divider_entity_spider_block",
-            collision_box = {{-10, -1}, {10, 1}}, -- Wide enough a spider can't reach across with its legs.
+            collision_box = {{-0, -10}, {1, 10}}, -- Wide enough a spider can't reach across with its legs.
             collision_mask = {spiderBlockCollisionLayer},
             flags = {"placeable-off-grid"},
             picture = Utils.EmptyRotatedSprite()
