@@ -13,6 +13,7 @@ local function CreateGlobals()
     global.general = global.general or {}
     global.general.surfaceName = "jd-spider-race"
     global.general.surface = global.general.surface or nil ---@type LuaSurface
+    global.general.perTeamMapHeight = 512 -- Tested at 1024, but "should" accept any size.
 
     PlayerHome.CreateGlobals()
     Divider.CreateGlobals()

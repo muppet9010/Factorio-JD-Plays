@@ -7,9 +7,7 @@ local Logging = require("utility/logging")
 local Utils = require("utility/utils")
 local Colors = require("utility.colors")
 
-local SpawnYOffset = 256
-local SpawnXOffset = -256
-local MapHeight = 1024 -- For both teams, so giving 512 tiles per team.
+local SpawnXOffset = -256 -- Distance in from the coastline.
 
 ---@class JdSpiderRace_PlayerHome_Team
 ---@field id JdSpiderRace_PlayerHome_PlayerTeamNames
@@ -44,10 +42,14 @@ end
 
 PlayerHome.OnStartup = function()
     if global.playerHome.teams["north"] == nil then
-        PlayerHome.CreateTeam("north", global.divider.dividerMiddleYPos - SpawnYOffset, SpawnXOffset)
-        PlayerHome.CreateTeam("south", global.divider.dividerMiddleYPos + SpawnYOffset, SpawnXOffset)
+        PlayerHome.CreateTeam("north", global.divider.dividerMiddleYPos - (global.general.perTeamMapHeight / 2), SpawnXOffset)
+        PlayerHome.CreateTeam("south", global.divider.dividerMiddleYPos + (global.general.perTeamMapHeight / 2), SpawnXOffset)
         global.playerHome.teams["north"].otherTeam = global.playerHome.teams["south"]
         global.playerHome.teams["south"].otherTeam = global.playerHome.teams["north"]
+
+        -- Set JD and Mukkie to their initial teams.
+        global.playerHome.teams["north"].playerNames["JD-Plays"] = "JD-Plays"
+        global.playerHome.teams["south"].playerNames["mukkie"] = "mukkie"
     end
 
     -- disable autofiring cross border
@@ -88,14 +90,15 @@ PlayerHome.OnStartup = function()
             global.playerHome.teams["north"].spawnPosition,
             global.playerHome.teams["south"].spawnPosition
         }
-        map_gen_settings.height = MapHeight -- Force the map to be 1024 tall and infinitely wide.
+        map_gen_settings.height = global.general.perTeamMapHeight * 2
         map_gen_settings.water = 0 -- Disable water on the map.
 
         global.general.surface = game.create_surface(global.general.surfaceName, map_gen_settings)
 
-        -- Set spawn points of our player forces.
+        -- Set spawn points of our player forces and request the spawn chunks are generated quickly so players can be teleported there very soon.
         for _, team in pairs(global.playerHome.teams) do
             team.playerForce.set_spawn_position(team.spawnPosition, global.general.surface)
+            global.general.surface.request_to_generate_chunks(team.spawnPosition, 1)
         end
     end
 end
@@ -174,7 +177,7 @@ PlayerHome.DelayedPlayerCreated_Scheduled = function(event)
     player.create_character()
     local playerMovedOk = PlayerHome.MovePlayerToSpawn(player)
     if not playerMovedOk then
-        -- Can happen if this is run during initial map generation. Will just wait a second and try again.
+        -- Can happen if this is run during initial map generation. Will just wait a few seconds and try movign the player again.
         player.print("Trying to respawn you in a few seconds after map has generated more.", Colors.lightgreen)
         EventScheduler.ScheduleEvent(event.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
     end
@@ -243,12 +246,20 @@ PlayerHome.MovePlayerToTeam = function(player, team)
 
         -- Give the player a character in the right spot.
         player.create_character()
-        PlayerHome.MovePlayerToSpawn(player)
+        local playerMovedOk = PlayerHome.MovePlayerToSpawn(player)
+        if not playerMovedOk then
+            -- Can happen if this is run during initial map generation. Will just wait a few seconds and try movign the player again.
+            player.print("Trying to respawn you in a few seconds after map has generated more.", Colors.lightgreen)
+            EventScheduler.ScheduleEvent(game.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
+        end
     else
         -- Player wasn't in the waiting room, so must have been already assigned to a team and is in a normal state.
 
         -- So kill them and they will respawn on the new team. This will leave any current equipment on the old (correct) side of the map.
-        player.character.die()
+        if player.character ~= nil then
+            -- If in Editor mode then no character.
+            player.character.die()
+        end
     end
 end
 

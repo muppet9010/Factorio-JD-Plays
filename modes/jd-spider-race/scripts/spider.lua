@@ -1,6 +1,4 @@
 --[[
-    This code was developed independantly of other parts of the mod and so will as self contained as possible. With anything needed being hard coded in local variables at the top of the file.
-
     The spiders mangement is done as a very light touch and as such its movements are a bit all or nothing. But it does perform far better in combat than if it just mindlessly followed a target until it was made to retreat. Its designed to be primarily reactive, with only limited simple proactive behaviour in certain combat situations.
 ]]
 --
@@ -184,16 +182,13 @@ local BossSpider_RconAmmoNames = {
 }
 
 local Settings = {
-    bossSpiderStartingLeftDistance = 5000,
-    bossSpiderStartingVerticalDistance = 256, -- Half the height of each teams map area.
+    bossSpiderStartingLeftDistance = 5000, -- How far left of spawn the center of the spiders  area starts the game at.
     spiderDamageToRetreat = 1000,
     spiderDamageSecondsConsidered = 30, -- How many seconds in the past the spider will consider to see if it has sustained enough damage to retreat.
-    spidersRoamingXRange = 100,
-    spidersRoamingYRange = 230, -- Bit less than half the height of each teams map area.
-    spidersFightingXRange = 500, -- Random limit to stop it chasing infinitely.
-    spidersFightingYRange = 256, -- Spider can move right up to the edge for when looking to chase a target to fight. It shouldn't ever actually reach this far in however.
+    spidersRoamingXRange = 100, -- How far up and down from the centre of a teams lane the spider will roam.
+    spidersFightingXRange = 1000, -- Random limit to stop it chasing infinitely.
     spidersFightingStepDistance = 5, -- How far the spider will move away from its current location when fighting per second. - value of 2 or lower known to cause weird failed leg movement actions.
-    distanceToCheckForEnemiesWhenBeingDamaged = 50, -- How far the spider will look for enemies when it is being damaged, but there's no enemies within its current weapon ammo range.
+    distanceToCheckForEnemiesNearby = 50, -- How far around it the spider will look for enemies nearby before considering other actions when fighting.
     showSpiderPlans = false, -- If enabled the plans of a spider are rendered.
     markSpiderAreas = false -- If enabled the roaming and fighting areas of the spiders are marked with lines. Blue for roaming and red for fighting.
 }
@@ -202,46 +197,14 @@ local Settings = {
 local Testing = true
 if Testing then
     Settings.bossSpiderStartingLeftDistance = 400
-    --Settings.bossSpiderStartingVerticalDistance = 30
     --Settings.spidersRoamingXRange = 20
-    --Settings.spidersRoamingYRange = 40
-    Settings.spidersFightingXRange = 200
-    --Settings.spidersFightingYRange = 60
+    Settings.spidersFightingXRange = 300
     Settings.showSpiderPlans = true
     Settings.markSpiderAreas = true
     BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher][3] = nil -- No atomic weapons.
 --BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher] = {} -- Test short range weapon spider.
 --BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.tankCannon] = {} -- Test short range weapon spider.
 --BossSpider_TurretRearm[BossSpider_TurretType.artillery] = {} -- No artillery shells.
-end
-
--- This must be created after the first batch of testing value changes are applied.
----@class JdSpiderRace_BossSpider_PlayerForcesDetails
-local PlayerForcesDetails = {
-    -- Set the color alphas to half as otherwise they become very dark.
-    {
-        name = "north",
-        biterTeamName = "north_enemy",
-        spiderStartingYPosition = -Settings.bossSpiderStartingVerticalDistance
-    },
-    {
-        name = "south",
-        biterTeamName = "south_enemy",
-        spiderStartingYPosition = Settings.bossSpiderStartingVerticalDistance
-    }
-}
-
--- This testing manipualtes the PlayerForcesDetails table before its used for anything.
-if Testing then
---PlayerForcesDetails[1].biterTeamName = "enemy" -- Theres no extra enemy force in this code yet.
---PlayerForcesDetails[2] = nil -- Just 1 spider for simplier movement testing.
--- PlayerForcesDetails[2].biterTeamName = "player" -- So the 2 spiders fight and we can see them in combat.
--- PlayerForcesDetails[2].spiderColor = {0, 100, 255, 128} -- A light blue color.
-end
-
-local PlayerForcesNameToDetails = {} ---@type table<string, JdSpiderRace_BossSpider_PlayerForcesDetails>
-for _, details in pairs(PlayerForcesDetails) do
-    PlayerForcesNameToDetails[details.name] = details
 end
 
 Spider.CreateGlobals = function()
@@ -266,8 +229,8 @@ end
 Spider.OnStartup = function()
     -- Create the spiders for each team if they don't exist.
     if next(global.spider.spiders) == nil then
-        for _, playerForceDetails in pairs(PlayerForcesDetails) do
-            Spider.CreateSpider(playerForceDetails.name, playerForceDetails.spiderStartingYPosition, playerForceDetails.biterTeamName)
+        for _, playerTeam in pairs(global.playerHome.teams) do
+            Spider.CreateSpider(playerTeam)
         end
 
         Spider.SetSpiderForcesTechs()
@@ -281,16 +244,13 @@ Spider.OnStartup = function()
 end
 
 --- Create a new spidertron for the specific player team to fight against.
----@param playerTeamName string
----@param spidersYPos uint
----@param biterTeamName string
-Spider.CreateSpider = function(playerTeamName, spidersYPos, biterTeamName)
-    local playerTeam = global.playerHome.teams[playerTeamName]
-    local spiderPosition = {x = -Settings.bossSpiderStartingLeftDistance, y = spidersYPos}
+---@param playerTeam JdSpiderRace_PlayerHome_Team
+Spider.CreateSpider = function(playerTeam)
+    local spiderPosition = {x = playerTeam.spawnPosition.x - Settings.bossSpiderStartingLeftDistance, y = playerTeam.spawnPosition.y}
     -- They can be created in chunks that don't exist as they have a radar and thus will generate the chunks around them.
     local bossEntity = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-spidertron_boss", position = spiderPosition, force = playerTeam.enemyForce}
     if bossEntity == nil then
-        error("Failed to create boss spider for team " .. playerTeamName .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
+        error("Failed to create boss spider for team " .. playerTeam.id .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
     end
     bossEntity.color = {0, 0, 0, 200} -- Deep black, but some highlighting still visible.
 
@@ -300,19 +260,19 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, biterTeamName)
         bossEntity = bossEntity,
         state = BossSpider_State.roaming,
         playerTeam = playerTeam,
-        playerTeamName = playerTeamName,
-        distanceFromSpawn = Settings.bossSpiderStartingLeftDistance,
+        playerTeamName = playerTeam.id,
+        distanceFromSpawn = -Settings.bossSpiderStartingLeftDistance,
         damageTakenThisSecond = 0,
         previousDamageToConsider = 0,
         secondsWhenDamaged = {},
         roamingXMin = nil, -- Populated later in creation function.
         roamingXMax = nil, -- Populated later in creation function.
-        roamingYMin = spidersYPos - Settings.spidersRoamingYRange,
-        roamingYMax = spidersYPos + Settings.spidersRoamingYRange,
+        roamingYMin = playerTeam.spawnPosition.y - (global.general.perTeamMapHeight / 2) + 26, -- Nearly to the edge of the team's lane.
+        roamingYMax = playerTeam.spawnPosition.y + (global.general.perTeamMapHeight / 2) - 26, -- Nearly to the edge of the team's lane.
         fightingXMin = -1000000, -- Can move as far left as it wants to chase a target.
         fightingXMax = nil, -- Populated later in creation function.
-        fightingYMin = spidersYPos - Settings.spidersFightingYRange,
-        fightingYMax = spidersYPos + Settings.spidersFightingYRange,
+        fightingYMin = playerTeam.spawnPosition.y - (global.general.perTeamMapHeight / 2), -- Right up to the edge of the team's lane.
+        fightingYMax = playerTeam.spawnPosition.y + (global.general.perTeamMapHeight / 2), -- Right up to the edge of the team's lane.
         spiderPlanRenderIds = {},
         spiderAreasRenderIds = {},
         spiderPositionLastSecond = spiderPosition,
@@ -347,7 +307,7 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, biterTeamName)
     for shortName, entityDetails in pairs(BossSpider_GunSpiderDetails) do
         local gunSpiderEntity = global.general.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = playerTeam.enemyForce}
         if gunSpiderEntity == nil then
-            error("Failed to create gun spider " .. shortName .. " for team " .. playerTeamName .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
+            error("Failed to create gun spider " .. shortName .. " for team " .. playerTeam.id .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
         end
         gunSpiderEntity.destructible = false
         local ammoInventory = gunSpiderEntity.get_inventory(defines.inventory.spider_ammo)
@@ -361,7 +321,7 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, biterTeamName)
     for shortName, entityDetails in pairs(BossSpider_TurretDetails) do
         local turretEntity = global.general.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = playerTeam.enemyForce}
         if turretEntity == nil then
-            error("Failed to create turret " .. shortName .. " for team " .. playerTeamName .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
+            error("Failed to create turret " .. shortName .. " for team " .. playerTeam.id .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
         end
         turretEntity.destructible = false
         spider.turrets[shortName] = {type = shortName, entity = turretEntity}
@@ -371,7 +331,7 @@ Spider.CreateSpider = function(playerTeamName, spidersYPos, biterTeamName)
 
     -- Record the spider to globals.
     global.spider.spiders[spider.id] = spider
-    global.spider.playerTeamsSpider[playerTeamName] = spider
+    global.spider.playerTeamsSpider[playerTeam.id] = spider
 end
 
 --- Give the forces of the spiders all the shooting sped upgrades, but no damage upgrades.
@@ -386,9 +346,10 @@ end
 --- Called when a spider has a new distance from spawn set and we need to change it's cached roaming values.
 ---@param spider JdSpiderRace_BossSpider
 Spider.UpdateSpidersRoamingValues = function(spider)
-    spider.roamingXMin = -spider.distanceFromSpawn - Settings.spidersRoamingXRange
-    spider.roamingXMax = -spider.distanceFromSpawn + Settings.spidersRoamingXRange
-    spider.fightingXMax = -spider.distanceFromSpawn + Settings.spidersFightingXRange
+    -- Code Note: a lot of these vaues start off as negatives in our usage case. Hence why adding values togeather to go left (more negative).
+    spider.roamingXMin = spider.playerTeam.spawnPosition.x + spider.distanceFromSpawn - Settings.spidersRoamingXRange
+    spider.roamingXMax = spider.playerTeam.spawnPosition.x + spider.distanceFromSpawn + Settings.spidersRoamingXRange
+    spider.fightingXMax = spider.playerTeam.spawnPosition.x + spider.distanceFromSpawn + Settings.spidersFightingXRange
     -- The Y roaming values never change as they have to remain within the player team's lane.
 
     if Settings.markSpiderAreas then
@@ -698,7 +659,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
     -- As spider can't pursue the current target look for anything near by to attack first, otherwise return to chasing the origional target if there was one, or return to roaming. Means the spider will attack down a line of defences, etc, before returning to a longer term behaviour.
 
     -- Look for nearest target nearby and set them as the new target entity.
-    local nearbyEnemy = global.general.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = Settings.distanceToCheckForEnemiesWhenBeingDamaged, force = spider.playerTeam.enemyForce}
+    local nearbyEnemy = global.general.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = Settings.distanceToCheckForEnemiesNearby, force = spider.playerTeam.enemyForce}
 
     -- Decide final action based on if a nearby target is found.
     if nearbyEnemy ~= nil then
@@ -1153,7 +1114,7 @@ Spider.Command_IncrementDistanceFromSpawn = function(commandEvent)
     end
 
     local playerTeamName = args[1] ---@type string
-    if playerTeamName ~= "both" and PlayerForcesNameToDetails[playerTeamName] == nil then
+    if playerTeamName ~= "both" and global.playerHome.teams[playerTeamName] == nil then
         game.print(commandErrorMessagePrefix .. 'First argument of player team name was invalid, either "north", "south" or "both". Recieved: ' .. tostring(playerTeamName), Colors.lightred)
         return
     end
@@ -1264,7 +1225,7 @@ Spider.Command_RearmSpider = function(commandEvent)
     end
 
     local playerTeamName = args[1] ---@type string
-    if playerTeamName ~= "both" and PlayerForcesNameToDetails[playerTeamName] == nil then
+    if playerTeamName ~= "both" and global.playerHome.teams[playerTeamName] == nil then
         game.print(commandErrorMessagePrefix .. 'First argument of player team name was invalid, either "north", "south" or "both". Recieved: ' .. tostring(playerTeamName), Colors.lightred)
         return
     end
@@ -1301,7 +1262,7 @@ Spider.Command_GiveSpiderAmmo = function(commandEvent)
     end
 
     local playerTeamName = args[1] ---@type string
-    if playerTeamName ~= "both" and PlayerForcesNameToDetails[playerTeamName] == nil then
+    if playerTeamName ~= "both" and global.playerHome.teams[playerTeamName] == nil then
         game.print(commandErrorMessagePrefix .. 'First argument of player team name was invalid, either "north", "south" or "both". Recieved: ' .. tostring(playerTeamName), Colors.lightred)
         return
     end
@@ -1403,7 +1364,7 @@ Spider.Command_ResetSpiderState = function(commandEvent)
     end
 
     local playerTeamName = args[1] ---@type string
-    if PlayerForcesNameToDetails[playerTeamName] == nil then
+    if global.playerHome.teams[playerTeamName] == nil then
         game.print(commandErrorMessagePrefix .. 'Argument of player team name was invalid, either "north" or "south". Recieved: ' .. tostring(playerTeamName), Colors.lightred)
         return
     end
