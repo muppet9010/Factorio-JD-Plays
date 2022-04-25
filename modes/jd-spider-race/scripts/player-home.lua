@@ -2,6 +2,7 @@ local PlayerHome = {}
 
 local Commands = require("utility/commands")
 local Events = require("utility/events")
+local EventScheduler = require("utility.event-scheduler")
 local Logging = require("utility/logging")
 local Utils = require("utility/utils")
 local Colors = require("utility.colors")
@@ -32,6 +33,7 @@ end
 
 PlayerHome.OnLoad = function()
     Events.RegisterHandlerEvent(defines.events.on_player_created, "PlayerHome.OnPlayerCreated", PlayerHome.OnPlayerCreated)
+    EventScheduler.RegisterScheduledEventType("PlayerHome.DelayedPlayerCreated_Scheduled", PlayerHome.DelayedPlayerCreated_Scheduled)
     Events.RegisterHandlerEvent(defines.events.on_marked_for_deconstruction, "PlayerHome.OnMarkedForDeconstruction", PlayerHome.OnMarkedForDeconstruction)
     Events.RegisterHandlerEvent(defines.events.on_built_entity, "PlayerHome.OnBuiltEntity", PlayerHome.OnBuiltEntity)
     Events.RegisterHandlerEvent(defines.events.on_chunk_generated, "PlayerHome.OnChunkGenerated", PlayerHome.OnChunkGenerated)
@@ -98,6 +100,86 @@ PlayerHome.OnStartup = function()
     end
 end
 
+---@param teamId JdSpiderRace_PlayerHome_PlayerTeamNames
+---@param spawnYPos float
+---@param spawnXPos float
+PlayerHome.CreateTeam = function(teamId, spawnYPos, spawnXPos)
+    ---@type JdSpiderRace_PlayerHome_Team
+    local team = {
+        id = teamId,
+        spawnPosition = {x = spawnXPos, y = spawnYPos},
+        players = {},
+        playerNames = {}
+    }
+    team.playerForce = game.create_force(teamId)
+    team.enemyForceName = teamId .. "_enemy"
+    team.enemyForce = game.create_force(team.enemyForceName)
+
+    global.playerHome.teams[teamId] = team
+
+    team.playerForce.technologies["landfill"].enabled = false
+end
+
+--- When player first joins put thme in the waiting room.
+---@param event on_player_created
+PlayerHome.OnPlayerCreated = function(event)
+    local player = game.get_player(event.player_index)
+
+    if player.controller_type == defines.controllers.cutscene then
+        -- So we have a player character to teleport.
+        player.exit_cutscene()
+    end
+
+    -- Check if the player has been pre-assigned to a team.
+    for _, team in pairs(global.playerHome.teams) do
+        if team.playerNames[player.name] ~= nil then
+            -- Player is pre-assigned to this team.
+
+            -- Record player to new team and update player's force.
+            local playerId = player.index
+            team.players[playerId] = player
+            global.playerHome.playerIdToTeam[playerId] = team
+            player.force = team.playerForce
+
+            -- Move them to the surface and position them.
+            PlayerHome.DelayedPlayerCreated_Scheduled({tick = event.tick, instanceId = playerId})
+
+            return
+        end
+    end
+
+    -- Store the players initial permission group name for use when assigning them to a force.
+    global.playerHome.waitingRoomPlayers[event.player_index] = player.permission_group.name
+
+    -- Place player in waiting room on the correct surface.
+    player.character.destroy()
+    player.teleport({0, 0}, global.general.surface)
+    player.permission_group = game.permissions.get_group("JDWaitingRoom")
+
+    player.print("Welcome! Waiting on an admin to put you on a team...")
+    player.print("You might need to /shout to grab attention")
+end
+
+--- To create a pre-assigned player to a team. Supports delayed looping back to itself if it fails during initial map generation.
+---@param event UtilityScheduledEvent_CallbackObject
+PlayerHome.DelayedPlayerCreated_Scheduled = function(event)
+    local playerId = event.instanceId
+    local player = game.get_player(playerId)
+
+    -- Move them to the surface and position them.
+    if player.character ~= nil then
+        player.character.destroy() -- Clears any starting inventory just like if the player isn't pre-assigned a team.
+    end
+    player.teleport({0, 0}, global.general.surface)
+    player.create_character()
+    local playerMovedOk = PlayerHome.MovePlayerToSpawn(player)
+    if not playerMovedOk then
+        -- Can happen if this is run during initial map generation. Will just wait a second and try again.
+        player.print("Trying to respawn you in a few seconds after map has generated more.", Colors.lightgreen)
+        EventScheduler.ScheduleEvent(event.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
+    end
+end
+
 ---@param event CustomCommandData
 PlayerHome.Command_AssignPlayerToTeam = function(event)
     local args = Commands.GetArgumentsFromCommand(event.parameter)
@@ -130,6 +212,67 @@ PlayerHome.Command_AssignPlayerToTeam = function(event)
     end
 end
 
+--- Add a player's name to the team's list of players.
+---@param playerName string
+---@param team JdSpiderRace_PlayerHome_Team
+PlayerHome.AddPlayerNameToTeam = function(playerName, team)
+    team.playerNames[playerName] = playerName
+end
+
+--- Moves the current player to the team.
+---@param player LuaPlayer
+---@param team JdSpiderRace_PlayerHome_Team
+PlayerHome.MovePlayerToTeam = function(player, team)
+    game.print("Player " .. player.name .. " is now on team: " .. team.id)
+    local playerId = player.index
+
+    -- Record player to new team and update player's force.
+    team.players[playerId] = player
+    global.playerHome.playerIdToTeam[playerId] = team
+    player.force = team.playerForce
+
+    -- Check if the player is in the waiting room at present and handle next steps accordingly.
+    local playersOrigionalPermissionGroupName = global.playerHome.waitingRoomPlayers[playerId]
+    local playerInWaitingRoom = playersOrigionalPermissionGroupName ~= nil
+    if playerInWaitingRoom then
+        -- Player is in the waiting room as we have a cached value for them.
+
+        -- Take the player out of the waiting room and remove them from the waiting room player list.
+        global.playerHome.waitingRoomPlayers[playerId] = nil
+        player.permission_group = game.permissions.get_group(playersOrigionalPermissionGroupName)
+
+        -- Give the player a character in the right spot.
+        player.create_character()
+        PlayerHome.MovePlayerToSpawn(player)
+    else
+        -- Player wasn't in the waiting room, so must have been already assigned to a team and is in a normal state.
+
+        -- So kill them and they will respawn on the new team. This will leave any current equipment on the old (correct) side of the map.
+        player.character.die()
+    end
+end
+
+--- Move the players character to the team's spawn area. As in most cases the player will be at {0,0} on the map currently.
+---@param player LuaPlayer
+---@return boolean playerMovedCorrectly @ Can be false if this runs during map generation for a pre-assigned player.
+PlayerHome.MovePlayerToSpawn = function(player)
+    local team = global.playerHome.playerIdToTeam[player.index]
+    local targetPos, surface = team.spawnPosition, global.general.surface
+
+    local foundPos = surface.find_non_colliding_position("character", targetPos, 50, 0.2)
+    if foundPos == nil then
+        Logging.LogPrint("ERROR: no position found for player '" .. player.name .. "' near '" .. Logging.PositionToString(targetPos) .. "' on surface '" .. surface.name .. "'")
+        return false
+    end
+    local teleported = player.teleport(foundPos, surface)
+    if teleported ~= true then
+        Logging.LogPrint("ERROR: teleport failed for player '" .. player.name .. "' to '" .. Logging.PositionToString(foundPos) .. "' on surface '" .. surface.name .. "'")
+        return false
+    end
+
+    return true
+end
+
 --- Called from central control.lua.
 ---@param event any
 PlayerHome.OnEntityDamaged = function(event)
@@ -152,108 +295,6 @@ PlayerHome.OnEntityDamaged = function(event)
         -- undo the damage done
         event_entity.health = event_entity.health + event.final_damage_amount
 
-        return
-    end
-end
-
----@param teamId JdSpiderRace_PlayerHome_PlayerTeamNames
----@param spawnYPos float
----@param spawnXPos float
-PlayerHome.CreateTeam = function(teamId, spawnYPos, spawnXPos)
-    ---@type JdSpiderRace_PlayerHome_Team
-    local team = {
-        id = teamId,
-        spawnPosition = {x = spawnXPos, y = spawnYPos},
-        players = {},
-        playerNames = {}
-    }
-    team.playerForce = game.create_force(teamId)
-    team.enemyForceName = teamId .. "_enemy"
-    team.enemyForce = game.create_force(team.enemyForceName)
-
-    global.playerHome.teams[teamId] = team
-
-    team.playerForce.technologies["landfill"].enabled = false
-end
-
---- Add a player's name to the team's list of players.
----@param playerName string
----@param team JdSpiderRace_PlayerHome_Team
-PlayerHome.AddPlayerNameToTeam = function(playerName, team)
-    team.playerNames[playerName] = playerName
-end
-
---- Moves the player to the team.
----@param player LuaPlayer
----@param team JdSpiderRace_PlayerHome_Team
-PlayerHome.MovePlayerToTeam = function(player, team)
-    game.print("Player " .. player.name .. " is now on team: " .. team.id)
-    local playerId = player.index
-
-    -- Check if the player is in the waiting room at present.
-    local playersOrigionalPermissionGroupName = global.playerHome.waitingRoomPlayers[playerId]
-    if playersOrigionalPermissionGroupName ~= nil then
-        -- player is in the waiting room as we have a cached value for them.
-
-        -- Take the player out of the waiting room and remove them from the waiting room player list.
-        global.playerHome.waitingRoomPlayers[playerId] = nil
-        player.permission_group = game.permissions.get_group(playersOrigionalPermissionGroupName)
-        player.create_character()
-    end
-
-    -- Record player to team.
-    team.players[playerId] = player
-    global.playerHome.playerIdToTeam[playerId] = team
-
-    -- move player to correct spawn
-    if playersOrigionalPermissionGroupName == nil then
-        -- Player was origionally on a team and not in the waiting room.
-        -- So kill them and they will respawn on the new team. This will leave any current equipment on the old (correct) side of the map.
-        player.character.die()
-    else
-        -- Player was in the waiting room before being assigned to a team.
-        PlayerHome.SpawnPlayer(player)
-    end
-
-    player.force = team.playerForce
-end
-
---- When player first joins put thme in the waiting room.
----@param event on_player_created
-PlayerHome.OnPlayerCreated = function(event)
-    local player = game.get_player(event.player_index)
-
-    if player.controller_type == defines.controllers.cutscene then
-        -- So we have a player character to teleport.
-        player.exit_cutscene()
-    end
-
-    -- Store the players initial permission group name for use when assigning them to a force.
-    global.playerHome.waitingRoomPlayers[event.player_index] = player.permission_group.name
-
-    -- Place player in waiting room
-    player.character.destroy()
-    player.teleport({0, 0}, global.general.surface)
-    player.permission_group = game.permissions.get_group("JDWaitingRoom")
-
-    player.print("Welcome! Waiting on an admin to put you on a team...")
-    player.print("You might need to /shout to grab attention")
-end
-
---- Move the player's character to the correct team and spawn area.
----@param player LuaPlayer
-PlayerHome.SpawnPlayer = function(player)
-    local team = global.playerHome.playerIdToTeam[player.index]
-    local targetPos, surface = team.spawnPosition, player.surface
-
-    local foundPos = surface.find_non_colliding_position("character", targetPos, 0, 0.2)
-    if foundPos == nil then
-        Logging.LogPrint("ERROR: no position found for player '" .. player.name .. "' near '" .. Logging.PositionToString(targetPos) .. "' on surface '" .. surface.name .. "'")
-        return
-    end
-    local teleported = player.teleport(foundPos, surface)
-    if teleported ~= true then
-        Logging.LogPrint("ERROR: teleport failed for player '" .. player.name .. "' to '" .. Logging.PositionToString(foundPos) .. "' on surface '" .. surface.name .. "'")
         return
     end
 end
