@@ -4,7 +4,7 @@ local refArtilleryTurret = data.raw["artillery-turret"]["artillery-turret"]
 local refArtilleryTurretGun = data.raw["gun"]["artillery-wagon-cannon"]
 
 -- If TRUE the turrets are visible and selectable.
-local Testing = false -- TODO LATER
+local Testing = false
 
 -- Special invisible artillery turret that has to be teleported to the spider each time its allowed to fire.
 -- Has to be a turret and not a spider so it will only target military buildings and not military units.
@@ -21,7 +21,7 @@ local spiderArtilleryTurret = {
     automated_ammo_count = 1, -- No idea what this done.
     turret_rotation_speed = 100, -- This is instant turning.
     manual_range_modifier = 1,
-    flags = {"placeable-off-grid", "hidden"},
+    flags = {"placeable-off-grid", "hidden", "not-on-map"},
     selectable_in_game = false,
     collision_mask = {},
     alert_when_attacking = false,

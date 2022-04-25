@@ -182,7 +182,7 @@ local BossSpider_RconAmmoNames = {
 }
 
 local Settings = {
-    bossSpiderStartingLeftDistance = 5000, -- How far left of spawn the center of the spiders  area starts the game at.
+    bossSpiderStartingLeftDistance = 5000, -- How far left of spawn the center of the spiders area starts the game at.
     spiderDamageToRetreat = 1000,
     spiderDamageSecondsConsidered = 30, -- How many seconds in the past the spider will consider to see if it has sustained enough damage to retreat.
     spidersRoamingXRange = 100, -- How far up and down from the centre of a teams lane the spider will roam.
@@ -202,9 +202,9 @@ if Testing then
     Settings.showSpiderPlans = true
     Settings.markSpiderAreas = true
     BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher][3] = nil -- No atomic weapons.
---BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher] = {} -- Test short range weapon spider.
---BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.tankCannon] = {} -- Test short range weapon spider.
---BossSpider_TurretRearm[BossSpider_TurretType.artillery] = {} -- No artillery shells.
+    --BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher] = {} -- Test short range weapon spider.
+    --BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.tankCannon] = {} -- Test short range weapon spider.
+    BossSpider_TurretRearm[BossSpider_TurretType.artillery] = {} -- No artillery shells.
 end
 
 Spider.CreateGlobals = function()
@@ -261,7 +261,7 @@ Spider.CreateSpider = function(playerTeam)
         state = BossSpider_State.roaming,
         playerTeam = playerTeam,
         playerTeamName = playerTeam.id,
-        distanceFromSpawn = -Settings.bossSpiderStartingLeftDistance,
+        distanceFromSpawn = Settings.bossSpiderStartingLeftDistance,
         damageTakenThisSecond = 0,
         previousDamageToConsider = 0,
         secondsWhenDamaged = {},
@@ -347,9 +347,9 @@ end
 ---@param spider JdSpiderRace_BossSpider
 Spider.UpdateSpidersRoamingValues = function(spider)
     -- Code Note: a lot of these vaues start off as negatives in our usage case. Hence why adding values togeather to go left (more negative).
-    spider.roamingXMin = spider.playerTeam.spawnPosition.x + spider.distanceFromSpawn - Settings.spidersRoamingXRange
-    spider.roamingXMax = spider.playerTeam.spawnPosition.x + spider.distanceFromSpawn + Settings.spidersRoamingXRange
-    spider.fightingXMax = spider.playerTeam.spawnPosition.x + spider.distanceFromSpawn + Settings.spidersFightingXRange
+    spider.roamingXMin = spider.playerTeam.spawnPosition.x - (spider.distanceFromSpawn + Settings.spidersRoamingXRange)
+    spider.roamingXMax = spider.playerTeam.spawnPosition.x - (spider.distanceFromSpawn - Settings.spidersRoamingXRange)
+    spider.fightingXMax = spider.playerTeam.spawnPosition.x - (spider.distanceFromSpawn - Settings.spidersFightingXRange)
     -- The Y roaming values never change as they have to remain within the player team's lane.
 
     if Settings.markSpiderAreas then

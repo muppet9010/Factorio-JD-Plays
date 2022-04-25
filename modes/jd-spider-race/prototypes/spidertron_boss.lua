@@ -93,11 +93,10 @@ local function create_boss_spidertron(arguments)
                     }
                 },
                 minimap_representation = {
-                    -- TODO LATER: replace with custom image.
-                    filename = "__base__/graphics/entity/spidertron/spidertron-map.png",
+                    filename = "__jd_plays__/graphics/jd-spider-race/spidertron_boss-map/spidertron_boss-map.png",
                     flags = {"icon"},
                     size = {128, 128},
-                    scale = 0.5
+                    scale = 1
                 },
                 corpse = "jd_plays-jd_spider_race-spidertron_boss_remnants", -- Changed to custom sized remnants.
                 dying_explosion = "spidertron-explosion",
