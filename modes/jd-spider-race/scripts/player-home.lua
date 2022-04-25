@@ -36,6 +36,7 @@ PlayerHome.OnLoad = function()
     Events.RegisterHandlerEvent(defines.events.on_built_entity, "PlayerHome.OnBuiltEntity", PlayerHome.OnBuiltEntity)
     Events.RegisterHandlerEvent(defines.events.on_chunk_generated, "PlayerHome.OnChunkGenerated", PlayerHome.OnChunkGenerated)
     Events.RegisterHandlerEvent(defines.events.on_market_item_purchased, "PlayerHome.OnMarketItemPurchased", PlayerHome.OnMarketItemPurchased)
+    EventScheduler.RegisterScheduledEventType("PlayerHome.CheckForDivideCrossedPlayers_Scheduled", PlayerHome.CheckForDivideCrossedPlayers_Scheduled)
 
     Commands.Register("spider_assign_player_to_team", {"api-description.jd_plays-jd_spider_race-spider_assign_player_to_team"}, PlayerHome.Command_AssignPlayerToTeam, true)
 end
@@ -100,6 +101,11 @@ PlayerHome.OnStartup = function()
             team.playerForce.set_spawn_position(team.spawnPosition, global.general.surface)
             global.general.surface.request_to_generate_chunks(team.spawnPosition, 1)
         end
+    end
+
+    -- Make sure a player on wrong side of divide is scheduled.
+    if not EventScheduler.IsEventScheduled(PlayerHome.CheckForDivideCrossedPlayers_Scheduled, nil, nil) then
+        EventScheduler.ScheduleEvent(game.tick, "PlayerHome.CheckForDivideCrossedPlayers_Scheduled")
     end
 end
 
@@ -427,6 +433,47 @@ PlayerHome.OnMarketItemPurchased = function(event)
     -- Remove the fake item the player just brought.
     local player = game.get_player(event.player_index)
     player.remove_item({name = "jd_plays-jd_spider_race-nuke_other_team"})
+end
+
+--- Check for any players who have ended up on the wrong side of the divide and bring them home.
+---@param event UtilityScheduledEvent_CallbackObject
+PlayerHome.CheckForDivideCrossedPlayers_Scheduled = function(event)
+    -- Check each connected player if they are on the wrong side and fix it if they are.
+    ---@typelist JdSpiderRace_PlayerHome_Team, MapPosition, int, LuaEntity, MapPosition
+    local team, player_position, correctYPos, teleportEntity, teleportTarget
+    for _, player in pairs(game.connected_players) do
+        team = global.playerHome.playerIdToTeam[player.index]
+        if team ~= nil then
+            -- Player is on a team and not in the waiting room.
+            player_position = player.position
+            if team.id == "north" and player_position.y > 0 then
+                correctYPos = -20
+            elseif team.id == "south" and player_position.y < 0 then
+                correctYPos = 20
+            end
+
+            if correctYPos ~= nil then
+                -- Player on wrong side, so send them back to their side.
+                teleportEntity = player.vehicle or player.character
+
+                -- Teleport back the player's vehicle or character if they have either. If they're dead then they will respawn on their side anyways.
+                if teleportEntity ~= nil then
+                    teleportTarget = global.general.surface.find_non_colliding_position(teleportEntity.name, {x = player_position.x, y = correctYPos}, 100, 0.5)
+                    if teleportTarget ~= nil then
+                        teleportEntity.teleport(teleportTarget)
+                        game.print({"message.jd_plays-jd_spider_race-moved_player_right_side_of_divide", player.name}, Colors.lightgreen)
+                    else
+                        game.print("ERROR: failed to teleport player " .. player.name .. " back to their side of the divide for their " .. teleportEntity.name, Colors.lightred)
+                    end
+                end
+
+                correctXPos, teleportEntity, teleportTarget = nil, nil, nil -- Reset for next players check.
+            end
+        end
+    end
+
+    -- Reschedule for another 5 minutes time.
+    EventScheduler.ScheduleEvent(event.tick + 18000, "PlayerHome.CheckForDivideCrossedPlayers_Scheduled")
 end
 
 return PlayerHome
