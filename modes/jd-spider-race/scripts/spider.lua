@@ -334,12 +334,16 @@ Spider.CreateSpider = function(playerTeam)
     global.spider.playerTeamsSpider[playerTeam.id] = spider
 end
 
---- Give the forces of the spiders all the shooting sped upgrades, but no damage upgrades.
+--- Give the forces of the spiders all the shooting speed upgrades and damage upgrades.
 Spider.SetSpiderForcesTechs = function()
     for _, spider in pairs(global.spider.spiders) do
         local spiderForce = spider.playerTeam.enemyForce
         spiderForce.technologies["weapon-shooting-speed-6"].researched = true
         spiderForce.technologies["laser-shooting-speed-7"].researched = true
+        spiderForce.technologies["physical-projectile-damage-7"].researched = true
+        spiderForce.technologies["refined-flammables-7"].researched = true
+        spiderForce.technologies["stronger-explosives-7"].researched = true
+        spiderForce.technologies["energy-weapons-damage-7"].researched = true
     end
 end
 

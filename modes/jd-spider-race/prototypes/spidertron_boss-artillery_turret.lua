@@ -40,13 +40,13 @@ local spiderArtilleryTurretGun = {
     icon = refArtilleryTurretGun.icon,
     icon_size = refArtilleryTurretGun.icon_size,
     icon_mipmaps = refArtilleryTurretGun.icon_mipmaps,
-    flags = {"hidden"},
+    flags = {"hidden", "hide-from-bonus-gui"},
     stack_size = 1,
     attack_parameters = {
         type = "projectile",
         ammo_category = "artillery-shell",
         cooldown = 20,
-        range = refArtilleryTurretGun.attack_parameters.range,
+        range = refArtilleryTurretGun.attack_parameters.range * data.raw["artillery-turret"]["artillery-turret"].manual_range_modifier, -- So same range as a default artillery under manual fire control.
         min_range = refArtilleryTurretGun.attack_parameters.min_range,
         sound = refArtilleryTurretGun.attack_parameters.sound
     }
@@ -54,7 +54,7 @@ local spiderArtilleryTurretGun = {
 
 local spiderArtilleryShell = Utils.DeepCopy(data.raw["ammo"]["artillery-shell"])
 spiderArtilleryShell.name = "jd_plays-jd_spider_race-spidertron_boss-artillery_shell"
-spiderArtilleryShell.flags = {"hidden"}
+spiderArtilleryShell.flags = {"hidden", "hide-from-bonus-gui"}
 spiderArtilleryShell.subgroup = nil
 spiderArtilleryShell.ammo_type.action.action_delivery.source_effects = nil -- Remove the flash when the shell is fired. As it won't match up to the spider.
 

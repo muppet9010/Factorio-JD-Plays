@@ -11,9 +11,6 @@ data:extend(
 )
 
 -- For every real prototype other than spidertron boss add the new target mask.
---[[local excludedPrototypeTypeNames = {arrow = true, ["artillery-flare"] = true, ["artillery-projectile"] = true, beam = true, ["character-corpse"] = true, corpse = true, ["rail-remnants"] = true, ["deconstructible-tile-proxy"] = true, ["entity-ghost"] = true, explosion = true, ["flame-thrower-explosion"] = true, fire =true, stream = true, ["flying-text"] =true, ["highlight-box"]=true, ["item-entity"] = true, ["item-request-proxy"] = true, ["particle-source"] = true, "projectile", ...}
-for prototypeTypeName, prototypeTypeEntries in pairs(data.raw) do
-    if not excludedPrototypeTypeNames[prototypeTypeName] then]]
 for _, prototypeTypeEntries in pairs(data.raw) do
     for _, entityPrototype in pairs(prototypeTypeEntries) do
         -- There's no mandatory attribute we can check, but any entity type we care about will have a non default max_health set.

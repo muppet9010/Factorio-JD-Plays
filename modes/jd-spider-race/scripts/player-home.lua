@@ -4,7 +4,6 @@ local Commands = require("utility/commands")
 local Events = require("utility/events")
 local EventScheduler = require("utility.event-scheduler")
 local Logging = require("utility/logging")
-local Utils = require("utility/utils")
 local Colors = require("utility.colors")
 
 local SpawnXOffset = -256 -- Distance in from the coastline.
@@ -34,9 +33,7 @@ PlayerHome.OnLoad = function()
     EventScheduler.RegisterScheduledEventType("PlayerHome.DelayedPlayerCreated_Scheduled", PlayerHome.DelayedPlayerCreated_Scheduled)
     Events.RegisterHandlerEvent(defines.events.on_marked_for_deconstruction, "PlayerHome.OnMarkedForDeconstruction", PlayerHome.OnMarkedForDeconstruction)
     Events.RegisterHandlerEvent(defines.events.on_built_entity, "PlayerHome.OnBuiltEntity", PlayerHome.OnBuiltEntity)
-    Events.RegisterHandlerEvent(defines.events.on_chunk_generated, "PlayerHome.OnChunkGenerated", PlayerHome.OnChunkGenerated)
     Events.RegisterHandlerEvent(defines.events.on_market_item_purchased, "PlayerHome.OnMarketItemPurchased", PlayerHome.OnMarketItemPurchased)
-    EventScheduler.RegisterScheduledEventType("PlayerHome.CheckForDivideCrossedPlayers_Scheduled", PlayerHome.CheckForDivideCrossedPlayers_Scheduled)
 
     Commands.Register("spider_assign_player_to_team", {"api-description.jd_plays-jd_spider_race-spider_assign_player_to_team"}, PlayerHome.Command_AssignPlayerToTeam, true)
 end
@@ -82,31 +79,6 @@ PlayerHome.OnStartup = function()
 
     -- For admins, if things go badly wrong
     group.set_allows_action(defines.input_action.edit_permission_group, true)
-
-    -- Create the surface with the same parameters as nauvis
-    if global.general.surface == nil then
-        -- Use the nauvis settings, but with dual spawn
-        local map_gen_settings = Utils.DeepCopy(game.surfaces["nauvis"].map_gen_settings)
-        map_gen_settings.starting_points = {
-            global.playerHome.teams["north"].spawnPosition,
-            global.playerHome.teams["south"].spawnPosition
-        }
-        map_gen_settings.height = global.general.perTeamMapHeight * 2
-        map_gen_settings.water = 0 -- Disable water on the map.
-
-        global.general.surface = game.create_surface(global.general.surfaceName, map_gen_settings)
-
-        -- Set spawn points of our player forces and request the spawn chunks are generated quickly so players can be teleported there very soon.
-        for _, team in pairs(global.playerHome.teams) do
-            team.playerForce.set_spawn_position(team.spawnPosition, global.general.surface)
-            global.general.surface.request_to_generate_chunks(team.spawnPosition, 1)
-        end
-    end
-
-    -- Make sure a player on wrong side of divide is scheduled.
-    if not EventScheduler.IsEventScheduled(PlayerHome.CheckForDivideCrossedPlayers_Scheduled, nil, nil) then
-        EventScheduler.ScheduleEvent(game.tick, "PlayerHome.CheckForDivideCrossedPlayers_Scheduled")
-    end
 end
 
 ---@param teamId JdSpiderRace_PlayerHome_PlayerTeamNames
@@ -382,41 +354,6 @@ PlayerHome.OnBuiltEntity = function(event)
     end
 end
 
---- Need to pale the market once the chunk at spawn has been generated.
----@param event on_chunk_generated
-PlayerHome.OnChunkGenerated = function(event)
-    if event.surface.name ~= global.general.surfaceName then
-        -- Not our surface.
-        return
-    end
-
-    -- If its the spawn chunk for a team create the market there.
-    for _, team in pairs(global.playerHome.teams) do
-        if event.area.left_top.x == team.spawnPosition.x and event.area.left_top.y == team.spawnPosition.y then
-            -- Spawn point is in this chunk.
-            PlayerHome.CreateMarketForTeam(team)
-        end
-    end
-end
-
---- Create a market for the team at its spawn area. Fully configures the market.
----@param team JdSpiderRace_PlayerHome_Team
-PlayerHome.CreateMarketForTeam = function(team)
-    -- Add a market somewhere near spawn. But we don't want it on top of ore.
-    local marketPosition = global.general.surface.find_non_colliding_position("jd_plays-jd_spider_race-market_placement_test", team.spawnPosition, 30, 1)
-    if marketPosition == nil then
-        error("No position found for market near spawn. UNACCEPTABLE")
-    end
-    local market = global.general.surface.create_entity {name = "market", position = marketPosition, force = team.playerForce, move_stuck_players = true}
-    if market == nil then
-        error("Market failed to create at found position. UNACCEPTABLE")
-    end
-    market.destructible = false
-
-    -- Add our end of game item to the market. Use an item as then when its hovered in the market we can show a picture and text.
-    market.add_market_item {price = {{"coin", 1}}, offer = {type = "give-item", item = "jd_plays-jd_spider_race-nuke_other_team"}}
-end
-
 --- Called when a player purchases an item in the market. In our mod this will only ever be to nuke the other team.
 ---@param event on_market_item_purchased
 PlayerHome.OnMarketItemPurchased = function(event)
@@ -427,53 +364,12 @@ PlayerHome.OnMarketItemPurchased = function(event)
 
     -- Trigger the nuke on the other team.
     local otherTeamName = global.playerHome.playerIdToTeam[event.player_index].otherTeam.id
-    remote.call("JDGoesBoom", "ForceGoesBoom", otherTeamName, 50, 15)
+    remote.call("JDGoesBoom", "ForceGoesBoom", otherTeamName, 50, 60)
     game.print({"message.jd_plays-jd_spider_race-blow_up_other_team", otherTeamName}, Colors.lightgreen)
 
     -- Remove the fake item the player just brought.
     local player = game.get_player(event.player_index)
     player.remove_item({name = "jd_plays-jd_spider_race-nuke_other_team"})
-end
-
---- Check for any players who have ended up on the wrong side of the divide and bring them home.
----@param event UtilityScheduledEvent_CallbackObject
-PlayerHome.CheckForDivideCrossedPlayers_Scheduled = function(event)
-    -- Check each connected player if they are on the wrong side and fix it if they are.
-    ---@typelist JdSpiderRace_PlayerHome_Team, MapPosition, int, LuaEntity, MapPosition
-    local team, player_position, correctYPos, teleportEntity, teleportTarget
-    for _, player in pairs(game.connected_players) do
-        team = global.playerHome.playerIdToTeam[player.index]
-        if team ~= nil then
-            -- Player is on a team and not in the waiting room.
-            player_position = player.position
-            if team.id == "north" and player_position.y > 0 then
-                correctYPos = -20
-            elseif team.id == "south" and player_position.y < 0 then
-                correctYPos = 20
-            end
-
-            if correctYPos ~= nil then
-                -- Player on wrong side, so send them back to their side.
-                teleportEntity = player.vehicle or player.character
-
-                -- Teleport back the player's vehicle or character if they have either. If they're dead then they will respawn on their side anyways.
-                if teleportEntity ~= nil then
-                    teleportTarget = global.general.surface.find_non_colliding_position(teleportEntity.name, {x = player_position.x, y = correctYPos}, 100, 0.5)
-                    if teleportTarget ~= nil then
-                        teleportEntity.teleport(teleportTarget)
-                        game.print({"message.jd_plays-jd_spider_race-moved_player_right_side_of_divide", player.name}, Colors.lightgreen)
-                    else
-                        game.print("ERROR: failed to teleport player " .. player.name .. " back to their side of the divide for their " .. teleportEntity.name, Colors.lightred)
-                    end
-                end
-
-                correctXPos, teleportEntity, teleportTarget = nil, nil, nil -- Reset for next players check.
-            end
-        end
-    end
-
-    -- Reschedule for another 5 minutes time.
-    EventScheduler.ScheduleEvent(event.tick + 18000, "PlayerHome.CheckForDivideCrossedPlayers_Scheduled")
 end
 
 return PlayerHome

@@ -4,6 +4,7 @@ local Divider = require("modes/jd-spider-race/scripts/divider")
 local WaterBarrier = require("modes/jd-spider-race/scripts/water-barrier")
 local Spider = require("modes.jd-spider-race.scripts.spider")
 local Utils = require("utility/utils")
+local Map = require("modes.jd-spider-race.scripts.map")
 
 if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
     return
@@ -24,6 +25,7 @@ end
 local function OnLoad()
     --Any Remote Interface registration calls can go in here or in root of control.lua
     PlayerHome.OnLoad()
+    Map.OnLoad()
     Spider.OnLoad()
     Divider.OnLoad()
     WaterBarrier.OnLoad()
@@ -44,8 +46,10 @@ local function OnStartup()
 
     -- Do first as sets teams and surfaces.
     PlayerHome.OnStartup()
+    Map.OnStartup()
 
     -- Regular startup (non ordered).
+    Divider.OnStartup()
     WaterBarrier.OnStartup()
     Spider.OnStartup()
 end
