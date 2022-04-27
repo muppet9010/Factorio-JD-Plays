@@ -13,7 +13,7 @@ dividerBeam.target_offset = nil
 dividerBeam.action = nil
 dividerBeam.start = nil
 dividerBeam.ending = nil
-dividerBeam.damage_interval = Utils.MaxUInt
+dividerBeam.damage_interval = 4294967295 -- Max size allowed for value.
 dividerBeam.head = Utils.EmptyRotatedSprite(16)
 dividerBeam.tail = Utils.EmptyRotatedSprite(16)
 for _, bodyPart in pairs(dividerBeam.body) do

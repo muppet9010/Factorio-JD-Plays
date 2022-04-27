@@ -216,11 +216,11 @@ Spider.CreateGlobals = function()
 end
 
 Spider.OnLoad = function()
-    EventScheduler.RegisterScheduledEventType("Spider.CheckSpiders_Scheduled", Spider.CheckSpiders_Scheduled) -- CODE NOTE: in ideal world this would be a re-occuring scheduled event every SECOND, but this Utils version doesn't have that feature. One schedule action per second shouldn't be too UPS heavy.
+    EventScheduler.RegisterScheduledEventType("Spider.CheckSpiders_Scheduled", Spider.CheckSpiders_Scheduled)
     Commands.Register("spider_incrememt_distance_from_spawn", {"api-description.jd_plays-jd_spider_race-spider_incrememt_distance_from_spawn"}, Spider.Command_IncrementDistanceFromSpawn, true)
     Commands.Register("spider_set_movement_per_minute", {"api-description.jd_plays-jd_spider_race-spider_set_movement_per_minute"}, Spider.Command_SetSpiderMovementPerMinute, true)
-    EventScheduler.RegisterScheduledEventType("Spider.SpidersMoveAwayFromSpawn_Scheduled", Spider.SpidersMoveAwayFromSpawn_Scheduled) -- CODE NOTE: in ideal world this would be a re-occuring scheduled event every MINUTE, but this Utils version doesn't have that feature. One schedule action per MINUTE shouldn't be too UPS heavy.
-    Events.RegisterHandlerEvent(defines.events.on_entity_died, "Spider.OnSpiderDied", Spider.OnSpiderDied, "bossSpiders", {{filter = "name", name = "jd_plays-jd_spider_race-spidertron_boss"}})
+    EventScheduler.RegisterScheduledEventType("Spider.SpidersMoveAwayFromSpawn_Scheduled", Spider.SpidersMoveAwayFromSpawn_Scheduled)
+    Events.RegisterHandlerEvent(defines.events.on_entity_died, "Spider.OnSpiderDied", Spider.OnSpiderDied, {{filter = "name", name = "jd_plays-jd_spider_race-spidertron_boss"}})
     Commands.Register("spider_reset_state", {"api-description.jd_plays-jd_spider_race-spider_reset_state"}, Spider.Command_ResetSpiderState, true)
     Commands.Register("spider_full_rearm", {"api-description.jd_plays-jd_spider_race-spider_full_rearm"}, Spider.Command_RearmSpider, true)
     Commands.Register("spider_give_ammo", {"api-description.jd_plays-jd_spider_race-spider_give_ammo"}, Spider.Command_GiveSpiderAmmo, true)
@@ -236,10 +236,10 @@ Spider.OnStartup = function()
         Spider.SetSpiderForcesTechs()
 
         -- Schedule it to occur at the start of every second. Makes later re-occuring rescheduling logic simplier as can just divide now by 60.
-        EventScheduler.ScheduleEvent((math_floor(game.tick / 60) * 60) + 60, "Spider.CheckSpiders_Scheduled")
+        EventScheduler.ScheduleEventOnce((math_floor(game.tick / 60) * 60) + 60, "Spider.CheckSpiders_Scheduled")
 
         -- Schedule it to occur at the start of every second. Makes later re-occuring rescheduling logic simplier as can just divide now by 60.
-        EventScheduler.ScheduleEvent((math_floor(game.tick / 3600) * 3600) + 3600, "Spider.SpidersMoveAwayFromSpawn_Scheduled")
+        EventScheduler.ScheduleEventOnce((math_floor(game.tick / 3600) * 3600) + 3600, "Spider.SpidersMoveAwayFromSpawn_Scheduled")
     end
 end
 
@@ -482,7 +482,7 @@ Spider.CheckSpiders_Scheduled = function(event)
     end
 
     -- Schedule the next seconds event. As the first instance of this schedule always occurs exactly on a second no fancy logic is needed for each reschedule.
-    EventScheduler.ScheduleEvent(event.tick + 60, "Spider.CheckSpiders_Scheduled")
+    EventScheduler.ScheduleEventOnce(event.tick + 60, "Spider.CheckSpiders_Scheduled")
 end
 
 --- Checks how the spiders roaming is going.
@@ -1182,7 +1182,7 @@ Spider.SpidersMoveAwayFromSpawn_Scheduled = function(event)
     end
 
     -- Schedule the next Minutes event. As the first instance of this schedule always occurs exactly on a minute no fancy logic is needed for each reschedule.
-    EventScheduler.ScheduleEvent(event.tick + 3600, "Spider.SpidersMoveAwayFromSpawn_Scheduled")
+    EventScheduler.ScheduleEventOnce(event.tick + 3600, "Spider.SpidersMoveAwayFromSpawn_Scheduled")
 end
 
 --- Gives the boss spider and its gun spiders 1 set of ammo.

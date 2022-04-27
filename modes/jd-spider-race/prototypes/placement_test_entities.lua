@@ -4,6 +4,6 @@ local Utils = require("utility.utils")
 
 local marketPlacementTestCollisionMask = {"item-layer", "object-layer", "player-layer", "water-tile"} -- Defaults from wiki.
 table.insert(marketPlacementTestCollisionMask, "resource-layer")
-local marketPlacementTest = Utils._CreatePlacementTestEntityPrototype(data.raw["market"]["market"], "jd_plays-jd_spider_race-market_placement_test", "other", marketPlacementTestCollisionMask)
+local marketPlacementTest = Utils.CreatePlacementTestEntityPrototype(data.raw["market"]["market"], "jd_plays-jd_spider_race-market_placement_test", "other", marketPlacementTestCollisionMask)
 
 data:extend({marketPlacementTest})

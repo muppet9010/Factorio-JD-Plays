@@ -157,7 +157,7 @@ PlayerHome.DelayedPlayerCreated_Scheduled = function(event)
     if not playerMovedOk then
         -- Can happen if this is run during initial map generation. Will just wait a few seconds and try movign the player again.
         player.print("Trying to respawn you in a few seconds after map has generated more.", Colors.lightgreen)
-        EventScheduler.ScheduleEvent(event.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
+        EventScheduler.ScheduleEventOnce(event.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
     end
 end
 
@@ -228,7 +228,7 @@ PlayerHome.MovePlayerToTeam = function(player, team)
         if not playerMovedOk then
             -- Can happen if this is run during initial map generation. Will just wait a few seconds and try movign the player again.
             player.print("Trying to respawn you in a few seconds after map has generated more.", Colors.lightgreen)
-            EventScheduler.ScheduleEvent(game.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
+            EventScheduler.ScheduleEventOnce(game.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
         end
     else
         -- Player wasn't in the waiting room, so must have been already assigned to a team and is in a normal state.
