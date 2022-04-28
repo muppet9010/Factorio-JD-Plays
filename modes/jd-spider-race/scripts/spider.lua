@@ -5,11 +5,10 @@
 
 --[[
     TODO LATER:
-        - Lot of LATER tags in code for things to be added as part of future wider functionality:
-            - GUIs
         - Use active danger checking when moving:
             - When we charge at a target we should target the position half weapons distance away from it. As we actually "arrive" when 10 tiles near the target position and then go in to a fighting stance if the enemy is vaguely close. This should stop the spider walking too close to turrets it knows about.
             - When the spider is chasing (moving for combat?) have it do a target scan around its current position and where it will roughly reach in the next second. Should just be looking for any enemies that will attack it. If found should go in to combat state against them. Really just to stop it running so deep in to turret lines when chasing or charging at targets. When its roaming should it do the same?
+            - Turn off testing settings for review release.
 ]]
 --
 
@@ -27,7 +26,6 @@ local math_min, math_max, math_floor, math_ceil, math_random = math.min, math.ma
 ---@field id UnitNumber @ The UnitNumber of the boss spider entity. Also the key in global.spiders.
 ---@field state JdSpiderRace_BossSpider_State
 ---@field playerTeam JdSpiderRace_PlayerHome_Team
----@field playerTeamName JdSpiderRace_PlayerHome_PlayerTeamNames
 ---@field bossEntity LuaEntity @ The main spider boss entity.
 ---@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
 ---@field gunSpiders table<JdSpiderRace_BossSpider_GunSpiderType, JdSpiderRace_GunSpider> @ The hidden spiders that move with the main spider. They are present just to carry the extra gun types.
@@ -162,25 +160,26 @@ local BossSpider_TurretRearm = {
 }
 
 ---@class JdSpiderRace_BossSpider_RconAmmoType
----@field ammoItemName string
+---@field ammoItemName string @ The item prototype name.
+---@field ammoItemPrettyName string @ The player printable name (with spaces).
 ---@field gunType JdSpiderRace_BossSpider_GunSpiderType|null
 ---@field bossSpider boolean|null
 ---@field turretType JdSpiderRace_BossSpider_TurretType|null
 
 ---@type table<string, JdSpiderRace_BossSpider_RconAmmoType> @ Command friendly name to item name.
 local BossSpider_RconAmmoNames = {
-    bullet = {ammoItemName = "firearm-magazine", gunType = BossSpider_GunSpiderType.machineGun},
-    piercingBullet = {ammoItemName = "piercing-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun},
-    uraniumBullet = {ammoItemName = "uranium-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun},
-    rocket = {ammoItemName = "rocket", gunType = BossSpider_GunSpiderType.rocketLauncher},
-    explosiveRocket = {ammoItemName = "explosive-rocket", gunType = BossSpider_GunSpiderType.rocketLauncher},
-    atomicRocket = {ammoItemName = "atomic-bomb", gunType = BossSpider_GunSpiderType.rocketLauncher},
-    cannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon},
-    explosiveCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon},
-    uraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon},
-    explosiveUraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon},
-    artilleryShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-artillery_shell", turretType = BossSpider_TurretType.artillery},
-    flamethrowerAmmo = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", bossSpider = true}
+    bullet = {ammoItemName = "firearm-magazine", gunType = BossSpider_GunSpiderType.machineGun, ammoItemPrettyName = "bullet"},
+    piercingBullet = {ammoItemName = "piercing-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun, ammoItemPrettyName = "piercing bullet"},
+    uraniumBullet = {ammoItemName = "uranium-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun, ammoItemPrettyName = "uranium bullet"},
+    rocket = {ammoItemName = "rocket", gunType = BossSpider_GunSpiderType.rocketLauncher, ammoItemPrettyName = "rocket"},
+    explosiveRocket = {ammoItemName = "explosive-rocket", gunType = BossSpider_GunSpiderType.rocketLauncher, ammoItemPrettyName = "explosive rocket"},
+    atomicRocket = {ammoItemName = "atomic-bomb", gunType = BossSpider_GunSpiderType.rocketLauncher, ammoItemPrettyName = "atomic rocket"},
+    cannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon, ammoItemPrettyName = "cannon shell"},
+    explosiveCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon, ammoItemPrettyName = "explosive cannon shell"},
+    uraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon, ammoItemPrettyName = "uranium cannon shell"},
+    explosiveUraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon, ammoItemPrettyName = "explosive uranium cannon shell"},
+    artilleryShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-artillery_shell", turretType = BossSpider_TurretType.artillery, ammoItemPrettyName = "artillery shell"},
+    flamethrowerAmmo = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", bossSpider = true, ammoItemPrettyName = "flamethrower ammo"}
 }
 
 ---@class JdSpiderRace_BossSpider_ScoreGuiData
@@ -212,7 +211,7 @@ local Settings = {
 -- Testing is for development and is very adhoc in what it changes to allow simplier testing.
 local Testing = true
 if Testing then
-    Settings.bossSpiderStartingLeftDistance = 400
+    Settings.bossSpiderStartingLeftDistance = 500
     --Settings.spidersRoamingXRange = 20
     Settings.spidersFightingXRange = 300
     Settings.showSpiderPlans = true
@@ -231,6 +230,7 @@ Spider.CreateGlobals = function()
     global.spider.constantMovementFromSpawnPerMinute = global.spider.constantMovementFromSpawnPerMinute or 3 ---@type number
     global.spider.playersMessageGuiEnabled = global.spider.playersMessageGuiEnabled or {} ---@type table<PlayerIndex, LuaPlayer> @ The players who have set that they want to recieve Message GUI notifications.
     global.spider.playersScoreGuiEnabled = global.spider.playersScoreGuiEnabled or {} ---@type table<PlayerIndex, LuaPlayer> @ The players who have set that they want the Scrore GUI enabled.
+    global.spider.messageGuiId = global.spider.messageGuiId or 0 ---@type uint
 end
 
 Spider.OnLoad = function()
@@ -242,10 +242,11 @@ Spider.OnLoad = function()
     Events.RegisterHandlerEvent(defines.events.on_entity_died, "Spider.OnSpiderDied", Spider.OnSpiderDied, {{filter = "name", name = "jd_plays-jd_spider_race-spidertron_boss"}})
 
     Commands.Register("spider_reset_state", {"api-description.jd_plays-jd_spider_race-spider_reset_state"}, Spider.Command_ResetSpiderState, true)
-    Commands.Register("spider_full_rearm", {"api-description.jd_plays-jd_spider_race-spider_full_rearm"}, Spider.Command_RearmSpider, true)
+    Commands.Register("spider_full_rearm", {"api-description.jd_plays-jd_spider_race-spider_full_rearm"}, Spider.Command_FullyRearmSpider, true)
     Commands.Register("spider_give_ammo", {"api-description.jd_plays-jd_spider_race-spider_give_ammo"}, Spider.Command_GiveSpiderAmmo, true)
 
     Events.RegisterHandlerEvent(defines.events.on_lua_shortcut, "Spider.OnLuaShortcut", Spider.OnLuaShortcut)
+    EventScheduler.RegisterScheduledEventType("Spider.RemoveMessageFromPlayers_Scheduled", Spider.RemoveMessageFromPlayers_Scheduled)
 
     Events.RegisterHandlerEvent(defines.events.on_player_created, "Spider.OnPlayerCreated", Spider.OnPlayerCreated)
     Events.RegisterHandlerEvent(defines.events.on_player_joined_game, "Spider.OnPlayerJoinedGame", Spider.OnPlayerJoinedGame)
@@ -285,7 +286,6 @@ Spider.CreateSpider = function(playerTeam)
         bossEntity = bossEntity,
         state = BossSpider_State.roaming,
         playerTeam = playerTeam,
-        playerTeamName = playerTeam.id,
         distanceFromSpawn = Settings.bossSpiderStartingLeftDistance,
         damageTakenThisSecond = 0,
         previousDamageToConsider = 0,
@@ -1169,16 +1169,14 @@ Spider.Command_IncrementDistanceFromSpawn = function(commandEvent)
         for _, spider in pairs(global.spider.spiders) do
             spider.distanceFromSpawn = spider.distanceFromSpawn + distanceChange
             Spider.UpdateSpidersRoamingValues(spider)
+            Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_moved_from_spawn", Utils.DisplayNumberPretty(distanceChange)})
         end
-        -- LATER: show GUI message about update.
-        local x = 1
     else
         -- Just update the 1 team's spider.
         local spider = global.spider.playerTeamsSpider[playerTeamName]
         spider.distanceFromSpawn = spider.distanceFromSpawn + distanceChange
         Spider.UpdateSpidersRoamingValues(spider)
-        -- LATER: show GUI message about update.
-        local x = 1
+        Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_moved_from_spawn", Utils.DisplayNumberPretty(distanceChange)})
     end
 
     -- Do one scoreboard update for all spiders.
@@ -1253,7 +1251,7 @@ end
 
 --- When the spider_full_rearm command is called to give the spider a full set of ammo.
 ---@param commandEvent CustomCommandData
-Spider.Command_RearmSpider = function(commandEvent)
+Spider.Command_FullyRearmSpider = function(commandEvent)
     local args = Commands.GetArgumentsFromCommand(commandEvent.parameter)
     local commandErrorMessagePrefix = "ERROR: spider_full_rearm command - "
     if args == nil or type(args) ~= "table" or #args == 0 then
@@ -1276,15 +1274,13 @@ Spider.Command_RearmSpider = function(commandEvent)
         -- Update both team's spiders.
         for _, spider in pairs(global.spider.spiders) do
             Spider.GiveSpiderFullAmmo(spider)
+            Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_fully_rearmed"})
         end
-        -- LATER: show GUI message about update.
-        local x = 1
     else
         -- Just update the 1 team's spider.
         local spider = global.spider.playerTeamsSpider[playerTeamName]
         Spider.GiveSpiderFullAmmo(spider)
-        -- LATER: show GUI message about update.
-        local x = 1
+        Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_fully_rearmed"})
     end
 end
 
@@ -1332,15 +1328,13 @@ Spider.Command_GiveSpiderAmmo = function(commandEvent)
         -- Update both team's spiders.
         for _, spider in pairs(global.spider.spiders) do
             Spider.GiveSpiderSpecificAmmo(spider, rconAmmoType, quantity)
+            Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_give_ammo", quantity, rconAmmoType.ammoItemPrettyName})
         end
-        -- LATER: show GUI message about update.
-        local x = 1
     else
         -- Just update the 1 team's spider.
         local spider = global.spider.playerTeamsSpider[playerTeamName]
         Spider.GiveSpiderSpecificAmmo(spider, rconAmmoType, quantity)
-        -- LATER: show GUI message about update.
-        local x = 1
+        Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_give_ammo", quantity, rconAmmoType.ammoItemPrettyName})
     end
 end
 
@@ -1385,9 +1379,9 @@ Spider.OnSpiderDied = function(event)
     Spider.UpdatePlanRenders(spider)
 
     -- Coin is dropped as loot automatically.
-    game.print({"message.jd_plays-jd_spider_race-spider_killed", spider.playerTeam.prettyName}, Colors.green)
 
-    -- LATER: announce the death and do any GUI stuff, etc.
+    -- Announce the death in chat and update the Score GUI.
+    game.print({"message.jd_plays-jd_spider_race-spider_killed", spider.playerTeam.prettyName}, Colors.green)
     Spider.UpdateAllScoreGuis()
 end
 
@@ -1499,7 +1493,8 @@ Spider.Gui_ShowScoreGuiForPlayer = function(player, playerIndex)
             type = "frame",
             storeName = "Score",
             direction = "vertical",
-            style = MuppetStyles.frame.main_shadowRisen.marginTL_paddingBR,
+            style = MuppetStyles.frame.main_shadowRisen.marginTL,
+            styling = {width = 334}, -- Width of the starting GUI size so the inner frames can stretch to fill it without the entire GUI growing when other large GUIs are added to the left of screen.
             children = {
                 {
                     -- Header title
@@ -1511,8 +1506,8 @@ Spider.Gui_ShowScoreGuiForPlayer = function(player, playerIndex)
                     -- North team container.
                     type = "frame",
                     direction = "vertical",
-                    style = MuppetStyles.frame.content_shadowSunken.paddingBR,
-                    styling = {horizontally_stretchable = true, left_margin = 4},
+                    style = MuppetStyles.frame.content_shadowSunken.plain,
+                    styling = {horizontally_stretchable = true},
                     children = {
                         {
                             -- North team title
@@ -1562,8 +1557,8 @@ Spider.Gui_ShowScoreGuiForPlayer = function(player, playerIndex)
                     -- South team container.
                     type = "frame",
                     direction = "vertical",
-                    style = MuppetStyles.frame.content_shadowSunken.paddingBR,
-                    styling = {horizontally_stretchable = true, left_margin = 4},
+                    style = MuppetStyles.frame.content_shadowSunken.plain,
+                    styling = {horizontally_stretchable = true},
                     children = {
                         {
                             -- South team title
@@ -1692,6 +1687,51 @@ Spider.GetScoreGuiData = function()
         southSpiderDistancePercentage = math_ceil((southMostLeftBuiltEntityYDistance / southSpiderObject.distanceFromSpawn) * 100)
     }
     return scoreGuiData
+end
+
+--- Shows a message GUI to the players on a team who have GUI Messages enabled.
+---@param team JdSpiderRace_PlayerHome_Team
+---@param message LocalisedString
+Spider.ShowMessageToEnabledTeamPlayers = function(team, message)
+    global.spider.messageGuiId = global.spider.messageGuiId + 1
+
+    local playersMessageGuiElements = {}
+    for playerIndex, player in pairs(team.players) do
+        if global.spider.playersMessageGuiEnabled[playerIndex] ~= nil and player.connected then
+            -- Player should be shown message.
+            local guiElementsCreated =
+                GuiUtil.AddElement(
+                {
+                    parent = player.gui.left,
+                    descriptiveName = "message_" .. global.spider.messageGuiId,
+                    type = "frame",
+                    style = MuppetStyles.frame.content.marginTL,
+                    returnElement = true,
+                    children = {
+                        {
+                            type = "label",
+                            style = MuppetStyles.label.text.medium.plain,
+                            caption = message
+                        }
+                    }
+                }
+            )
+            playersMessageGuiElements[playerIndex] = guiElementsCreated[next(guiElementsCreated)]
+        end
+    end
+
+    EventScheduler.ScheduleEventOnce(game.tick + 600, "Spider.RemoveMessageFromPlayers_Scheduled", global.spider.messageGuiId, playersMessageGuiElements)
+end
+
+--- Scheduled to remove Message GUI from those players who were shown them.
+---@param event UtilityScheduledEvent_CallbackObject
+Spider.RemoveMessageFromPlayers_Scheduled = function(event)
+    local playersMessageGuiElements = event.data ---@type table<PlayerIndex, LuaGuiElement>
+    for _, guiElement in pairs(playersMessageGuiElements) do
+        if guiElement.valid then
+            guiElement.destroy()
+        end
+    end
 end
 
 return Spider

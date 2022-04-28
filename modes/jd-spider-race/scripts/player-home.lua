@@ -106,7 +106,7 @@ PlayerHome.CreateTeam = function(teamId, spawnYPos, spawnXPos)
     ---@type JdSpiderRace_PlayerHome_Team
     local team = {
         id = teamId,
-        prettyName = string.gsub(teamId .. " Team", "^%l", string.upper), -- Default starting value with a capitalied first letter.
+        prettyName = string.gsub(teamId .. " team", "^%l", string.upper), -- Default starting value with a capitalied first letter.
         spawnPosition = {x = spawnXPos, y = spawnYPos},
         players = {},
         playerNames = {},
