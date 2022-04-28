@@ -5,27 +5,38 @@ local Events = require("utility/events")
 local EventScheduler = require("utility.event-scheduler")
 local Logging = require("utility/logging")
 local Colors = require("utility.colors")
+local GuiUtil = require("utility.gui-util")
+local GuiActionsClick = require("utility.gui-actions-click")
+local MuppetStyles = require("utility.style-data").MuppetStyles
 
 local SpawnXOffset = -256 -- Distance in from the coastline.
 
 ---@class JdSpiderRace_PlayerHome_Team
 ---@field id JdSpiderRace_PlayerHome_PlayerTeamNames
+---@field prettyName string @ The nice name to use in GUIs and messages. Can be set at runtime via the approperiate command.
 ---@field playerForce LuaForce @ Ref to the player force for this team.
 ---@field enemyForce LuaForce @ The biter force in this teams lane of the map.
 ---@field enemyForceName string
 ---@field spawnPosition MapPosition @ Position of this team's spawn.
----@field players table<Id, LuaPlayer> @ Table of the player ids to player object who have joined this team.
----@field playerNames table<string, string> @ Table of player names (key and value) who will join this team on first connect.
+---@field players table<PlayerIndex, LuaPlayer> @ Table of the player who have joined this team.
+---@field playerNames table<string, boolean> @ Table of player names who will/are on this team, with the value being if they ahve already joined the server yet. Player names can be pre-assigned and to a team so they are auto assigned on joining.
 ---@field otherTeam JdSpiderRace_PlayerHome_Team @ Ref to the other teams global object.
 
 ---@alias JdSpiderRace_PlayerHome_PlayerTeamNames '"north"'|'"south"'
+
+---@class JdSpiderRace_PlayerHome_WaitingPlayerDetails
+---@field id PlayerIndex
+---@field player LuaPlayer
+---@field playerName string
+---@field origionalPermissionGroup LuaPermissionGroup
 
 PlayerHome.CreateGlobals = function()
     global.playerHome = global.playerHome or {}
 
     global.playerHome.teams = global.playerHome.teams or {} ---@type table<JdSpiderRace_PlayerHome_PlayerTeamNames, JdSpiderRace_PlayerHome_Team> @ Team name to team object.
-    global.playerHome.playerIdToTeam = global.playerHome.playerIdToTeam or {} ---@type table<Id, JdSpiderRace_PlayerHome_Team> @ Player index to thier team object.
-    global.playerHome.waitingRoomPlayers = global.playerHome.waitingRoomPlayers or {} ---@type table<Id, string> @ Player's index to their initial permissions group name from before they were put in the waiting room.
+    global.playerHome.playerIdToTeam = global.playerHome.playerIdToTeam or {} ---@type table<PlayerIndex, JdSpiderRace_PlayerHome_Team> @ Player to their team object.
+    global.playerHome.waitingRoomPlayers = global.playerHome.waitingRoomPlayers or {} ---@type table<PlayerIndex, JdSpiderRace_PlayerHome_WaitingPlayerDetails> @ Player's initial permissions group name from before they were put in the waiting room.
+    global.playerHome.playerManagerGuiOpened = global.playerHome.playerManagerGuiOpened or {} ---@type table<PlayerIndex, LuaPlayer>
 end
 
 PlayerHome.OnLoad = function()
@@ -36,6 +47,12 @@ PlayerHome.OnLoad = function()
     Events.RegisterHandlerEvent(defines.events.on_market_item_purchased, "PlayerHome.OnMarketItemPurchased", PlayerHome.OnMarketItemPurchased)
 
     Commands.Register("spider_assign_player_to_team", {"api-description.jd_plays-jd_spider_race-spider_assign_player_to_team"}, PlayerHome.Command_AssignPlayerToTeam, true)
+    Commands.Register("spider_set_teams_pretty_name", {"api-description.jd_plays-jd_spider_race-spider_set_teams_pretty_name"}, PlayerHome.Command_SetTeamsPrettyName, true)
+
+    Events.RegisterHandlerEvent(defines.events.on_lua_shortcut, "PlayerHome.OnLuaShortcut", PlayerHome.OnLuaShortcut)
+    GuiActionsClick.LinkGuiClickActionNameToFunction("PlayerHome.On_PlayerManagerCloseButtonClicked", PlayerHome.On_PlayerManagerCloseButtonClicked)
+    GuiActionsClick.LinkGuiClickActionNameToFunction("PlayerHome.On_PlayerManagerPlayerNameClicked", PlayerHome.On_PlayerManagerPlayerNameClicked)
+    GuiActionsClick.LinkGuiClickActionNameToFunction("PlayerHome.On_PlayerManagerAssignPlayerClicked", PlayerHome.On_PlayerManagerAssignPlayerClicked)
 end
 
 PlayerHome.OnStartup = function()
@@ -46,8 +63,8 @@ PlayerHome.OnStartup = function()
         global.playerHome.teams["south"].otherTeam = global.playerHome.teams["north"]
 
         -- Set JD and Mukkie to their initial teams.
-        global.playerHome.teams["north"].playerNames["JD-Plays"] = "JD-Plays"
-        global.playerHome.teams["south"].playerNames["mukkie"] = "mukkie"
+        global.playerHome.teams["north"].playerNames["JD-Plays"] = false
+        global.playerHome.teams["south"].playerNames["mukkie"] = false
     end
 
     -- disable autofiring cross border
@@ -88,12 +105,16 @@ PlayerHome.CreateTeam = function(teamId, spawnYPos, spawnXPos)
     ---@type JdSpiderRace_PlayerHome_Team
     local team = {
         id = teamId,
+        prettyName = string.gsub(teamId .. " Team", "^%l", string.upper), -- Default starting value with a capitalied first letter.
         spawnPosition = {x = spawnXPos, y = spawnYPos},
         players = {},
-        playerNames = {}
+        playerNames = {},
+        enemyForce = nil, -- Set later in this function.
+        enemyForceName = teamId .. "_enemy",
+        playerForce = nil, -- Set later in this function.
+        otherTeam = nil -- Set later in this function.
     }
     team.playerForce = game.create_force(teamId)
-    team.enemyForceName = teamId .. "_enemy"
     team.enemyForce = game.create_force(team.enemyForceName)
 
     global.playerHome.teams[teamId] = team
@@ -111,9 +132,11 @@ PlayerHome.OnPlayerCreated = function(event)
         player.exit_cutscene()
     end
 
+    local playerName = player.name
+
     -- Check if the player has been pre-assigned to a team.
     for _, team in pairs(global.playerHome.teams) do
-        if team.playerNames[player.name] ~= nil then
+        if team.playerNames[playerName] ~= nil then
             -- Player is pre-assigned to this team.
 
             -- Record player to new team and update player's force.
@@ -121,6 +144,7 @@ PlayerHome.OnPlayerCreated = function(event)
             team.players[playerId] = player
             global.playerHome.playerIdToTeam[playerId] = team
             player.force = team.playerForce
+            team.playerNames[playerName] = true
 
             -- Move them to the surface and position them.
             PlayerHome.DelayedPlayerCreated_Scheduled({tick = event.tick, instanceId = playerId})
@@ -130,7 +154,12 @@ PlayerHome.OnPlayerCreated = function(event)
     end
 
     -- Store the players initial permission group name for use when assigning them to a force.
-    global.playerHome.waitingRoomPlayers[event.player_index] = player.permission_group.name
+    global.playerHome.waitingRoomPlayers[event.player_index] = {
+        id = event.player_index,
+        player = player,
+        playerName = playerName,
+        origionalPermissionGroup = player.permission_group
+    }
 
     -- Place player in waiting room on the correct surface.
     player.character.destroy()
@@ -139,6 +168,9 @@ PlayerHome.OnPlayerCreated = function(event)
 
     player.print("Welcome! Waiting on an admin to put you on a team...")
     player.print("You might need to /shout to grab attention")
+
+    -- Update any player listing GUIs.
+    PlayerHome.UpdateAllOpenPlayerManagerGuis()
 end
 
 --- To create a pre-assigned player to a team. Supports delayed looping back to itself if it fails during initial map generation.
@@ -161,6 +193,7 @@ PlayerHome.DelayedPlayerCreated_Scheduled = function(event)
     end
 end
 
+--- Command to assign a player (current or future) to a team.
 ---@param event CustomCommandData
 PlayerHome.Command_AssignPlayerToTeam = function(event)
     local args = Commands.GetArgumentsFromCommand(event.parameter)
@@ -174,53 +207,67 @@ PlayerHome.Command_AssignPlayerToTeam = function(event)
         return
     end
 
-    local player_name = args[1]
-    local team_name = args[2]
+    local playerName = args[1]
+    local teamName = args[2]
 
-    local team = global.playerHome.teams[team_name]
+    local team = global.playerHome.teams[teamName]
     if team == nil then
-        game.print(commandErrorMessagePrefix .. "Unknown team: " .. team_name, Colors.lightred)
+        game.print(commandErrorMessagePrefix .. "Unknown team: " .. teamName, Colors.lightred)
         return
     end
 
-    -- Record the named player to be on the team (now and in the future).
-    PlayerHome.AddPlayerNameToTeam(player_name, team)
-
-    -- If the player is currently on the server move them to the team now.
-    local player = game.get_player(player_name)
-    if player ~= nil then
-        PlayerHome.MovePlayerToTeam(player, team)
-    end
+    PlayerHome.AssignPlayerToTeam(playerName, game.get_player(playerName), team)
 end
 
---- Add a player's name to the team's list of players.
+--- Assign the player to the team.
+---@param playerName string
+---@param player LuaPlayer|nil
+---@param team JdSpiderRace_PlayerHome_Team
+PlayerHome.AssignPlayerToTeam = function(playerName, player, team)
+    -- Record the named player to be on the team (now and in the future).
+    PlayerHome.AddPlayerNameToTeam(playerName, team)
+
+    -- If the player has connected to the server move them to the team now.
+    if player ~= nil then
+        PlayerHome.MovePlayerToTeam(player, team, playerName)
+    end
+
+    -- Update all the GUIs that need to know.
+    PlayerHome.UpdateAllOpenPlayerManagerGuis()
+end
+
+--- Add a player's name to the team's list of players and remove from the other team.
 ---@param playerName string
 ---@param team JdSpiderRace_PlayerHome_Team
 PlayerHome.AddPlayerNameToTeam = function(playerName, team)
-    team.playerNames[playerName] = playerName
+    team.playerNames[playerName] = false
+    team.otherTeam.playerNames[playerName] = nil
 end
 
 --- Moves the current player to the team.
 ---@param player LuaPlayer
 ---@param team JdSpiderRace_PlayerHome_Team
-PlayerHome.MovePlayerToTeam = function(player, team)
-    game.print("Player " .. player.name .. " is now on team: " .. team.id)
+PlayerHome.MovePlayerToTeam = function(player, team, playerName)
+    game.print({"message.jd_plays-jd_spider_race-player_moved_to_team", playerName, team.prettyName})
     local playerId = player.index
 
     -- Record player to new team and update player's force.
     team.players[playerId] = player
     global.playerHome.playerIdToTeam[playerId] = team
     player.force = team.playerForce
+    team.playerNames[playerName] = true
+
+    -- Remove player from old team.
+    team.otherTeam.players[playerId] = nil
 
     -- Check if the player is in the waiting room at present and handle next steps accordingly.
-    local playersOrigionalPermissionGroupName = global.playerHome.waitingRoomPlayers[playerId]
-    local playerInWaitingRoom = playersOrigionalPermissionGroupName ~= nil
-    if playerInWaitingRoom then
+    local playerInWaitingRoomDetails = global.playerHome.waitingRoomPlayers[playerId]
+    if playerInWaitingRoomDetails then
         -- Player is in the waiting room as we have a cached value for them.
 
-        -- Take the player out of the waiting room and remove them from the waiting room player list.
+        -- Take the player out of the waiting room (permission groups) and remove them from the waiting room player list.
+        player.permission_group = playerInWaitingRoomDetails.origionalPermissionGroup
         global.playerHome.waitingRoomPlayers[playerId] = nil
-        player.permission_group = game.permissions.get_group(playersOrigionalPermissionGroupName)
 
         -- Give the player a character in the right spot.
         player.create_character()
@@ -363,13 +410,429 @@ PlayerHome.OnMarketItemPurchased = function(event)
     end
 
     -- Trigger the nuke on the other team.
-    local otherTeamName = global.playerHome.playerIdToTeam[event.player_index].otherTeam.id
-    remote.call("JDGoesBoom", "ForceGoesBoom", otherTeamName, 50, 60)
-    game.print({"message.jd_plays-jd_spider_race-blow_up_other_team", otherTeamName}, Colors.lightgreen)
+    local otherTeam = global.playerHome.playerIdToTeam[event.player_index].otherTeam
+    remote.call("JDGoesBoom", "ForceGoesBoom", otherTeam.id, 50, 60)
+    game.print({"message.jd_plays-jd_spider_race-blow_up_other_team", otherTeam.prettyName}, Colors.lightgreen)
 
     -- Remove the fake item the player just brought.
     local player = game.get_player(event.player_index)
     player.remove_item({name = "jd_plays-jd_spider_race-nuke_other_team"})
+end
+
+--- Called when a shortcut is used by a player. Check if it was a shortcut we are monitoring.
+---@param event on_lua_shortcut
+PlayerHome.OnLuaShortcut = function(event)
+    local shortcutName = event.prototype_name
+    if shortcutName == "jd_plays-jd_spider_race-player_manager-gui_button" then
+        local player = game.get_player(event.player_index)
+        if player.admin then
+            if global.playerHome.playerManagerGuiOpened[event.player_index] then
+                PlayerHome.Gui_ClosePlayerManagerForPlayer(event.player_index)
+            else
+                PlayerHome.Gui_OpenPlayerManagerForPlayer(player, event.player_index)
+            end
+        else
+            player.print("Only admins can open the Player Manager GUI", Colors.lightred)
+        end
+    end
+end
+
+--- Open the Player Manager GUI for the player.
+---@param player LuaPlayer
+---@param playerIndex PlayerIndex
+PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
+    global.playerHome.playerManagerGuiOpened[playerIndex] = player
+
+    -- Code notes:
+    --      In names "pm" stands for "PlayerManager".
+    --      All caption and tooltip names must be manually defined and be prefixed with "jd_plays-jd_spider_race-" so the locale names don't conflict with other modes. As only the mod name is pulled through in to the auto generated names, not the mode name.
+    GuiUtil.AddElement(
+        {
+            parent = player.gui.screen,
+            descriptiveName = "pm_main",
+            type = "frame",
+            direction = "vertical",
+            style = MuppetStyles.frame.main_shadowRisen.paddingBR,
+            storeName = "PlayerManager",
+            attributes = {
+                auto_center = true
+            },
+            children = {
+                {
+                    -- Header bar of the GUI.
+                    type = "flow",
+                    direction = "horizontal",
+                    style = MuppetStyles.flow.horizontal.marginTL,
+                    styling = {horizontal_align = "left", right_padding = 4},
+                    children = {
+                        {
+                            type = "label",
+                            style = MuppetStyles.label.heading.large.bold_paddingSides,
+                            caption = {"gui-caption.jd_plays-jd_spider_race-pm_title"}
+                        },
+                        {
+                            descriptiveName = "pm_dragBar",
+                            type = "empty-widget",
+                            style = "draggable_space",
+                            styling = {horizontally_stretchable = true, height = 20, top_margin = 4, minimal_width = 80},
+                            attributes = {
+                                drag_target = function()
+                                    return GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_main", "frame")
+                                end
+                            }
+                        },
+                        {
+                            type = "flow",
+                            direction = "horizontal",
+                            style = MuppetStyles.flow.horizontal.spaced,
+                            styling = {horizontal_align = "right", top_margin = 4},
+                            children = {
+                                {
+                                    descriptiveName = "pm_closeButton",
+                                    type = "sprite-button",
+                                    tooltip = "gui-tooltip.jd_plays-jd_spider_race-pm_closeButton",
+                                    sprite = "utility/close_white",
+                                    style = MuppetStyles.spriteButton.frameCloseButtonClickable,
+                                    registerClick = {actionName = "PlayerHome.On_PlayerManagerCloseButtonClicked"}
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    -- Contents container.
+                    type = "flow",
+                    direction = "vertical",
+                    style = MuppetStyles.flow.vertical.plain,
+                    children = {
+                        {
+                            -- Player lists area.
+                            type = "flow",
+                            direction = "horizontal",
+                            style = MuppetStyles.flow.horizontal.plain,
+                            children = {
+                                {
+                                    -- North player container.
+                                    type = "frame",
+                                    direction = "vertical",
+                                    style = MuppetStyles.frame.content_shadowSunken.marginTL_paddingBR,
+                                    styling = {horizontally_stretchable = true, width = 400, height = 400},
+                                    children = {
+                                        {
+                                            -- North player title
+                                            type = "label",
+                                            style = MuppetStyles.label.text.medium.semibold_paddingSides,
+                                            caption = global.playerHome.teams["north"].prettyName
+                                        },
+                                        {
+                                            -- North players list.
+                                            type = "frame",
+                                            direction = "vertical",
+                                            style = MuppetStyles.frame.contentInnerDark_shadowSunken.marginTL,
+                                            children = {
+                                                {
+                                                    descriptiveName = "pm_north_players",
+                                                    type = "scroll-pane",
+                                                    direction = "vertical",
+                                                    storeName = "PlayerManager",
+                                                    style = MuppetStyles.scroll.plain,
+                                                    styling = {horizontally_stretchable = true, vertically_stretchable = true}
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    -- Waiting player container.
+                                    type = "frame",
+                                    direction = "vertical",
+                                    style = MuppetStyles.frame.content_shadowSunken.marginTL_paddingBR,
+                                    styling = {horizontally_stretchable = true, width = 400, height = 400},
+                                    children = {
+                                        {
+                                            -- Waiting player title
+                                            type = "label",
+                                            style = MuppetStyles.label.text.medium.semibold_paddingSides,
+                                            caption = {"gui-caption.jd_plays-jd_spider_race-waiting_title"}
+                                        },
+                                        {
+                                            -- Waiting players list.
+                                            type = "frame",
+                                            direction = "vertical",
+                                            style = MuppetStyles.frame.contentInnerDark_shadowSunken.marginTL,
+                                            children = {
+                                                {
+                                                    descriptiveName = "pm_waiting_players",
+                                                    type = "scroll-pane",
+                                                    direction = "vertical",
+                                                    storeName = "PlayerManager",
+                                                    style = MuppetStyles.scroll.plain,
+                                                    styling = {horizontally_stretchable = true, vertically_stretchable = true}
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    -- South player container.
+                                    type = "frame",
+                                    direction = "vertical",
+                                    style = MuppetStyles.frame.content_shadowSunken.marginTL_paddingBR,
+                                    styling = {horizontally_stretchable = true, width = 400, height = 400},
+                                    children = {
+                                        {
+                                            -- South player title
+                                            type = "label",
+                                            style = MuppetStyles.label.text.medium.semibold_paddingSides,
+                                            caption = global.playerHome.teams["south"].prettyName
+                                        },
+                                        {
+                                            -- South players list.
+                                            type = "frame",
+                                            direction = "vertical",
+                                            style = MuppetStyles.frame.contentInnerDark_shadowSunken.marginTL,
+                                            children = {
+                                                {
+                                                    descriptiveName = "pm_south_players",
+                                                    type = "scroll-pane",
+                                                    direction = "vertical",
+                                                    storeName = "PlayerManager",
+                                                    style = MuppetStyles.scroll.plain,
+                                                    styling = {horizontally_stretchable = true, vertically_stretchable = true}
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            -- Player assignment area.
+                            type = "frame",
+                            direction = "vertical",
+                            style = MuppetStyles.frame.content_shadowSunken.marginTL,
+                            styling = {horizontally_stretchable = true, vertically_stretchable = true},
+                            children = {
+                                {
+                                    -- Player assignment button area.
+                                    type = "flow",
+                                    direction = "horizontal",
+                                    style = MuppetStyles.flow.horizontal.marginTL,
+                                    children = {
+                                        {
+                                            type = "flow",
+                                            direction = "horizontal",
+                                            style = MuppetStyles.flow.horizontal.plain,
+                                            styling = {horizontal_align = "center", width = 400},
+                                            children = {
+                                                {
+                                                    descriptiveName = "pm_assign_player_north",
+                                                    type = "button",
+                                                    storeName = "PlayerManager",
+                                                    style = MuppetStyles.button.text.medium.paddingSides,
+                                                    styling = {width = 200},
+                                                    caption = {"gui-caption.jd_plays-jd_spider_race-assign_player_north"},
+                                                    registerClick = {actionName = "PlayerHome.On_PlayerManagerAssignPlayerClicked", data = "north"},
+                                                    enabled = false
+                                                }
+                                            }
+                                        },
+                                        {
+                                            type = "frame",
+                                            direction = "horizontal",
+                                            style = MuppetStyles.frame.contentInnerDark.plain,
+                                            styling = {horizontal_align = "center", width = 400, vertical_align = "center"},
+                                            children = {
+                                                {
+                                                    descriptiveName = "pm_selected_player_name",
+                                                    type = "label",
+                                                    storeName = "PlayerManager",
+                                                    style = MuppetStyles.label.text.medium.plain,
+                                                    caption = {"gui-caption.jd_plays-jd_spider_race-pm_no_player_selected"}
+                                                }
+                                            }
+                                        },
+                                        {
+                                            type = "flow",
+                                            direction = "horizontal",
+                                            style = MuppetStyles.flow.horizontal.plain,
+                                            styling = {horizontal_align = "center", width = 400},
+                                            children = {
+                                                {
+                                                    descriptiveName = "pm_assign_player_south",
+                                                    type = "button",
+                                                    storeName = "PlayerManager",
+                                                    style = MuppetStyles.button.text.medium.paddingSides,
+                                                    styling = {width = 200},
+                                                    caption = {"gui-caption.jd_plays-jd_spider_race-assign_player_south"},
+                                                    registerClick = {actionName = "PlayerHome.On_PlayerManagerAssignPlayerClicked", data = "south"},
+                                                    enabled = false
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    -- Assign player instructions.
+                                    type = "label",
+                                    style = MuppetStyles.label.text.small.marginTL_paddingSides,
+                                    styling = {width = 1200},
+                                    caption = {"gui-caption.jd_plays-jd_spider_race-pm_instructions"}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+
+    PlayerHome.UpdatePlayersInPlayerManagerGui(playerIndex)
+end
+
+--- When the player clicks the close button on their Player Manager GUI.
+---@param event UtilityGuiActionsClick_ActionData
+PlayerHome.On_PlayerManagerCloseButtonClicked = function(event)
+    PlayerHome.Gui_ClosePlayerManagerForPlayer(event.playerIndex)
+end
+
+--- Called to close a player's Player Manager GUI.
+---@param playerIndex PlayerIndex
+PlayerHome.Gui_ClosePlayerManagerForPlayer = function(playerIndex)
+    GuiUtil.DestroyPlayersReferenceStorage(playerIndex, "PlayerManager")
+    global.playerHome.playerManagerGuiOpened[playerIndex] = nil
+end
+
+--- Called when a player changes team or joins the server so anyone with the Player Manager GUI open needs to be updated.
+PlayerHome.UpdateAllOpenPlayerManagerGuis = function()
+    for playerIndex in pairs(global.playerHome.playerManagerGuiOpened) do
+        local player = game.get_player(playerIndex)
+        -- If the admin player is online then refresh their GUI, but if they are offline just close the GUI to avoid it being checked again.
+        if player.connected then
+            PlayerHome.UpdatePlayersInPlayerManagerGui(playerIndex)
+        else
+            PlayerHome.Gui_ClosePlayerManagerForPlayer(playerIndex)
+        end
+    end
+end
+
+--- Called to update the player's list in the Player Manager GUI for an admin player who has the GUI currently open.
+---@param playerIndex any
+---@return table
+PlayerHome.UpdatePlayersInPlayerManagerGui = function(playerIndex)
+    -- Check the GUI is sitll open as we expect it to be.
+    if GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_main", "frame") == nil then
+        -- GUI isn't open, so re-open it. This will also re-call this function to show the curernt players.
+        PlayerHome.Gui_OpenPlayerManagerForPlayer(game.get_player(playerIndex), playerIndex)
+        return
+    end
+
+    local northPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_north_players", "scroll-pane")
+    northPlayerListGui.clear()
+    for playerName, connectedToServer in pairs(global.playerHome.teams["north"].playerNames) do
+        PlayerHome.AddPlayerToListInPlayerManagerGui(northPlayerListGui, playerName, connectedToServer)
+    end
+
+    local waitingPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_waiting_players", "scroll-pane")
+    waitingPlayerListGui.clear()
+    for _, waitingPlayerDetails in pairs(global.playerHome.waitingRoomPlayers) do
+        PlayerHome.AddPlayerToListInPlayerManagerGui(waitingPlayerListGui, waitingPlayerDetails.playerName, true)
+    end
+
+    local southPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_south_players", "scroll-pane")
+    southPlayerListGui.clear()
+    for playerName, connectedToServer in pairs(global.playerHome.teams["south"].playerNames) do
+        PlayerHome.AddPlayerToListInPlayerManagerGui(southPlayerListGui, playerName, connectedToServer)
+    end
+end
+
+--- Adds a player button/label to a player list.
+---@param playerListGui LuaGuiElement
+---@param playerName string
+---@param connectedToServer boolean
+PlayerHome.AddPlayerToListInPlayerManagerGui = function(playerListGui, playerName, connectedToServer)
+    if connectedToServer then
+        GuiUtil.AddElement(
+            {
+                parent = playerListGui,
+                descriptiveName = "pm_player_name" .. playerName,
+                type = "button",
+                style = MuppetStyles.button.text.medium.paddingSides,
+                styling = {height = 24, top_padding = -2},
+                caption = playerName,
+                registerClick = {actionName = "PlayerHome.On_PlayerManagerPlayerNameClicked", data = playerName}
+            }
+        )
+    else
+        GuiUtil.AddElement(
+            {
+                parent = playerListGui,
+                type = "label",
+                style = MuppetStyles.label.text.medium.plain,
+                styling = {horizontally_stretchable = true},
+                caption = {"gui-caption.jd_plays-jd_spider_race-pm_player_not_connected", playerName}
+            }
+        )
+    end
+end
+
+-- When an admin clicks on a player's name in the Player Manager GUI. The player's name is the event.data.
+---@param event UtilityGuiActionsClick_ActionData
+PlayerHome.On_PlayerManagerPlayerNameClicked = function(event)
+    local playerName, adminPlayerIndex = event.data, event.playerIndex
+
+    -- Update the GUI to show this admin the player they have clicked on.
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label", {caption = playerName}, false)
+
+    -- Enable the 2 assignment buttons.
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_assign_player_north", "button", {enabled = true}, false)
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_assign_player_south", "button", {enabled = true}, false)
+end
+
+-- When an admin clicks to assign a player to a team via the Player Manager GUI. The assigned team is the event.data.
+---@param event UtilityGuiActionsClick_ActionData
+PlayerHome.On_PlayerManagerAssignPlayerClicked = function(event)
+    local newTeamName, adminPlayerIndex = event.data, event.playerIndex
+    local playerName = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label").caption
+    local player = game.get_player(playerName)
+
+    -- Move the player if they are not currently on the assigned team.
+    local playersCurrentTeam = global.playerHome.playerIdToTeam[player.index]
+    if newTeamName ~= playersCurrentTeam.id then
+        -- Player not currently on the selected team, so move them.
+        PlayerHome.AssignPlayerToTeam(playerName, player, global.playerHome.teams[newTeamName])
+    end
+
+    -- Reset our GUI in all cases.
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-pm_no_player_selected"}}, false)
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_assign_player_north", "button", {enabled = false}, false)
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_assign_player_south", "button", {enabled = false}, false)
+end
+
+---@param event CustomCommandData
+PlayerHome.Command_SetTeamsPrettyName = function(event)
+    local args = Commands.GetArgumentsFromCommand(event.parameter)
+    local commandErrorMessagePrefix = "ERROR: spider_set_teams_pretty_name command - "
+    if args == nil or type(args) ~= "table" or #args == 0 then
+        game.print(commandErrorMessagePrefix .. "No arguments provided.", Colors.lightred)
+        return
+    end
+    if #args ~= 2 then
+        game.print(commandErrorMessagePrefix .. "Expecting two args.", Colors.lightred)
+        return
+    end
+
+    local teamName = args[1]
+    local prettyName = args[2]
+
+    local team = global.playerHome.teams[teamName]
+    if team == nil then
+        game.print(commandErrorMessagePrefix .. "Unknown team: " .. teamName, Colors.lightred)
+        return
+    end
+
+    team.prettyName = prettyName
+    game.print("Set team " .. teamName .. "'s name to: " .. prettyName)
 end
 
 return PlayerHome

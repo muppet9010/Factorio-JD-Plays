@@ -1,9 +1,11 @@
 local EventScheduler = require("utility/event-scheduler")
+local GuiActionsClick = require("utility.gui-actions-click")
+local Utils = require("utility/utils")
+
 local PlayerHome = require("modes/jd-spider-race/scripts/player-home")
 local Divider = require("modes/jd-spider-race/scripts/divider")
 local WaterBarrier = require("modes/jd-spider-race/scripts/water-barrier")
 local Spider = require("modes.jd-spider-race.scripts.spider")
-local Utils = require("utility/utils")
 local Map = require("modes.jd-spider-race.scripts.map")
 
 if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
@@ -59,6 +61,7 @@ script.on_configuration_changed(OnStartup)
 --script.on_event(defines.events.on_runtime_mod_setting_changed, OnSettingChanged)
 script.on_load(OnLoad)
 EventScheduler.RegisterScheduler()
+GuiActionsClick.MonitorGuiClickActions()
 
 --- Do the on_damaged_event in an ultra UPS optimised manner.
 script.on_event(

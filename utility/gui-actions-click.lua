@@ -44,6 +44,12 @@ GuiActionsClick.RegisterGuiForClick = function(elementName, elementType, actionN
     if elementName == nil or elementType == nil or actionName == nil then
         error("GuiActions.RegisterGuiForClick called with missing arguments")
     end
+
+    -- Check no unsupported attributes have been passed in.
+    if type(actionName) ~= "string" then
+        error("GuiActionsClick.RegisterGuiForClick passed a non string type actionName '" .. elementName .. "' and type '" .. elementType .. "'")
+    end
+
     local name = GuiActionsClick._GenerateGuiElementName(elementName, elementType)
     global.UTILITYGUIACTIONSGUICLICK = global.UTILITYGUIACTIONSGUICLICK or {}
     if not disabled then

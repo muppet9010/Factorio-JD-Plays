@@ -20,12 +20,14 @@
 
 local styleData = {}
 
+local Colors = require("utility.colors")
+
 styleData.styleVersion = "_1_0_0"
+local styleNamesGenerated = {}
 
 -- Enable to write the styles out to a text file to use for updating EmmyLua class. This is for when updating the styles library only during development.
 -- Doesn't include Style version as we don't want to hardcode that in to usage code.
 local writeStyleNames = false
-styleNamesGenerated = {}
 
 local GenerateDetailsName = function(detailsName)
     local generatedDetailsName = string.gsub(detailsName, "_", "", 1)
@@ -35,8 +37,8 @@ local GenerateDetailsName = function(detailsName)
     return generatedDetailsName
 end
 
+--- Call in data.lua to actually generate the styles in to the game's prototypes.
 styleData.GeneratePrototypes = function()
-    local Colors = require("utility.colors")
     local defaultStyle = data.raw["gui-style"]["default"]
 
     local frameShadowRisenColor = {0, 0, 0, 0.35}
@@ -430,6 +432,7 @@ styleData.GeneratePrototypes = function()
     end
 end
 
+--- The style options pre-defined by Muppet Utils. For use in runtime code by IDE's to auto select pre-defined style names.
 ---@class MuppetStyle
 styleData.MuppetStyles = {
     flow = {
