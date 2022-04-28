@@ -9,8 +9,6 @@ local GuiUtil = require("utility.gui-util")
 local GuiActionsClick = require("utility.gui-actions-click")
 local MuppetStyles = require("utility.style-data").MuppetStyles
 
-local SpawnXOffset = -256 -- Distance in from the coastline.
-
 ---@class JdSpiderRace_PlayerHome_Team
 ---@field id JdSpiderRace_PlayerHome_PlayerTeamNames
 ---@field prettyName string @ The nice name to use in GUIs and messages. Can be set at runtime via the approperiate command.
@@ -21,6 +19,7 @@ local SpawnXOffset = -256 -- Distance in from the coastline.
 ---@field players table<PlayerIndex, LuaPlayer> @ Table of the player who have joined this team.
 ---@field playerNames table<string, boolean> @ Table of player names who will/are on this team, with the value being if they ahve already joined the server yet. Player names can be pre-assigned and to a team so they are auto assigned on joining.
 ---@field otherTeam JdSpiderRace_PlayerHome_Team @ Ref to the other teams global object.
+---@field mostLeftBuiltEntityXPosition double @ The most left built entity of this team. Used in spider Score GUI.
 
 ---@alias JdSpiderRace_PlayerHome_PlayerTeamNames '"north"'|'"south"'
 
@@ -37,6 +36,8 @@ PlayerHome.CreateGlobals = function()
     global.playerHome.playerIdToTeam = global.playerHome.playerIdToTeam or {} ---@type table<PlayerIndex, JdSpiderRace_PlayerHome_Team> @ Player to their team object.
     global.playerHome.waitingRoomPlayers = global.playerHome.waitingRoomPlayers or {} ---@type table<PlayerIndex, JdSpiderRace_PlayerHome_WaitingPlayerDetails> @ Player's initial permissions group name from before they were put in the waiting room.
     global.playerHome.playerManagerGuiOpened = global.playerHome.playerManagerGuiOpened or {} ---@type table<PlayerIndex, LuaPlayer>
+
+    global.playerHome.spawnXOffset = -256 -- Distance in from the coastline.
 end
 
 PlayerHome.OnLoad = function()
@@ -57,8 +58,8 @@ end
 
 PlayerHome.OnStartup = function()
     if global.playerHome.teams["north"] == nil then
-        PlayerHome.CreateTeam("north", global.divider.dividerMiddleYPos - (global.general.perTeamMapHeight / 2), SpawnXOffset)
-        PlayerHome.CreateTeam("south", global.divider.dividerMiddleYPos + (global.general.perTeamMapHeight / 2), SpawnXOffset)
+        PlayerHome.CreateTeam("north", global.divider.dividerMiddleYPos - (global.general.perTeamMapHeight / 2), global.playerHome.spawnXOffset)
+        PlayerHome.CreateTeam("south", global.divider.dividerMiddleYPos + (global.general.perTeamMapHeight / 2), global.playerHome.spawnXOffset)
         global.playerHome.teams["north"].otherTeam = global.playerHome.teams["south"]
         global.playerHome.teams["south"].otherTeam = global.playerHome.teams["north"]
 
@@ -112,7 +113,8 @@ PlayerHome.CreateTeam = function(teamId, spawnYPos, spawnXPos)
         enemyForce = nil, -- Set later in this function.
         enemyForceName = teamId .. "_enemy",
         playerForce = nil, -- Set later in this function.
-        otherTeam = nil -- Set later in this function.
+        otherTeam = nil, -- Set later in this function.
+        mostLeftBuiltEntityXPosition = spawnXPos -- Starts at effectively 0 when.
     }
     team.playerForce = game.create_force(teamId)
     team.enemyForce = game.create_force(team.enemyForceName)
@@ -166,8 +168,8 @@ PlayerHome.OnPlayerCreated = function(event)
     player.teleport({0, 0}, global.general.surface)
     player.permission_group = game.permissions.get_group("JDWaitingRoom")
 
-    player.print("Welcome! Waiting on an admin to put you on a team...")
-    player.print("You might need to /shout to grab attention")
+    player.print({"message.jd_plays-jd_spider_race-player_home_welcome_1"})
+    player.print({"message.jd_plays-jd_spider_race-player_home_welcome_2"})
 
     -- Update any player listing GUIs.
     PlayerHome.UpdateAllOpenPlayerManagerGuis()
@@ -310,7 +312,7 @@ PlayerHome.MovePlayerToSpawn = function(player)
 end
 
 --- Called from central control.lua.
----@param event any
+---@param event on_entity_damaged
 PlayerHome.OnEntityDamaged = function(event)
     -- Undo any damage done from one player team to the other.
 
@@ -380,7 +382,8 @@ PlayerHome.OnBuiltEntity = function(event)
     end
 
     local to_destroy = false
-    if entity.position.y < 0 then
+    local entity_position = entity.position
+    if entity_position.y < 0 then
         -- Entity built on north side of divider.
         if team.id == "south" then
             to_destroy = true
@@ -393,10 +396,18 @@ PlayerHome.OnBuiltEntity = function(event)
     end
 
     if to_destroy then
-        entity.surface.create_entity({name = "flying-text", position = entity.position, text = "Cannot build on other side of wall"})
+        -- Entity invalid so remove it.
+        entity.surface.create_entity({name = "flying-text", position = entity_position, text = "Cannot build on other side of wall"})
 
         if not player.mine_entity(entity, true) then
             entity.destroy()
+        end
+    else
+        -- Entity valid so leave it be.
+
+        -- If this is the left most built entity for this team record its y position.
+        if entity_position.x < team.mostLeftBuiltEntityXPosition then
+            team.mostLeftBuiltEntityXPosition = entity_position.x
         end
     end
 end
@@ -426,8 +437,8 @@ PlayerHome.OnLuaShortcut = function(event)
     if shortcutName == "jd_plays-jd_spider_race-player_manager-gui_button" then
         local player = game.get_player(event.player_index)
         if player.admin then
-            if global.playerHome.playerManagerGuiOpened[event.player_index] then
-                PlayerHome.Gui_ClosePlayerManagerForPlayer(event.player_index)
+            if global.playerHome.playerManagerGuiOpened[event.player_index] ~= nil then
+                PlayerHome.Gui_ClosePlayerManagerForPlayer(player, event.player_index)
             else
                 PlayerHome.Gui_OpenPlayerManagerForPlayer(player, event.player_index)
             end
@@ -442,6 +453,7 @@ end
 ---@param playerIndex PlayerIndex
 PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
     global.playerHome.playerManagerGuiOpened[playerIndex] = player
+    player.set_shortcut_toggled("jd_plays-jd_spider_race-player_manager-gui_button", true)
 
     -- Code notes:
     --      In names "pm" stands for "PlayerManager".
@@ -693,20 +705,21 @@ end
 --- When the player clicks the close button on their Player Manager GUI.
 ---@param event UtilityGuiActionsClick_ActionData
 PlayerHome.On_PlayerManagerCloseButtonClicked = function(event)
-    PlayerHome.Gui_ClosePlayerManagerForPlayer(event.playerIndex)
+    PlayerHome.Gui_ClosePlayerManagerForPlayer(global.playerHome.playerManagerGuiOpened[event.playerIndex], event.playerIndex)
 end
 
 --- Called to close a player's Player Manager GUI.
+---@param player LuaPlayer
 ---@param playerIndex PlayerIndex
-PlayerHome.Gui_ClosePlayerManagerForPlayer = function(playerIndex)
+PlayerHome.Gui_ClosePlayerManagerForPlayer = function(player, playerIndex)
     GuiUtil.DestroyPlayersReferenceStorage(playerIndex, "PlayerManager")
     global.playerHome.playerManagerGuiOpened[playerIndex] = nil
+    player.set_shortcut_toggled("jd_plays-jd_spider_race-player_manager-gui_button", false)
 end
 
 --- Called when a player changes team or joins the server so anyone with the Player Manager GUI open needs to be updated.
 PlayerHome.UpdateAllOpenPlayerManagerGuis = function()
-    for playerIndex in pairs(global.playerHome.playerManagerGuiOpened) do
-        local player = game.get_player(playerIndex)
+    for playerIndex, player in pairs(global.playerHome.playerManagerGuiOpened) do
         -- If the admin player is online then refresh their GUI, but if they are offline just close the GUI to avoid it being checked again.
         if player.connected then
             PlayerHome.UpdatePlayersInPlayerManagerGui(playerIndex)
@@ -717,13 +730,13 @@ PlayerHome.UpdateAllOpenPlayerManagerGuis = function()
 end
 
 --- Called to update the player's list in the Player Manager GUI for an admin player who has the GUI currently open.
----@param playerIndex any
----@return table
+---@param playerIndex PlayerIndex
 PlayerHome.UpdatePlayersInPlayerManagerGui = function(playerIndex)
-    -- Check the GUI is sitll open as we expect it to be.
-    if GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_main", "frame") == nil then
-        -- GUI isn't open, so re-open it. This will also re-call this function to show the curernt players.
-        PlayerHome.Gui_OpenPlayerManagerForPlayer(game.get_player(playerIndex), playerIndex)
+    -- Check the GUI is still there (valid) as we expect it to be.
+    local playerManagerGuiElement = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_main", "frame")
+    if playerManagerGuiElement == nil or not playerManagerGuiElement.valid then
+        -- GUI isn't present, so re-open it. This will also re-call this function to show the curernt players.
+        PlayerHome.Gui_OpenPlayerManagerForPlayer(global.playerHome.playerManagerGuiOpened[playerIndex], playerIndex)
         return
     end
 

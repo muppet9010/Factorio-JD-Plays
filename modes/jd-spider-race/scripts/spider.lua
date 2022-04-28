@@ -19,13 +19,15 @@ local EventScheduler = require("utility/event-scheduler")
 local Colors = require("utility.colors")
 local Commands = require("utility.commands")
 local Events = require("utility.events")
-local math_min, math_max, math_floor, math_random = math.min, math.max, math.floor, math.random
+local GuiUtil = require("utility.gui-util")
+local MuppetStyles = require("utility.style-data").MuppetStyles
+local math_min, math_max, math_floor, math_ceil, math_random = math.min, math.max, math.floor, math.ceil, math.random
 
 ---@class JdSpiderRace_BossSpider
 ---@field id UnitNumber @ The UnitNumber of the boss spider entity. Also the key in global.spiders.
 ---@field state JdSpiderRace_BossSpider_State
 ---@field playerTeam JdSpiderRace_PlayerHome_Team
----@field playerTeamName string
+---@field playerTeamName JdSpiderRace_PlayerHome_PlayerTeamNames
 ---@field bossEntity LuaEntity @ The main spider boss entity.
 ---@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
 ---@field gunSpiders table<JdSpiderRace_BossSpider_GunSpiderType, JdSpiderRace_GunSpider> @ The hidden spiders that move with the main spider. They are present just to carry the extra gun types.
@@ -181,6 +183,20 @@ local BossSpider_RconAmmoNames = {
     flamethrowerAmmo = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", bossSpider = true}
 }
 
+---@class JdSpiderRace_BossSpider_ScoreGuiData
+---@field northSpiderTargetDistance string
+---@field northSpiderClearedDistance string
+---@field northSpiderDistancePercentage uint
+---@field northSpiderMaxHealth string
+---@field northSpiderCurrentHealth string
+---@field northSpiderHealthPercentage uint
+---@field southSpiderMaxHealth string
+---@field southSpiderCurrentHealth string
+---@field southSpiderHealthPercentage uint
+---@field southSpiderTargetDistance string
+---@field southSpiderClearedDistance string
+---@field southSpiderDistancePercentage uint
+
 local Settings = {
     bossSpiderStartingLeftDistance = 5000, -- How far left of spawn the center of the spiders area starts the game at.
     spiderDamageToRetreat = 1000,
@@ -210,9 +226,11 @@ end
 Spider.CreateGlobals = function()
     global.spider = global.spider or {}
     global.spider.spiders = global.spider.spiders or {} ---@type table<UnitNumber, JdSpiderRace_BossSpider> @ Key'd by spiders UnitNumber
-    global.spider.playerTeamsSpider = global.spider.playerTeamsSpider or {} ---@type table<string, JdSpiderRace_BossSpider> @ The player team name to the spider they are fighting.
+    global.spider.playerTeamsSpider = global.spider.playerTeamsSpider or {} ---@type table<JdSpiderRace_PlayerHome_PlayerTeamNames, JdSpiderRace_BossSpider> @ The player team name to the spider they are fighting.
     global.spider.showSpiderPlans = global.spider.showSpiderPlans or Settings.showSpiderPlans ---@type boolean
     global.spider.constantMovementFromSpawnPerMinute = global.spider.constantMovementFromSpawnPerMinute or 3 ---@type number
+    global.spider.playersMessageGuiEnabled = global.spider.playersMessageGuiEnabled or {} ---@type table<PlayerIndex, LuaPlayer> @ The players who have set that they want to recieve Message GUI notifications.
+    global.spider.playersScoreGuiEnabled = global.spider.playersScoreGuiEnabled or {} ---@type table<PlayerIndex, LuaPlayer> @ The players who have set that they want the Scrore GUI enabled.
 end
 
 Spider.OnLoad = function()
@@ -220,10 +238,17 @@ Spider.OnLoad = function()
     Commands.Register("spider_incrememt_distance_from_spawn", {"api-description.jd_plays-jd_spider_race-spider_incrememt_distance_from_spawn"}, Spider.Command_IncrementDistanceFromSpawn, true)
     Commands.Register("spider_set_movement_per_minute", {"api-description.jd_plays-jd_spider_race-spider_set_movement_per_minute"}, Spider.Command_SetSpiderMovementPerMinute, true)
     EventScheduler.RegisterScheduledEventType("Spider.SpidersMoveAwayFromSpawn_Scheduled", Spider.SpidersMoveAwayFromSpawn_Scheduled)
+
     Events.RegisterHandlerEvent(defines.events.on_entity_died, "Spider.OnSpiderDied", Spider.OnSpiderDied, {{filter = "name", name = "jd_plays-jd_spider_race-spidertron_boss"}})
+
     Commands.Register("spider_reset_state", {"api-description.jd_plays-jd_spider_race-spider_reset_state"}, Spider.Command_ResetSpiderState, true)
     Commands.Register("spider_full_rearm", {"api-description.jd_plays-jd_spider_race-spider_full_rearm"}, Spider.Command_RearmSpider, true)
     Commands.Register("spider_give_ammo", {"api-description.jd_plays-jd_spider_race-spider_give_ammo"}, Spider.Command_GiveSpiderAmmo, true)
+
+    Events.RegisterHandlerEvent(defines.events.on_lua_shortcut, "Spider.OnLuaShortcut", Spider.OnLuaShortcut)
+
+    Events.RegisterHandlerEvent(defines.events.on_player_created, "Spider.OnPlayerCreated", Spider.OnPlayerCreated)
+    Events.RegisterHandlerEvent(defines.events.on_player_joined_game, "Spider.OnPlayerJoinedGame", Spider.OnPlayerJoinedGame)
 end
 
 Spider.OnStartup = function()
@@ -367,8 +392,6 @@ Spider.UpdateSpidersRoamingValues = function(spider)
         table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.blue, filled = false, width = 10, left_top = {x = spider.roamingXMin, y = spider.roamingYMin}, right_bottom = {x = spider.roamingXMax, y = spider.roamingYMax}, surface = global.general.surface, draw_on_ground = true})
         table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.red, filled = false, width = 10, left_top = {x = spider.fightingXMin, y = spider.fightingYMin}, right_bottom = {x = spider.fightingXMax, y = spider.fightingYMax}, surface = global.general.surface, draw_on_ground = true})
     end
-
-    -- LATER: update distance GUI for this spider's player team.
 end
 
 --- Called when only a boss spider named entity type has been damaged.
@@ -427,6 +450,8 @@ end
 --- Checks both spider's states and activity over the last second.
 ---@param event UtilityScheduledEvent_CallbackObject
 Spider.CheckSpiders_Scheduled = function(event)
+    local updateScoreGuis = false
+
     for _, spider in pairs(global.spider.spiders) do
         -- If spider is dead then nothing to be done.
         if spider.state ~= BossSpider_State.dead then
@@ -435,6 +460,9 @@ Spider.CheckSpiders_Scheduled = function(event)
             if spider.damageTakenThisSecond > 0 then
                 -- Only record the second if damage was done. Keeps the table smaller.
                 spider.secondsWhenDamaged[thisSecond] = spider.damageTakenThisSecond
+
+                -- Only update the score GUIs with the spiders health if its taken damage.
+                updateScoreGuis = true
             end
 
             -- Update the previous damage to consider for this upcoming second.
@@ -479,6 +507,11 @@ Spider.CheckSpiders_Scheduled = function(event)
                 Spider.UpdatePlanRenders(spider)
             end
         end
+    end
+
+    -- Refresh the Score GUI if a spider has been damaged in the last second or every minute.
+    if updateScoreGuis or event.tick % 3600 == 0 then
+        Spider.UpdateAllScoreGuis()
     end
 
     -- Schedule the next seconds event. As the first instance of this schedule always occurs exactly on a second no fancy logic is needed for each reschedule.
@@ -1128,6 +1161,7 @@ Spider.Command_IncrementDistanceFromSpawn = function(commandEvent)
         game.print(commandErrorMessagePrefix .. "Second argument of distance to change by must be a number, recieved: " .. tostring(distanceChange), Colors.lightred)
         return
     end
+    distanceChange = math_ceil(distanceChange) -- Must be in whole tiles, so round it.
 
     -- Impliment command as any errors would have bene flagged by now.
     if playerTeamName == "both" then
@@ -1146,6 +1180,9 @@ Spider.Command_IncrementDistanceFromSpawn = function(commandEvent)
         -- LATER: show GUI message about update.
         local x = 1
     end
+
+    -- Do one scoreboard update for all spiders.
+    Spider.UpdateAllScoreGuis()
 end
 
 --- When the spider_set_movement_per_minute command is called.
@@ -1283,7 +1320,7 @@ Spider.Command_GiveSpiderAmmo = function(commandEvent)
         game.print(commandErrorMessagePrefix .. "Third argument of quantity must be a number, recieved: " .. tostring(quantity), Colors.lightred)
         return
     end
-    quantity = math.floor(quantity)
+    quantity = math_floor(quantity)
 
     if quantity <= 0 then
         game.print(commandErrorMessagePrefix .. "Quantity of 0 or less is ignored, recieved after rounding down: " .. tostring(quantity), Colors.lightred)
@@ -1348,9 +1385,10 @@ Spider.OnSpiderDied = function(event)
     Spider.UpdatePlanRenders(spider)
 
     -- Coin is dropped as loot automatically.
-    game.print("HYPE - boss spider of team " .. spider.playerTeamName .. " killed !!!", Colors.green)
+    game.print({"message.jd_plays-jd_spider_race-spider_killed", spider.playerTeam.prettyName}, Colors.green)
 
-    -- LATER: announce the death and do any GUI stuff, etc. Maybe freeze all spider distance changes and lock the scoreboard?
+    -- LATER: announce the death and do any GUI stuff, etc.
+    Spider.UpdateAllScoreGuis()
 end
 
 --- When the spider_reset_state command is called. Resets it's state variables and teleports it home to fix any odd state it may have got into.
@@ -1385,6 +1423,275 @@ Spider.Command_ResetSpiderState = function(commandEvent)
         gunSpider.entity.teleport(teleportPosition)
     end
     Spider.StartRoaming(spider, teleportPosition)
+end
+
+--- Called for each new player who joins the server.
+---@param event on_player_created
+Spider.OnPlayerCreated = function(event)
+    local player = game.get_player(event.player_index)
+
+    -- Set Mesasge GUI to be enabled by default.
+    global.spider.playersMessageGuiEnabled[event.player_index] = player
+    player.set_shortcut_toggled("jd_plays-jd_spider_race-message-gui_button", true)
+
+    -- Set Score GUI to be enabled by default.
+    global.spider.playersScoreGuiEnabled[event.player_index] = player
+    player.set_shortcut_toggled("jd_plays-jd_spider_race-score-gui_button", true)
+    Spider.Gui_ShowScoreGuiForPlayer(player, event.player_index)
+
+    player.print({"message.jd_plays-jd_spider_race-spider_welcome_1"})
+end
+
+--- Called each time a player joins the game (goes connected).
+---@param event on_player_joined_game
+Spider.OnPlayerJoinedGame = function(event)
+    -- If the player has the Score GUI open refresh it.
+    local scoreEnabledPlayer = global.spider.playersScoreGuiEnabled[event.player_index]
+    if scoreEnabledPlayer ~= nil then
+        Spider.UpdatePlayersScoreGui(event.player_index, scoreEnabledPlayer, Spider.GetScoreGuiData())
+    end
+end
+
+--- Called when a shortcut is used by a player. Check if it was a shortcut we are monitoring.
+---@param event on_lua_shortcut
+Spider.OnLuaShortcut = function(event)
+    local shortcutName = event.prototype_name
+    if shortcutName == "jd_plays-jd_spider_race-score-gui_button" then
+        local enabledPlayer = global.spider.playersScoreGuiEnabled[event.player_index]
+        if enabledPlayer ~= nil then
+            -- Already open, so close it.
+            GuiUtil.DestroyPlayersReferenceStorage(event.player_index, "Score")
+            global.spider.playersScoreGuiEnabled[event.player_index] = nil
+            enabledPlayer.set_shortcut_toggled("jd_plays-jd_spider_race-score-gui_button", false)
+        else
+            -- Not open, so open it.
+            local player = game.get_player(event.player_index)
+            global.spider.playersScoreGuiEnabled[event.player_index] = player
+            player.set_shortcut_toggled("jd_plays-jd_spider_race-score-gui_button", true)
+            Spider.Gui_ShowScoreGuiForPlayer(player, event.player_index)
+        end
+    elseif shortcutName == "jd_plays-jd_spider_race-message-gui_button" then
+        -- Just toggle the stored state for the player.
+        local enabledPlayer = global.spider.playersMessageGuiEnabled[event.player_index]
+        if enabledPlayer ~= nil then
+            -- Already enabled, so turn it off.
+            global.spider.playersMessageGuiEnabled[event.player_index] = nil
+            enabledPlayer.set_shortcut_toggled("jd_plays-jd_spider_race-message-gui_button", false)
+        else
+            -- Not enabled, so turn it on.
+            local player = game.get_player(event.player_index)
+            global.spider.playersMessageGuiEnabled[event.player_index] = player
+            player.set_shortcut_toggled("jd_plays-jd_spider_race-message-gui_button", true)
+        end
+    end
+end
+
+--- Open the Score GUI for the player. They must be on a team when this is done.
+---@param player LuaPlayer
+---@param playerIndex PlayerIndex
+Spider.Gui_ShowScoreGuiForPlayer = function(player, playerIndex)
+    -- Code notes:
+    --      All caption and tooltip names must be manually defined and be prefixed with "[TYPE].jd_plays-jd_spider_race-" so the locale names don't conflict with other modes. As only the mod name is pulled through in to the auto generated names, not the mode name. i.e. {"gui-caption.jd_plays-jd_spider_race-score_test"}.
+    GuiUtil.AddElement(
+        {
+            parent = player.gui.left,
+            descriptiveName = "score_main",
+            type = "frame",
+            storeName = "Score",
+            direction = "vertical",
+            style = MuppetStyles.frame.main_shadowRisen.marginTL_paddingBR,
+            children = {
+                {
+                    -- Header title
+                    type = "label",
+                    style = MuppetStyles.label.heading.large.bold_paddingSides,
+                    caption = {"gui-caption.jd_plays-jd_spider_race-score_title"}
+                },
+                {
+                    -- North team container.
+                    type = "frame",
+                    direction = "vertical",
+                    style = MuppetStyles.frame.content_shadowSunken.paddingBR,
+                    styling = {horizontally_stretchable = true, left_margin = 4},
+                    children = {
+                        {
+                            -- North team title
+                            type = "label",
+                            style = MuppetStyles.label.heading.medium.semibold_paddingSides,
+                            caption = global.playerHome.teams["north"].prettyName
+                        },
+                        {
+                            -- North score details table.
+                            type = "table",
+                            direction = "vertical",
+                            style = MuppetStyles.table.horizontalSpaced,
+                            styling = {left_margin = 4, right_margin = 4},
+                            column_count = 2,
+                            children = {
+                                {
+                                    type = "label",
+                                    style = MuppetStyles.label.text.medium.plain,
+                                    caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_label"},
+                                    tooltip = {"gui-tooltip.jd_plays-jd_spider_race-score_distance_information"}
+                                },
+                                {
+                                    descriptiveName = "score_north_distance",
+                                    type = "label",
+                                    storeName = "Score",
+                                    style = MuppetStyles.label.text.medium.plain,
+                                    caption = nil,
+                                    tooltip = {"gui-tooltip.jd_plays-jd_spider_race-score_distance_information"}
+                                },
+                                {
+                                    type = "label",
+                                    style = MuppetStyles.label.text.medium.plain,
+                                    caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_label"}
+                                },
+                                {
+                                    descriptiveName = "score_north_spider_health",
+                                    type = "label",
+                                    storeName = "Score",
+                                    style = MuppetStyles.label.text.medium.plain,
+                                    caption = nil
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    -- South team container.
+                    type = "frame",
+                    direction = "vertical",
+                    style = MuppetStyles.frame.content_shadowSunken.paddingBR,
+                    styling = {horizontally_stretchable = true, left_margin = 4},
+                    children = {
+                        {
+                            -- South team title
+                            type = "label",
+                            style = MuppetStyles.label.heading.medium.semibold_paddingSides,
+                            caption = global.playerHome.teams["south"].prettyName
+                        },
+                        {
+                            -- South score details table.
+                            type = "table",
+                            direction = "vertical",
+                            style = MuppetStyles.table.horizontalSpaced,
+                            styling = {left_margin = 4, right_margin = 4},
+                            column_count = 2,
+                            children = {
+                                {
+                                    type = "label",
+                                    style = MuppetStyles.label.text.medium.plain,
+                                    caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_label"},
+                                    tooltip = {"gui-tooltip.jd_plays-jd_spider_race-score_distance_information"}
+                                },
+                                {
+                                    descriptiveName = "score_south_distance",
+                                    type = "label",
+                                    storeName = "Score",
+                                    style = MuppetStyles.label.text.medium.plain,
+                                    caption = nil,
+                                    tooltip = {"gui-tooltip.jd_plays-jd_spider_race-score_distance_information"}
+                                },
+                                {
+                                    type = "label",
+                                    style = MuppetStyles.label.text.medium.plain,
+                                    caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_label"}
+                                },
+                                {
+                                    descriptiveName = "score_south_spider_health",
+                                    type = "label",
+                                    storeName = "Score",
+                                    style = MuppetStyles.label.text.medium.plain,
+                                    caption = nil
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+
+    Spider.UpdatePlayersScoreGui(playerIndex, player, Spider.GetScoreGuiData())
+end
+
+--- Called when one or both teams score values change and their score GUI needs to be updated for all players with it open.
+--- Called in the below situations: distance increment RCON command, every second the spider has taken damage, every minute (via spider state check schedule) to catch gradual spider distance changes and built entities.
+Spider.UpdateAllScoreGuis = function()
+    local scoreGuiData = Spider.GetScoreGuiData()
+    for playerIndex, player in pairs(global.spider.playersScoreGuiEnabled) do
+        -- If the player is online then refresh their GUI. Just leave it as-is if they are offline. We will trigger an update when they rejoin.
+        if player.connected then
+            Spider.UpdatePlayersScoreGui(playerIndex, player, scoreGuiData)
+        end
+    end
+end
+
+--- Called to update a specific player's Score GUI.
+---@param playerIndex PlayerIndex
+---@param player LuaPlayer
+---@param scoreGuiData JdSpiderRace_BossSpider_ScoreGuiData
+Spider.UpdatePlayersScoreGui = function(playerIndex, player, scoreGuiData)
+    -- Check the GUI is still there (valid) as we expect it to be.
+    local scoreMainLuaElement = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "Score", "score_main", "frame")
+    if scoreMainLuaElement == nil or not scoreMainLuaElement.valid then
+        -- GUI isn't present, so re-open it. This will also re-call this function to show the curernt players.
+        Spider.Gui_ShowScoreGuiForPlayer(player, playerIndex)
+        return
+    end
+
+    -- Update the north's values.
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_north_distance", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.northSpiderDistancePercentage, scoreGuiData.northSpiderClearedDistance, scoreGuiData.northSpiderTargetDistance}}, false)
+    if scoreGuiData.northSpiderCurrentHealth ~= "0" then
+        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_north_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.northSpiderHealthPercentage, scoreGuiData.northSpiderCurrentHealth, scoreGuiData.northSpiderMaxHealth}}, false)
+    else
+        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_north_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.northSpiderHealthPercentage, "dead", "deader"}}, false)
+    end
+
+    -- Update the south's values.
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_south_distance", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.southSpiderDistancePercentage, scoreGuiData.southSpiderClearedDistance, scoreGuiData.southSpiderTargetDistance}}, false)
+    if scoreGuiData.southSpiderCurrentHealth ~= "0" then
+        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_south_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.southSpiderHealthPercentage, scoreGuiData.southSpiderCurrentHealth, scoreGuiData.southSpiderMaxHealth}}, false)
+    else
+        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_south_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.southSpiderHealthPercentage, "dead", "deader"}}, false)
+    end
+end
+
+--- Gets the data needed for the Score GUI. Just call it once for all players having their GUI updated at once time to avoid excessive API calls.
+---@return JdSpiderRace_BossSpider_ScoreGuiData
+Spider.GetScoreGuiData = function()
+    local spiderMaxHealth = game.entity_prototypes["jd_plays-jd_spider_race-spidertron_boss"].max_health
+    local northSpiderObject, southSpiderObject = global.spider.playerTeamsSpider["north"], global.spider.playerTeamsSpider["south"]
+    local northSpiderCurrentHealth, southSpiderCurrentHealth
+    if northSpiderObject.state ~= BossSpider_State.dead then
+        northSpiderCurrentHealth = northSpiderObject.bossEntity.health
+    else
+        northSpiderCurrentHealth = 0
+    end
+    if southSpiderObject.state ~= BossSpider_State.dead then
+        southSpiderCurrentHealth = southSpiderObject.bossEntity.health
+    else
+        southSpiderCurrentHealth = 0
+    end
+    local northMostLeftBuiltEntityYDistance, southMostLeftBuiltEntityYDistance = 0 - math_floor(global.playerHome.teams["north"].mostLeftBuiltEntityXPosition - global.playerHome.spawnXOffset), 0 - math_floor(global.playerHome.teams["south"].mostLeftBuiltEntityXPosition - global.playerHome.spawnXOffset)
+
+    ---@type JdSpiderRace_BossSpider_ScoreGuiData
+    local scoreGuiData = {
+        northSpiderCurrentHealth = Utils.DisplayNumberPretty(math_ceil(northSpiderCurrentHealth)),
+        northSpiderMaxHealth = Utils.DisplayNumberPretty(spiderMaxHealth),
+        northSpiderHealthPercentage = math_ceil((northSpiderCurrentHealth / spiderMaxHealth) * 100),
+        southSpiderCurrentHealth = Utils.DisplayNumberPretty(math_ceil(southSpiderCurrentHealth)),
+        southSpiderMaxHealth = Utils.DisplayNumberPretty(spiderMaxHealth),
+        southSpiderHealthPercentage = math_ceil((southSpiderCurrentHealth / spiderMaxHealth) * 100),
+        northSpiderTargetDistance = Utils.DisplayNumberPretty(northSpiderObject.distanceFromSpawn),
+        northSpiderClearedDistance = Utils.DisplayNumberPretty(northMostLeftBuiltEntityYDistance),
+        northSpiderDistancePercentage = math_ceil((northMostLeftBuiltEntityYDistance / northSpiderObject.distanceFromSpawn) * 100),
+        southSpiderTargetDistance = Utils.DisplayNumberPretty(southSpiderObject.distanceFromSpawn),
+        southSpiderClearedDistance = Utils.DisplayNumberPretty(southMostLeftBuiltEntityYDistance),
+        southSpiderDistancePercentage = math_ceil((southMostLeftBuiltEntityYDistance / southSpiderObject.distanceFromSpawn) * 100)
+    }
+    return scoreGuiData
 end
 
 return Spider
