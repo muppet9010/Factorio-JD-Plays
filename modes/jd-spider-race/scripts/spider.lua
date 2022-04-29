@@ -3,12 +3,6 @@
 ]]
 --
 
---[[
-    TODO LATER:
-        - Turn off testing settings for review release.
-]]
---
-
 local Spider = {}
 local Utils = require("utility.utils")
 local EventScheduler = require("utility/event-scheduler")
@@ -1042,11 +1036,19 @@ Spider.GetEntitiesControllingPlayer = function(entity)
     elseif entityType == "spider-vehicle" or entityType == "car" or entityType == "artillery-wagon" or entityType == "cargo-wagon" or entityType == "fluid-wagon" or entityType == "locomotive" then
         local driverCharacter = entity.get_driver()
         if driverCharacter ~= nil then
-            return driverCharacter.player
+            if driverCharacter.is_player() then
+                return driverCharacter -- Editor mode.
+            else
+                return driverCharacter.player
+            end
         else
             local passengerCharacter = entity.get_passenger()
             if passengerCharacter ~= nil then
-                return passengerCharacter.player
+                if driverCharacter.is_player() then
+                    return passengerCharacter -- Editor mode.
+                else
+                    return passengerCharacter.player
+                end
             else
                 return nil
             end

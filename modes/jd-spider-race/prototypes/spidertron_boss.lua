@@ -193,7 +193,8 @@ local function create_boss_spidertron(arguments)
                     },
                     military_target = "spidertron-military-target"
                 },
-                loot = {{item = "coin"}}
+                loot = {{item = "coin"}}, -- Added as reward.
+                hit_visualization_box = {{-1.5, -5.5}, {1.5, -3}} -- Added so lasers targetted at the spider hit the body and not the ground between its feet.
             },
             make_spidertron_leg(arguments.name, leg_scale, arguments.leg_thickness, arguments.leg_movement_speed, 1),
             make_spidertron_leg(arguments.name, leg_scale, arguments.leg_thickness, arguments.leg_movement_speed, 2),
