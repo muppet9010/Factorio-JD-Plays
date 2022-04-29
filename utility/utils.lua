@@ -1510,7 +1510,32 @@ end
 ---@param orientation RealOrientation
 ---@return MapPosition
 Utils.GetPositionForOrientationDistance = function(startingPos, distance, orientation)
-    return Utils.GetPositionForAngledDistance(startingPos, distance, orientation * 360)
+    local angle = orientation * 360
+    if angle < 0 then
+        angle = 360 + angle
+    end
+    local angleRad = math_rad(angle)
+    local newPos = {
+        x = (distance * math_sin(angleRad)) + startingPos.x,
+        y = (distance * -math_cos(angleRad)) + startingPos.y
+    }
+    return newPos
+end
+
+--- Gets the position for a distance along a line from a starting positon towards a target position.
+---@param startingPos MapPosition
+---@param targetPos MapPosition
+---@param distance number
+---@return MapPosition
+Utils.GetPositionForDistanceBetween2Points = function(startingPos, targetPos, distance)
+    local angleRad = -math.atan2(startingPos.y - targetPos.y, targetPos.x - startingPos.x) + 1.5707963267949 -- Static value is to re-align it from east to north as 0 value.
+    -- equivilent to: math.rad(math.deg(-math.atan2(startingPos.y - targetPos.y, targetPos.x - startingPos.x)) + 90)
+
+    local newPos = {
+        x = (distance * math_sin(angleRad)) + startingPos.x,
+        y = (distance * -math_cos(angleRad)) + startingPos.y
+    }
+    return newPos
 end
 
 Utils.FindWhereLineCrossesCircle = function(radius, slope, yIntercept)

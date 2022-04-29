@@ -5,10 +5,7 @@
 
 --[[
     TODO LATER:
-        - Use active danger checking when moving:
-            - When we charge at a target we should target the position half weapons distance away from it. As we actually "arrive" when 10 tiles near the target position and then go in to a fighting stance if the enemy is vaguely close. This should stop the spider walking too close to turrets it knows about.
-            - When the spider is chasing (moving for combat?) have it do a target scan around its current position and where it will roughly reach in the next second. Should just be looking for any enemies that will attack it. If found should go in to combat state against them. Really just to stop it running so deep in to turret lines when chasing or charging at targets. When its roaming should it do the same?
-            - Turn off testing settings for review release.
+        - Turn off testing settings for review release.
 ]]
 --
 
@@ -203,7 +200,8 @@ local Settings = {
     spidersRoamingXRange = 100, -- How far up and down from the centre of a teams lane the spider will roam.
     spidersFightingXRange = 1000, -- Random limit to stop it chasing infinitely.
     spidersFightingStepDistance = 5, -- How far the spider will move away from its current location when fighting per second. - value of 2 or lower known to cause weird failed leg movement actions.
-    distanceToCheckForEnemiesNearby = 50, -- How far around it the spider will look for enemies nearby before considering other actions when fighting.
+    distanceToCheckForEnemiesNearby = 60, -- How far around it the spider will look for enemies nearby before considering other actions when fighting. This is a bit above how far the spider can move in a second plus its max weapons range, to try and avoid it stepping forwards and then next second stepping backwards.
+    distanceSpiderMovesinSecond = 21, -- Approximate distance a full speed boss spider will cover over 1 second.
     showSpiderPlans = false, -- If enabled the plans of a spider are rendered.
     markSpiderAreas = false -- If enabled the roaming and fighting areas of the spiders are marked with lines. Blue for roaming and red for fighting.
 }
@@ -578,6 +576,12 @@ Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
         Spider.StartFighting(spider, spidersCurrentPosition)
     else
         -- Spider is still moving towards its existing target location.
+
+        if Spider.CheckAndEngageNearEnemiesTowardsTarget(spider, spidersCurrentPosition, spider.chasingEntityLastPosition) then
+            -- Spider will stop short of the target position and fight for the next second.
+            return
+        end
+
         -- A spider can't "follow" another entity, it can only have its destination updated to the entities current position. This is how vanilla Factorio works.
         Spider.OrderSpiderToStartMovingToPosition(spider, spider.chasingEntityLastPosition)
     end
@@ -635,7 +639,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             -- No need to check if theres anything to kill within weapons range as we check for nearby enemies on next stage of fallback behaviour.
             -- So do fallback behaviour.
         else
-            -- There is a short term target so handle it.
+            -- There is a long term target so handle it.
             Spider.FightTargetTypeWhileNotBeingDamaged(spider, spidersCurrentPosition, "chasing", spidersMaxShootingRange)
             return
         end
@@ -805,7 +809,7 @@ Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosi
     end
 end
 
---- Check a chased/lastDamaged target is still valid. If chasign a player it updates the target entity. Always updates target position. If the entity isn't valid or has left the fighting area it blanks out all target data. To make the chasing ad fighting logic simplier.
+--- Check a chased/lastDamaged target is still valid. If chasing a player it updates the target entity. Always updates target position. If the entity isn't valid or has left the fighting area it blanks out all target data. To make the chasing ad fighting logic simplier.
 ---@param spider JdSpiderRace_BossSpider
 ---@param chasingOrLastDamaged '"chasing"'|'"lastDamaged"'
 Spider.UpdateTargetsDetails = function(spider, chasingOrLastDamaged)
@@ -967,12 +971,18 @@ Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition)
         currentTargetPosition = spider.chasingEntityLastPosition
     end
 
-    local distanceToAttacker = Utils.GetDistance(spidersCurrentPosition, currentTargetPosition)
-    if distanceToAttacker <= Spider.GetSpidersEngagementRange(spider) then
+    local distanceToAttacker, spidersMaxShootingRange = Utils.GetDistance(spidersCurrentPosition, currentTargetPosition), Spider.GetSpidersEngagementRange(spider)
+    if distanceToAttacker <= spidersMaxShootingRange then
         -- Attacker is close enough to start fighting already.
         Spider.StartFighting(spider, spidersCurrentPosition)
     else
         -- Spider will start moving to the position the last attacking enemy was at.
+
+        if Spider.CheckAndEngageNearEnemiesTowardsTarget(spider, spidersCurrentPosition, currentTargetPosition) then
+            -- Spider will stop short of the target position and fight for the next second.
+            return
+        end
+
         spider.state = BossSpider_State.chasing
         Spider.OrderSpiderToStartMovingToPosition(spider, currentTargetPosition)
         if Settings.showSpiderPlans then
@@ -989,6 +999,35 @@ Spider.StartFighting = function(spider, spidersCurrentPosition)
     Spider.ManageFightingForSecond(spider, spidersCurrentPosition)
     if Settings.showSpiderPlans then
         Spider.UpdatePlanRenders(spider)
+    end
+end
+
+--- Check if there is anything the spider needs to fight for where it will be in 1 seconds time. This is to avoid it chasing in to static defences.
+---@param spider JdSpiderRace_BossSpider
+---@param spidersCurrentPosition MapPosition
+---@param targetPosition MapPosition
+---@return boolean targetFound
+Spider.CheckAndEngageNearEnemiesTowardsTarget = function(spider, spidersCurrentPosition, targetPosition)
+    local spidersMaxShootingRange = Spider.GetSpidersEngagementRange(spider)
+    local approximateSpiderPositionIn1Second = Utils.GetPositionForDistanceBetween2Points(spidersCurrentPosition, targetPosition, Settings.distanceSpiderMovesinSecond)
+    local nearestEnemyIn1Second = global.general.surface.find_nearest_enemy {position = approximateSpiderPositionIn1Second, max_distance = spidersMaxShootingRange, force = spider.playerTeam.enemyForce}
+
+    if nearestEnemyIn1Second ~= nil then
+        -- Will be within range of an enemy in 1 second.
+
+        -- Order the spider to move to just within weapons range of the target and set the state for fighting so that the next 1 second cycle it will start fightign from the correct position. Don't enter fighting now as nothing will be in range until it's done this extra movement (distance up to the spiders movement per second).
+        -- Note that a spider has to slow down and so will likely overshoot the distance a bit.
+        local positionToStopAt = Utils.GetPositionForDistanceBetween2Points(nearestEnemyIn1Second.position, spidersCurrentPosition, spidersMaxShootingRange)
+        Spider.OrderSpiderToStartMovingToPosition(spider, positionToStopAt)
+        spider.state = BossSpider_State.fighting
+        if Settings.showSpiderPlans then
+            rendering.draw_text {text = "stopping charge before walking in to enemy", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
+            Spider.UpdatePlanRenders(spider)
+        end
+        return true
+    else
+        -- Nothing in range where the spider will be in 1 seconds time.
+        return false
     end
 end
 
