@@ -1164,19 +1164,25 @@ Spider.Command_IncrementDistanceFromSpawn = function(commandEvent)
     distanceChange = math_ceil(distanceChange) -- Must be in whole tiles, so round it.
 
     -- Impliment command as any errors would have bene flagged by now.
+    local messageLocalisedString
+    if distanceChange > 0 then
+        messageLocalisedString = {"message.jd_plays-jd_spider_race-spider_moved_away_from_spawn", Utils.DisplayNumberPretty(distanceChange)}
+    else
+        messageLocalisedString = {"message.jd_plays-jd_spider_race-spider_moved_towards_spawn", Utils.DisplayNumberPretty(-distanceChange)}
+    end
     if playerTeamName == "both" then
         -- Update both team's spiders.
         for _, spider in pairs(global.spider.spiders) do
             spider.distanceFromSpawn = spider.distanceFromSpawn + distanceChange
             Spider.UpdateSpidersRoamingValues(spider)
-            Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_moved_from_spawn", Utils.DisplayNumberPretty(distanceChange)})
+            Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, messageLocalisedString)
         end
     else
         -- Just update the 1 team's spider.
         local spider = global.spider.playerTeamsSpider[playerTeamName]
         spider.distanceFromSpawn = spider.distanceFromSpawn + distanceChange
         Spider.UpdateSpidersRoamingValues(spider)
-        Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_moved_from_spawn", Utils.DisplayNumberPretty(distanceChange)})
+        Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, messageLocalisedString)
     end
 
     -- Do one scoreboard update for all spiders.
@@ -1494,7 +1500,7 @@ Spider.Gui_ShowScoreGuiForPlayer = function(player, playerIndex)
             storeName = "Score",
             direction = "vertical",
             style = MuppetStyles.frame.main_shadowRisen.marginTL,
-            styling = {width = 334}, -- Width of the starting GUI size so the inner frames can stretch to fill it without the entire GUI growing when other large GUIs are added to the left of screen.
+            styling = {width = 259}, -- Width of the starting GUI size so the inner frames can stretch to fill it without the entire GUI growing when other large GUIs are added to the left of screen.
             children = {
                 {
                     -- Header title
@@ -1526,8 +1532,7 @@ Spider.Gui_ShowScoreGuiForPlayer = function(player, playerIndex)
                                 {
                                     type = "label",
                                     style = MuppetStyles.label.text.medium.plain,
-                                    caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_label"},
-                                    tooltip = {"gui-tooltip.jd_plays-jd_spider_race-score_distance_information"}
+                                    caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_label"}
                                 },
                                 {
                                     descriptiveName = "score_north_distance",
@@ -1535,7 +1540,7 @@ Spider.Gui_ShowScoreGuiForPlayer = function(player, playerIndex)
                                     storeName = "Score",
                                     style = MuppetStyles.label.text.medium.plain,
                                     caption = nil,
-                                    tooltip = {"gui-tooltip.jd_plays-jd_spider_race-score_distance_information"}
+                                    tooltip = nil
                                 },
                                 {
                                     type = "label",
@@ -1637,7 +1642,7 @@ Spider.UpdatePlayersScoreGui = function(playerIndex, player, scoreGuiData)
     end
 
     -- Update the north's values.
-    GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_north_distance", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.northSpiderDistancePercentage, scoreGuiData.northSpiderClearedDistance, scoreGuiData.northSpiderTargetDistance}}, false)
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_north_distance", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.northSpiderDistancePercentage, scoreGuiData.northSpiderTargetDistance}, tooltip = {"gui-tooltip.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.northSpiderClearedDistance, scoreGuiData.northSpiderTargetDistance}}, false)
     if scoreGuiData.northSpiderCurrentHealth ~= "0" then
         GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_north_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.northSpiderHealthPercentage, scoreGuiData.northSpiderCurrentHealth, scoreGuiData.northSpiderMaxHealth}}, false)
     else
@@ -1645,7 +1650,7 @@ Spider.UpdatePlayersScoreGui = function(playerIndex, player, scoreGuiData)
     end
 
     -- Update the south's values.
-    GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_south_distance", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.southSpiderDistancePercentage, scoreGuiData.southSpiderClearedDistance, scoreGuiData.southSpiderTargetDistance}}, false)
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_south_distance", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.southSpiderDistancePercentage, scoreGuiData.southSpiderTargetDistance}, tooltip = {"gui-tooltip.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.southSpiderClearedDistance, scoreGuiData.southSpiderTargetDistance}}, false)
     if scoreGuiData.southSpiderCurrentHealth ~= "0" then
         GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_south_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.southSpiderHealthPercentage, scoreGuiData.southSpiderCurrentHealth, scoreGuiData.southSpiderMaxHealth}}, false)
     else

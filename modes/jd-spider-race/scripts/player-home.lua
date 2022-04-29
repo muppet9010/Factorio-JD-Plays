@@ -68,7 +68,7 @@ PlayerHome.OnStartup = function()
         global.playerHome.teams["south"].playerNames["mukkie"] = false
     end
 
-    -- disable autofiring cross border
+    -- Disable autofiring cross border. Manual damage is undone in reaction to the on_damaged_event.
     local north = global.playerHome.teams["north"].playerForce
     local north_enemy = global.playerHome.teams["north"].enemyForce
     local south = global.playerHome.teams["south"].playerForce
@@ -82,7 +82,7 @@ PlayerHome.OnStartup = function()
     south_enemy.set_cease_fire(north, true)
     south_enemy.set_cease_fire(north_enemy, true)
 
-    -- don't allow firendly fire within the biter teams. To protect against spider nukes and flamethrower.
+    -- Don't allow firendly fire within the biter teams. To protect against spider nukes and flamethrower.
     north_enemy.friendly_fire = false
     south_enemy.friendly_fire = false
 
@@ -91,12 +91,10 @@ PlayerHome.OnStartup = function()
     for _, perm in pairs(defines.input_action) do
         group.set_allows_action(perm, false)
     end
-
-    -- Allow spamming of chat if forgotten to be placed in a group
-    group.set_allows_action(defines.input_action.write_to_console, true)
-
-    -- For admins, if things go badly wrong
-    group.set_allows_action(defines.input_action.edit_permission_group, true)
+    group.set_allows_action(defines.input_action.write_to_console, true) -- Allow spamming of chat if forgotten to be placed in a group.
+    group.set_allows_action(defines.input_action.edit_permission_group, true) -- For admins, if things go badly wrong.
+    group.set_allows_action(defines.input_action.lua_shortcut, true) -- So admins can access the Player Manager GUI.
+    group.set_allows_action(defines.input_action.gui_click, true) -- So admins can use the Player Manager GUI.
 end
 
 ---@param teamId JdSpiderRace_PlayerHome_PlayerTeamNames
@@ -811,7 +809,7 @@ PlayerHome.On_PlayerManagerAssignPlayerClicked = function(event)
 
     -- Move the player if they are not currently on the assigned team.
     local playersCurrentTeam = global.playerHome.playerIdToTeam[player.index]
-    if newTeamName ~= playersCurrentTeam.id then
+    if playersCurrentTeam == nil or newTeamName ~= playersCurrentTeam.id then
         -- Player not currently on the selected team, so move them.
         PlayerHome.AssignPlayerToTeam(playerName, player, global.playerHome.teams[newTeamName])
     end
