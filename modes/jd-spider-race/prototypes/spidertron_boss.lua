@@ -13,6 +13,49 @@ end
     Copy of spidertron generation functions from vanilla Factorio, but with some changes (commented): base\prototypes\entity\entities.lua
 ]]
 --
+
+local function get_leg_hit_the_ground_trigger()
+    return {
+        {
+            type = "create-trivial-smoke",
+            smoke_name = "smoke-building",
+            repeat_count = 4,
+            starting_frame_deviation = 5,
+            starting_frame_speed_deviation = 5,
+            offset_deviation = {{-0.2, -0.2}, {0.2, 0.2}},
+            speed_from_center = 0.03
+        }
+    }
+end
+
+local function make_spidertron_leg(spidertron_name, scale, leg_thickness, movement_speed, number, base_sprite, ending_sprite)
+    return {
+        type = "spider-leg",
+        name = spidertron_name .. "-leg-" .. number,
+        localised_name = {"entity-name.spidertron-leg"},
+        collision_box = {{-0.05, -0.05}, {0.05, 0.05}},
+        selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
+        icon = "__base__/graphics/icons/spidertron.png",
+        icon_size = 64,
+        icon_mipmaps = 4,
+        walking_sound_volume_modifier = 0.6,
+        target_position_randomisation_distance = 0.25 * scale,
+        minimal_step_size = 1 * scale,
+        working_sound = {
+            match_progress_to_activity = true,
+            sound = sounds.spidertron_leg,
+            audible_distance_modifier = 0.5
+        },
+        part_length = 3.5 * scale,
+        initial_movement_speed = 0.06 * movement_speed,
+        movement_acceleration = 0.03 * movement_speed,
+        max_health = 100,
+        movement_based_position_selection_distance = 4 * scale,
+        selectable_in_game = false,
+        graphics_set = create_spidertron_leg_graphics_set(scale * leg_thickness, number)
+    }
+end
+
 local function create_boss_spidertron(arguments)
     local scale = arguments.scale
     local leg_scale = scale * arguments.leg_scale
@@ -206,48 +249,6 @@ local function create_boss_spidertron(arguments)
             make_spidertron_leg(arguments.name, leg_scale, arguments.leg_thickness, arguments.leg_movement_speed, 8)
         }
     )
-end
-
-local function get_leg_hit_the_ground_trigger()
-    return {
-        {
-            type = "create-trivial-smoke",
-            smoke_name = "smoke-building",
-            repeat_count = 4,
-            starting_frame_deviation = 5,
-            starting_frame_speed_deviation = 5,
-            offset_deviation = {{-0.2, -0.2}, {0.2, 0.2}},
-            speed_from_center = 0.03
-        }
-    }
-end
-
-local function make_spidertron_leg(spidertron_name, scale, leg_thickness, movement_speed, number, base_sprite, ending_sprite)
-    return {
-        type = "spider-leg",
-        name = spidertron_name .. "-leg-" .. number,
-        localised_name = {"entity-name.spidertron-leg"},
-        collision_box = {{-0.05, -0.05}, {0.05, 0.05}},
-        selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
-        icon = "__base__/graphics/icons/spidertron.png",
-        icon_size = 64,
-        icon_mipmaps = 4,
-        walking_sound_volume_modifier = 0.6,
-        target_position_randomisation_distance = 0.25 * scale,
-        minimal_step_size = 1 * scale,
-        working_sound = {
-            match_progress_to_activity = true,
-            sound = sounds.spidertron_leg,
-            audible_distance_modifier = 0.5
-        },
-        part_length = 3.5 * scale,
-        initial_movement_speed = 0.06 * movement_speed,
-        movement_acceleration = 0.03 * movement_speed,
-        max_health = 100,
-        movement_based_position_selection_distance = 4 * scale,
-        selectable_in_game = false,
-        graphics_set = create_spidertron_leg_graphics_set(scale * leg_thickness, number)
-    }
 end
 --[[
         End of copied spidertron creation code.

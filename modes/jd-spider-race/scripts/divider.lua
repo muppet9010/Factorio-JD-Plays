@@ -28,7 +28,7 @@ end
 
 Divider.OnStartup = function()
     -- Make sure a player on wrong side of divide is scheduled.
-    if not EventScheduler.IsEventScheduledOnce(Divider.CheckForDivideCrossedPlayers_Scheduled, nil, nil) then
+    if not EventScheduler.IsEventScheduledOnce("Divider.CheckForDivideCrossedPlayers_Scheduled", nil, nil) then
         EventScheduler.ScheduleEventOnce(game.tick + 18000, "Divider.CheckForDivideCrossedPlayers_Scheduled")
     end
 end

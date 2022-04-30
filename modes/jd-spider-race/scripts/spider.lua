@@ -44,6 +44,7 @@ local math_min, math_max, math_floor, math_ceil, math_random = math.min, math.ma
 ---@field chasingEntity LuaEntity|null @ The initial target entity that the boss spider is trying to hunt down. It may get distracted and fight other things on the way to this. Recorded when the initial damage is done to a non fighting spider and so may become invalid during runtime, if so it will be set back to nil. Only recorded if it is within the spiders attacking range.
 ---@field chasingPlayer LuaPlayer|null @ If the chasingEntity was a player controlled entity then this references the player to allow tracking across multiple entities (vehicles/character).
 ---@field chasingEntityLastPosition MapPosition|null @ The last known position of the chasingEntity. To act as a fallback for if the entity is no longer valid. Only recorded/updated if it is within the spiders attacking range.
+---@field lastSentBitersToAttackTick Tick @ Last tick that biters were sent to attack the player in response to the spider being attacked.
 
 ---@class JdSpiderRace_GunSpider
 ---@field type JdSpiderRace_BossSpider_GunSpiderType
@@ -190,20 +191,22 @@ local BossSpider_RconAmmoNames = {
 local Settings = {
     bossSpiderStartingLeftDistance = 5000, -- How far left of spawn the center of the spiders area starts the game at.
     spiderDamageToRetreat = 1000,
-    spiderDamageSecondsConsidered = 30, -- How many seconds in the past the spider will consider to see if it has sustained enough damage to retreat.
+    spiderDamageSecondsConsidered = 60, -- How many seconds in the past the spider will consider to see if it has sustained enough damage to retreat.
+    spiderDistanceToRetreat = 1000, -- How far to increment a spider's distance to the left by when it is forced to retreat.
     spidersRoamingXRange = 100, -- How far up and down from the centre of a teams lane the spider will roam.
     spidersFightingXRange = 1000, -- Random limit to stop it chasing infinitely.
     spidersFightingStepDistance = 5, -- How far the spider will move away from its current location when fighting per second. - value of 2 or lower known to cause weird failed leg movement actions.
     distanceToCheckForEnemiesNearby = 60, -- How far around it the spider will look for enemies nearby before considering other actions when fighting. This is a bit above how far the spider can move in a second plus its max weapons range, to try and avoid it stepping forwards and then next second stepping backwards.
     distanceSpiderMovesinSecond = 21, -- Approximate distance a full speed boss spider will cover over 1 second.
     showSpiderPlans = false, -- If enabled the plans of a spider are rendered.
-    markSpiderAreas = false -- If enabled the roaming and fighting areas of the spiders are marked with lines. Blue for roaming and red for fighting.
+    markSpiderAreas = false, -- If enabled the roaming and fighting areas of the spiders are marked with lines. Blue for roaming and red for fighting.
+    BitersSentToRetaliateMaxFrequency = 18000 -- The max frequency all biters near the spider can be sent at the players in retaliation for attackign the spider.
 }
 
 -- Testing is for development and is very adhoc in what it changes to allow simplier testing.
 local Testing = true
 if Testing then
-    Settings.bossSpiderStartingLeftDistance = 500
+    Settings.bossSpiderStartingLeftDistance = 1000
     --Settings.spidersRoamingXRange = 20
     Settings.spidersFightingXRange = 300
     Settings.showSpiderPlans = true
@@ -303,7 +306,8 @@ Spider.CreateSpider = function(playerTeam)
         chasingPlayer = nil,
         chasingEntity = nil,
         chasingEntityLastPosition = nil,
-        hasAmmo = nil -- Populated later in creation function.
+        hasAmmo = nil, -- Populated later in creation function.
+        lastSentBitersToAttackTick = -999999 -- Set to ages ago so first trigger attempt always works.
     }
 
     Spider.UpdateSpidersRoamingValues(spider)
@@ -384,6 +388,9 @@ Spider.UpdateSpidersRoamingValues = function(spider)
         table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.blue, filled = false, width = 10, left_top = {x = spider.roamingXMin, y = spider.roamingYMin}, right_bottom = {x = spider.roamingXMax, y = spider.roamingYMax}, surface = global.general.surface, draw_on_ground = true})
         table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.red, filled = false, width = 10, left_top = {x = spider.fightingXMin, y = spider.fightingYMin}, right_bottom = {x = spider.fightingXMax, y = spider.fightingYMax}, surface = global.general.surface, draw_on_ground = true})
     end
+
+    -- Request the chunks to be generated around this area. The ones beyond the spider center will be important if the spider is attacked as we want bases to be there so the spider can call biters from them.
+    global.general.surface.request_to_generate_chunks({x = spider.roamingXMin, y = spider.playerTeam.spawnPosition.y}, 10)
 end
 
 --- Called when only a boss spider named entity type has been damaged.
@@ -418,20 +425,26 @@ Spider.OnBossSpiderEntityDamaged = function(event)
             return
         end
 
-        -- If the target position isn't within the allowed fighting area then ignore it.
+        -- If the target position is within the allowed fighting area then react to it, otherwise it is ignored.
         if Spider.IsFightingTargetPositionWithinAllowedFightingArea(spider, lastDamagedFromPosition) then
+            local spidersCurrentPosition = spider.bossEntity.position
+
+            -- Work out what to record this valid attacker as on the spiders target list.
             if spider.chasingEntityLastPosition == nil then
                 -- Spider wasn't already chasing anything, so start now.
                 spider.chasingPlayer = Spider.GetEntitiesControllingPlayer(event.cause)
                 spider.chasingEntity = event.cause
                 spider.chasingEntityLastPosition = lastDamagedFromPosition
+
+                Spider.CallNearbyBitersForHelp(spider, event.tick, event.force, spidersCurrentPosition)
             else
                 -- Spider was already chasing something, so just record the damage originator for the short term fighting.
                 spider.lastDamagedByPlayer = Spider.GetEntitiesControllingPlayer(event.cause)
                 spider.lastDamagedByEntity = event.cause
                 spider.lastDamagedFromPosition = lastDamagedFromPosition
             end
-            Spider.ChargeAtAttacker(spider, spider.bossEntity.position)
+            Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
+
             return
         end
     end
@@ -943,9 +956,14 @@ end
 Spider.Retreat = function(spider)
     Spider.ClearStateVariables(spider)
 
+    spider.distanceFromSpawn = spider.distanceFromSpawn + Settings.spiderDistanceToRetreat
+    Spider.UpdateSpidersRoamingValues(spider)
+    game.print({"message.jd_plays-jd_spider_race-spider_retreated", spider.playerTeam.prettyName}, Colors.green)
+
     spider.state = BossSpider_State.retreating
     spider.retreatingTargetPosition = {x = spider.roamingXMin, y = math_random(spider.roamingYMin, spider.roamingYMax)}
     Spider.OrderSpiderToStartMovingToPosition(spider, spider.retreatingTargetPosition)
+
     if Settings.showSpiderPlans then
         Spider.UpdatePlanRenders(spider)
     end
@@ -1055,6 +1073,25 @@ Spider.GetEntitiesControllingPlayer = function(entity)
         end
     else
         return nil
+    end
+end
+
+--- Send all the biters in a very large area at the players spawn area if this hasn't been done recently.
+--- Currently just done when a new main target is defined. Don't want it running too frequently as it will potentailly trigger a lot of biters.
+---@param spider JdSpiderRace_BossSpider
+---@param currentTick Tick
+---@param attackingForce LuaForce
+---@param spidersCurrentPosition MapPosition
+Spider.CallNearbyBitersForHelp = function(spider, currentTick, attackingForce, spidersCurrentPosition)
+    if currentTick > spider.lastSentBitersToAttackTick + Settings.BitersSentToRetaliateMaxFrequency then
+        -- Creates one massive group for use with biter attracter entity call_for_help_radius of 500.
+        -- Alternative code to create smaller groups at end of file in comment block.
+        local summoningWorm = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-biter_attracter_turret", position = {x = spidersCurrentPosition.x, y = spider.playerTeam.spawnPosition.y}, force = spider.playerTeam.enemyForce} -- Place in middle of lane to get all biters in lane.
+        local biterTargetEntity = global.general.surface.create_entity {name = "gun-turret", position = spider.playerTeam.spawnPosition, force = spider.playerTeam.playerForce}
+        summoningWorm.damage(100000000, attackingForce, "impact", biterTargetEntity)
+        biterTargetEntity.destroy()
+        game.play_sound {path = "jd_plays-jd_spider_race-spidertron_boss_attacked", position = spidersCurrentPosition}
+        spider.lastSentBitersToAttackTick = currentTick
     end
 end
 
@@ -1779,5 +1816,43 @@ Spider.RemoveMessageFromPlayers_Scheduled = function(event)
         end
     end
 end
+
+-- ALTERNATIVE CODE: - creates lots of smaller groups of biters to attack the player in response to a spider beign attacked.
+--[[
+            -- Send all the biters in a very large area at the players spawn area.
+            -- Creates a lot of smaller groups for use with biter attracter entity call_for_help_radius of 100.
+            ---@typelist MapPosition, LuaEntity
+            local position, summoningWorm
+            local rowsStart
+            local mapHeight100s = math.floor(global.general.perTeamMapHeight / 100) * 100
+            if spider.playerTeam.spawnPosition.y < 0 then
+                rowsStart = -mapHeight100s
+            else
+                rowsStart = mapHeight100s
+            end
+            -- Do as a series of biter attracters so that they don't try and form mega groups as these tend to get bogged down and delay the groups arrival.
+            for rows = rowsStart, rowsStart + mapHeight100s, 100 do
+                if rows % 200 == 0 then
+                    -- Even rows - To get the bulk of the area.
+                    local biterTargetEntity = global.general.surface.create_entity {name = "gun-turret", position = {x = spider.playerTeam.spawnPosition.x, y = rows}, force = spider.playerTeam.playerForce}
+                    for columns = -400, 400, 200 do
+                        position = {x = spidersCurrentPosition.x + columns, y = rows}
+                        summoningWorm = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-biter_attracter_turret", position = position, force = spider.playerTeam.enemyForce}
+                        summoningWorm.damage(100000000, event.force, "impact", biterTargetEntity)
+                    end
+                    biterTargetEntity.destroy()
+                else
+                    -- Odd rows - To get the gaps in the even row points.
+                    local biterTargetEntity = global.general.surface.create_entity {name = "gun-turret", position = {x = spider.playerTeam.spawnPosition.x, y = rows}, force = spider.playerTeam.playerForce}
+                    for columns = -300, 300, 200 do
+                        position = {x = spidersCurrentPosition.x + columns, y = rows}
+                        summoningWorm = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-biter_attracter_turret", position = position, force = spider.playerTeam.enemyForce}
+                        summoningWorm.damage(100000000, event.force, "impact", biterTargetEntity)
+                    end
+                    biterTargetEntity.destroy()
+                end
+            end
+            --]]
+--
 
 return Spider
