@@ -1460,7 +1460,9 @@ Spider.OnSpiderDied = function(event)
         turretDetails.entity.destroy()
     end
 
-    Spider.UpdatePlanRenders(spider)
+    if Settings.showSpiderPlans then
+        Spider.UpdatePlanRenders(spider)
+    end
 
     -- Coin is dropped as loot automatically.
 
@@ -1722,17 +1724,17 @@ Spider.UpdatePlayersScoreGui = function(playerIndex, player, scoreGuiData)
     -- Update the north's values.
     GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_north_distance", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.northSpiderDistancePercentage, scoreGuiData.northSpiderTargetDistance}, tooltip = {"gui-tooltip.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.northSpiderClearedDistance, scoreGuiData.northSpiderTargetDistance}}, false)
     if scoreGuiData.northSpiderCurrentHealth ~= "0" then
-        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_north_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.northSpiderHealthPercentage, scoreGuiData.northSpiderCurrentHealth, scoreGuiData.northSpiderMaxHealth}}, false)
+        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_north_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.northSpiderHealthPercentage, scoreGuiData.northSpiderMaxHealth}}, false)
     else
-        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_north_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.northSpiderHealthPercentage, "dead", "deader"}}, false)
+        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_north_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value_dead"}}, false)
     end
 
     -- Update the south's values.
     GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_south_distance", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.southSpiderDistancePercentage, scoreGuiData.southSpiderTargetDistance}, tooltip = {"gui-tooltip.jd_plays-jd_spider_race-score_distance_value", scoreGuiData.southSpiderClearedDistance, scoreGuiData.southSpiderTargetDistance}}, false)
     if scoreGuiData.southSpiderCurrentHealth ~= "0" then
-        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_south_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.southSpiderHealthPercentage, scoreGuiData.southSpiderCurrentHealth, scoreGuiData.southSpiderMaxHealth}}, false)
+        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_south_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.southSpiderHealthPercentage, scoreGuiData.southSpiderMaxHealth}}, false)
     else
-        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_south_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value", scoreGuiData.southSpiderHealthPercentage, "dead", "deader"}}, false)
+        GuiUtil.UpdateElementFromPlayersReferenceStorage(playerIndex, "Score", "score_south_spider_health", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-score_spider_health_value_dead"}}, false)
     end
 end
 

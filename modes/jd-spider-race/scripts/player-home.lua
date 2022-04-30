@@ -149,6 +149,7 @@ PlayerHome.OnPlayerCreated = function(event)
             -- Move them to the surface and position them.
             PlayerHome.DelayedPlayerCreated_Scheduled({tick = event.tick, instanceId = playerId})
 
+            PlayerHome.UpdateAllOpenPlayerManagerGuis()
             return
         end
     end
@@ -216,7 +217,13 @@ PlayerHome.Command_AssignPlayerToTeam = function(event)
         return
     end
 
-    PlayerHome.AssignPlayerToTeam(playerName, game.get_player(playerName), team)
+    local assignedPlayer = game.get_player(playerName)
+    PlayerHome.AssignPlayerToTeam(playerName, assignedPlayer, team)
+
+    -- If player not on server report that the player was pre-assigned to the team. If the player was on the server this would have been reported as part of moving them already.
+    if assignedPlayer == nil then
+        game.print({"message.jd_plays-jd_spider_race-preassigned_player_to_team", playerName, team.prettyName})
+    end
 end
 
 --- Assign the player to the team.
@@ -420,7 +427,7 @@ PlayerHome.OnMarketItemPurchased = function(event)
 
     -- Trigger the nuke on the other team.
     local otherTeam = global.playerHome.playerIdToTeam[event.player_index].otherTeam
-    remote.call("JDGoesBoom", "ForceGoesBoom", otherTeam.id, 50, 60)
+    remote.call("JDGoesBoom", "ForceGoesBoom", otherTeam.id, 60, 60)
     game.print({"message.jd_plays-jd_spider_race-blow_up_other_team", otherTeam.prettyName}, Colors.lightgreen)
 
     -- Remove the fake item the player just brought.
@@ -828,8 +835,12 @@ PlayerHome.Command_SetTeamsPrettyName = function(event)
         game.print(commandErrorMessagePrefix .. "No arguments provided.", Colors.lightred)
         return
     end
-    if #args ~= 2 then
+    if #args < 2 then
         game.print(commandErrorMessagePrefix .. "Expecting two args.", Colors.lightred)
+        return
+    end
+    if #args > 2 then
+        game.print(commandErrorMessagePrefix .. "Expecting two args. Try wrapping a team name with spaces in it within quotes. i.e. 'my team name'", Colors.lightred)
         return
     end
 
@@ -842,8 +853,8 @@ PlayerHome.Command_SetTeamsPrettyName = function(event)
         return
     end
 
-    team.prettyName = prettyName
-    game.print("Set team " .. teamName .. "'s name to: " .. prettyName)
+    team.prettyName = prettyName or "" -- Never let nil go in.
+    game.print({"message.jd_plays-jd_spider_race-team_pretty_name_set", teamName, prettyName})
 end
 
 return PlayerHome
