@@ -209,12 +209,12 @@ if Testing then
     Settings.bossSpiderStartingLeftDistance = 1000
     --Settings.spidersRoamingXRange = 20
     Settings.spidersFightingXRange = 300
-    Settings.showSpiderPlans = true
-    Settings.markSpiderAreas = true
-    BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher][3] = nil -- No atomic weapons.
-    --BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher] = {} -- Test short range weapon spider.
-    --BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.tankCannon] = {} -- Test short range weapon spider.
-    BossSpider_TurretRearm[BossSpider_TurretType.artillery] = {} -- No artillery shells.
+--Settings.showSpiderPlans = true
+--Settings.markSpiderAreas = true
+--BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher][3] = nil -- No atomic weapons.
+--BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher] = {} -- Test short range weapon spider.
+--BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.tankCannon] = {} -- Test short range weapon spider.
+--BossSpider_TurretRearm[BossSpider_TurretType.artillery] = {} -- No artillery shells.
 end
 
 Spider.CreateGlobals = function()
