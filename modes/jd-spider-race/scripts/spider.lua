@@ -1079,16 +1079,18 @@ Spider.GetEntitiesControllingPlayer = function(entity)
     end
 end
 
---- Send all the biters in a very large area at the players spawn area if this hasn't been done recently.
---- Currently just done when a new main target is defined. Don't want it running too frequently as it will potentailly trigger a lot of biters.
+--- Send all the biters in a very large area towards the players spawn direction. Is only activated periodically with more frequent requests being ignored.
+--- Currently only being called when a new main target is defined.
 ---@param spider JdSpiderRace_BossSpider
 ---@param currentTick Tick
 ---@param attackingForce LuaForce
 ---@param spidersCurrentPosition MapPosition
 Spider.CallNearbyBitersForHelp = function(spider, currentTick, attackingForce, spidersCurrentPosition)
     if currentTick > spider.lastSentBitersToAttackTick + Settings.BitersSentToRetaliateMaxFrequency then
-        -- Send all the biters in a very large area at the players spawn area.
-        -- Creates a number of medium sized groups. Configured for use with biter attracter entity call_for_help_radius of 200. Also the chunk generation west of spider is set aroud these values.
+        -- Send all the biters in a very large area 1,000 tiles east of the spider.
+        -- CODE NOTES:
+        --    - Creates a number of medium sized groups. Configured for use with biter attracter entity call_for_help_radius of 200. Also the chunk generation west of spider is set aroud these values.
+        --    - Does 1,000 tiles as targetting spawn from far west (i.e. 10k+) caused considerable pathing delay. So the 1,000 tiles should be enough to hit any players or infrastrcuture nearish to the spider. This is a bit adhoc compared to manually controlling the biters, but that needs a lot more active management.
         ---@typelist MapPosition, LuaEntity
         local position, summoningWorm
         local rowsStart
@@ -1100,7 +1102,7 @@ Spider.CallNearbyBitersForHelp = function(spider, currentTick, attackingForce, s
         end
         -- Do as a series of biter attracters so that they don't try and form mega groups as these tend to get bogged down and delay the groups arrival.
         for rows = rowsStart, rowsStart + mapHeightPlacementUnits - 250, 250 do
-            local biterTargetEntity = global.general.surface.create_entity {name = "gun-turret", position = {x = spider.playerTeam.spawnPosition.x, y = rows}, force = spider.playerTeam.playerForce}
+            local biterTargetEntity = global.general.surface.create_entity {name = "gun-turret", position = {x = spidersCurrentPosition.x + 1000, y = rows}, force = spider.playerTeam.playerForce}
             for columns = -500, 500, 250 do
                 position = {x = spidersCurrentPosition.x + columns, y = rows}
                 summoningWorm = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-biter_attracter_turret", position = position, force = spider.playerTeam.enemyForce}
