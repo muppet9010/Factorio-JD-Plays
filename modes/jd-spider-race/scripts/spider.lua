@@ -389,8 +389,11 @@ Spider.UpdateSpidersRoamingValues = function(spider)
         table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.red, filled = false, width = 10, left_top = {x = spider.fightingXMin, y = spider.fightingYMin}, right_bottom = {x = spider.fightingXMax, y = spider.fightingYMax}, surface = global.general.surface, draw_on_ground = true})
     end
 
-    -- Request the chunks to be generated around this area. The ones beyond the spider center will be important if the spider is attacked as we want bases to be there so the spider can call biters from them.
-    global.general.surface.request_to_generate_chunks({x = spider.roamingXMin, y = spider.playerTeam.spawnPosition.y}, 10)
+    -- Request the chunks to be generated around this spider area. The ones beyond the spider center will be important if the spider is attacked as we want bases to be there so the spider can call biters from them. Do a series of chunk requests to covered approximately 600 tiles west of the spider's raoming area as this is roughly how far it can call for reinforcements from.
+    local laneChunksHeight = math.ceil((global.general.perTeamMapHeight / 32) / 2) -- may be 1 chunk further out than the lane in some map width sizes.
+    global.general.surface.request_to_generate_chunks({x = spider.roamingXMin, y = spider.playerTeam.spawnPosition.y}, laneChunksHeight)
+    global.general.surface.request_to_generate_chunks({x = spider.roamingXMin - 180, y = spider.playerTeam.spawnPosition.y}, laneChunksHeight)
+    global.general.surface.request_to_generate_chunks({x = spider.roamingXMin - 360, y = spider.playerTeam.spawnPosition.y}, laneChunksHeight)
 end
 
 --- Called when only a boss spider named entity type has been damaged.
@@ -1084,14 +1087,28 @@ end
 ---@param spidersCurrentPosition MapPosition
 Spider.CallNearbyBitersForHelp = function(spider, currentTick, attackingForce, spidersCurrentPosition)
     if currentTick > spider.lastSentBitersToAttackTick + Settings.BitersSentToRetaliateMaxFrequency then
-        -- Creates one massive group for use with biter attracter entity call_for_help_radius of 500.
-        -- Alternative code to create smaller groups at end of file in comment block.
-        local summoningWorm = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-biter_attracter_turret", position = {x = spidersCurrentPosition.x, y = spider.playerTeam.spawnPosition.y}, force = spider.playerTeam.enemyForce} -- Place in middle of lane to get all biters in lane.
-        local biterTargetEntity = global.general.surface.create_entity {name = "gun-turret", position = spider.playerTeam.spawnPosition, force = spider.playerTeam.playerForce}
-        summoningWorm.damage(100000000, attackingForce, "impact", biterTargetEntity)
-        biterTargetEntity.destroy()
-        game.play_sound {path = "jd_plays-jd_spider_race-spidertron_boss_attacked", position = spidersCurrentPosition}
-        spider.lastSentBitersToAttackTick = currentTick
+        -- Send all the biters in a very large area at the players spawn area.
+        -- Creates a number of medium sized groups. Configured for use with biter attracter entity call_for_help_radius of 200. Also the chunk generation west of spider is set aroud these values.
+        ---@typelist MapPosition, LuaEntity
+        local position, summoningWorm
+        local rowsStart
+        local mapHeightPlacementUnits = math.floor(global.general.perTeamMapHeight / 250) * 250
+        if spider.playerTeam.spawnPosition.y < 0 then
+            rowsStart = -mapHeightPlacementUnits + 125
+        else
+            rowsStart = 125
+        end
+        -- Do as a series of biter attracters so that they don't try and form mega groups as these tend to get bogged down and delay the groups arrival.
+        for rows = rowsStart, rowsStart + mapHeightPlacementUnits - 250, 250 do
+            local biterTargetEntity = global.general.surface.create_entity {name = "gun-turret", position = {x = spider.playerTeam.spawnPosition.x, y = rows}, force = spider.playerTeam.playerForce}
+            for columns = -500, 500, 250 do
+                position = {x = spidersCurrentPosition.x + columns, y = rows}
+                summoningWorm = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-biter_attracter_turret", position = position, force = spider.playerTeam.enemyForce}
+                summoningWorm.damage(100000000, attackingForce, "impact", biterTargetEntity)
+                --rendering.draw_circle {color = Colors.green, filled = true, draw_on_ground = true, radius = 200, surface = global.general.surface, target = position}
+            end
+            biterTargetEntity.destroy()
+        end
     end
 end
 
@@ -1818,43 +1835,5 @@ Spider.RemoveMessageFromPlayers_Scheduled = function(event)
         end
     end
 end
-
--- ALTERNATIVE CODE: - creates lots of smaller groups of biters to attack the player in response to a spider beign attacked.
---[[
-            -- Send all the biters in a very large area at the players spawn area.
-            -- Creates a lot of smaller groups for use with biter attracter entity call_for_help_radius of 100.
-            ---@typelist MapPosition, LuaEntity
-            local position, summoningWorm
-            local rowsStart
-            local mapHeight100s = math.floor(global.general.perTeamMapHeight / 100) * 100
-            if spider.playerTeam.spawnPosition.y < 0 then
-                rowsStart = -mapHeight100s
-            else
-                rowsStart = mapHeight100s
-            end
-            -- Do as a series of biter attracters so that they don't try and form mega groups as these tend to get bogged down and delay the groups arrival.
-            for rows = rowsStart, rowsStart + mapHeight100s, 100 do
-                if rows % 200 == 0 then
-                    -- Even rows - To get the bulk of the area.
-                    local biterTargetEntity = global.general.surface.create_entity {name = "gun-turret", position = {x = spider.playerTeam.spawnPosition.x, y = rows}, force = spider.playerTeam.playerForce}
-                    for columns = -400, 400, 200 do
-                        position = {x = spidersCurrentPosition.x + columns, y = rows}
-                        summoningWorm = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-biter_attracter_turret", position = position, force = spider.playerTeam.enemyForce}
-                        summoningWorm.damage(100000000, event.force, "impact", biterTargetEntity)
-                    end
-                    biterTargetEntity.destroy()
-                else
-                    -- Odd rows - To get the gaps in the even row points.
-                    local biterTargetEntity = global.general.surface.create_entity {name = "gun-turret", position = {x = spider.playerTeam.spawnPosition.x, y = rows}, force = spider.playerTeam.playerForce}
-                    for columns = -300, 300, 200 do
-                        position = {x = spidersCurrentPosition.x + columns, y = rows}
-                        summoningWorm = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-biter_attracter_turret", position = position, force = spider.playerTeam.enemyForce}
-                        summoningWorm.damage(100000000, event.force, "impact", biterTargetEntity)
-                    end
-                    biterTargetEntity.destroy()
-                end
-            end
-            --]]
---
 
 return Spider
