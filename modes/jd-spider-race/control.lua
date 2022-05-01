@@ -3,7 +3,6 @@ local GuiActionsClick = require("utility.gui-actions-click")
 local Utils = require("utility/utils")
 
 local PlayerHome = require("modes/jd-spider-race/scripts/player-home")
-local Divider = require("modes/jd-spider-race/scripts/divider")
 local WaterBarrier = require("modes/jd-spider-race/scripts/water-barrier")
 local Spider = require("modes.jd-spider-race.scripts.spider")
 local Map = require("modes.jd-spider-race.scripts.map")
@@ -19,7 +18,7 @@ local function CreateGlobals()
     global.general.perTeamMapHeight = 512 -- Tested at 1024, but "should" accept any size.
 
     PlayerHome.CreateGlobals()
-    Divider.CreateGlobals()
+    Map.CreateGlobals()
     WaterBarrier.CreateGlobals()
     Spider.CreateGlobals()
 end
@@ -29,7 +28,6 @@ local function OnLoad()
     PlayerHome.OnLoad()
     Map.OnLoad()
     Spider.OnLoad()
-    Divider.OnLoad()
     WaterBarrier.OnLoad()
 end
 
@@ -51,7 +49,6 @@ local function OnStartup()
     Map.OnStartup()
 
     -- Regular startup (non ordered).
-    Divider.OnStartup()
     WaterBarrier.OnStartup()
     Spider.OnStartup()
 end

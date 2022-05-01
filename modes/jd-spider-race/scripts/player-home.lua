@@ -58,8 +58,8 @@ end
 
 PlayerHome.OnStartup = function()
     if global.playerHome.teams["north"] == nil then
-        PlayerHome.CreateTeam("north", global.divider.dividerMiddleYPos - (global.general.perTeamMapHeight / 2), global.playerHome.spawnXOffset)
-        PlayerHome.CreateTeam("south", global.divider.dividerMiddleYPos + (global.general.perTeamMapHeight / 2), global.playerHome.spawnXOffset)
+        PlayerHome.CreateTeam("north", global.map.dividerMiddleYPos - (global.general.perTeamMapHeight / 2), global.playerHome.spawnXOffset)
+        PlayerHome.CreateTeam("south", global.map.dividerMiddleYPos + (global.general.perTeamMapHeight / 2), global.playerHome.spawnXOffset)
         global.playerHome.teams["north"].otherTeam = global.playerHome.teams["south"]
         global.playerHome.teams["south"].otherTeam = global.playerHome.teams["north"]
 
