@@ -8,7 +8,7 @@ data:extend(
             icon = "__base__/graphics/icons/behemoth-worm.png",
             icon_size = 64,
             icon_mipmaps = 4,
-            call_for_help_radius = 300, -- How far away biters from the spiders X pos will be called in to attack the player from. Theres a limit (?) or distance (300~) of how many biters will commit to make the journey, so no point triggering biters momentarily beyond this limit.
+            call_for_help_radius = 200, -- How far away biters from the spiders X pos will be called in to attack the player from. Theres a limit (?) or distance (300~) of how many biters will commit to make the journey, so no point triggering biters momentarily beyond this limit.
             attack_parameters = {type = "beam", range = 0, cooldown = 9999, ammo_type = {category = "artillery-shell"}},
             folded_animation = {direction_count = 1, filename = "__core__/graphics/empty.png", size = 1},
             flags = {"not-in-kill-statistics"}
