@@ -72,12 +72,23 @@ Map.OnChunkGenerated = function(event)
     end
 
     -- Force biters to be on the correct force
+    local position
     for _, base_entity in pairs(event.surface.find_entities_filtered({area = event.area, force = "enemy"})) do
         if base_entity.valid then
-            if base_entity.position.y <= 0 then
-                base_entity.force = "north_enemy"
+            position = base_entity.position
+
+            -- If the nest/worm is centered near the divide then remove it. As otherwise its biters can spawn on the wrong side of the divide and mess up group behaviour.
+            -- Otherwise set the force to be correct based on which side of the divide it is.
+            if position.y >= -5 and position.y <= 5 then
+                -- Remove it.
+                base_entity.destroy({raise_destroy = true})
             else
-                base_entity.force = "south_enemy"
+                -- Set the buildings force to be correct.
+                if position.y <= 0 then
+                    base_entity.force = "north_enemy"
+                else
+                    base_entity.force = "south_enemy"
+                end
             end
         end
     end
@@ -133,14 +144,14 @@ Map.PlaceTeamDividerForChunkGenerated = function(surface, area)
 
     -- Place the blocking entities in the center of the 2 tiles.
     for x = area.left_top.x, area.left_top.x + 31 do
-        local dividerEntity = surface.create_entity {name = "jd_plays-jd_spider_race-divider_entity", position = {x = x + 0.5, y = global.map.dividerMiddleYPos}, create_build_effect_smoke = false, raise_built = false}
+        local dividerEntity = surface.create_entity {name = "jd_plays-jd_spider_race-divider_entity", position = {x = x + 0.5, y = global.map.dividerMiddleYPos}, force = "neutral", create_build_effect_smoke = false, raise_built = false}
         dividerEntity.destructible = false
-        local dividerEntitySpider = surface.create_entity {name = "jd_plays-jd_spider_race-divider_entity_spider_block", position = {x = x + 0.5, y = global.map.dividerMiddleYPos}, create_build_effect_smoke = false, raise_built = false}
+        local dividerEntitySpider = surface.create_entity {name = "jd_plays-jd_spider_race-divider_entity_spider_block", position = {x = x + 0.5, y = global.map.dividerMiddleYPos}, force = "neutral", create_build_effect_smoke = false, raise_built = false}
         dividerEntitySpider.destructible = false
     end
 
     -- Place the beam effect. Overlap by a tile as we have overlaped all the graphics bits of the beam prototype.
-    surface.create_entity {name = "jd_plays-jd_spider_race-divider_beam", position = {0, 0}, target_position = {x = area.left_top.x - 1, y = global.map.dividerMiddleYPos}, source_position = {x = area.left_top.x + 33, y = global.map.dividerMiddleYPos}}
+    surface.create_entity {name = "jd_plays-jd_spider_race-divider_beam", position = {0, 0}, target_position = {x = area.left_top.x - 1, y = global.map.dividerMiddleYPos}, source_position = {x = area.left_top.x + 33, y = global.map.dividerMiddleYPos}, force = "neutral"}
 end
 
 ---@param event on_player_built_tile|on_robot_built_tile
