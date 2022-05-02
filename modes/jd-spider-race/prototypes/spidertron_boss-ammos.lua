@@ -1,5 +1,9 @@
 local Utils = require("utility.utils")
 
+if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
+    return
+end
+
 local ammoFlags = {"hidden", "hide-from-bonus-gui"}
 
 -- Special flamethrower ammo that works like player held flamethrower for the spidertron. This means the spider will light the ground and trees on fire. But with FF disabled it won't hurt this biter forces units.

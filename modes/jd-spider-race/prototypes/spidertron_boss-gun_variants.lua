@@ -1,6 +1,10 @@
 -- Makes copies of the boss spidertron for each gun type and hidden graghics. Are to act as extra gun platforms of the spidertron.
 local Utils = require("utility.utils")
 
+if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
+    return
+end
+
 -- If TRUE the spiders are visible and selectable.
 local Testing = false
 

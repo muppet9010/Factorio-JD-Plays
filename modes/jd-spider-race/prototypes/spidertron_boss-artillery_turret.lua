@@ -1,5 +1,9 @@
 local Utils = require("utility.utils")
 
+if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
+    return
+end
+
 local refArtilleryTurret = data.raw["artillery-turret"]["artillery-turret"]
 local refArtilleryTurretGun = data.raw["gun"]["artillery-wagon-cannon"]
 

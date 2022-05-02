@@ -1,3 +1,7 @@
+if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
+    return
+end
+
 -- Makes Spidertron Boss immune to all nukes.
 
 -- Add a new target type that will be used to to distinguish everything from spidertron bosses.

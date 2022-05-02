@@ -1,3 +1,7 @@
+if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
+    return
+end
+
 data:extend(
     {
         {
