@@ -191,7 +191,7 @@ local BossSpider_RconAmmoNames = {
 local Settings = {
     bossSpiderStartingLeftDistance = 5000, -- How far left of spawn the center of the spiders area starts the game at.
     spiderDamageToRetreat = 1000,
-    spiderDamageSecondsConsidered = 60, -- How many seconds in the past the spider will consider to see if it has sustained enough damage to retreat.
+    spiderDamageSecondsConsidered = 600, -- How many seconds in the past the spider will consider to see if it has sustained enough damage to retreat. Set to 10 minutes to try and counter players doing slow damage to the spider to try and avoid it retreating.
     spiderDistanceToRetreat = 1000, -- How far to increment a spider's distance to the left by when it is forced to retreat.
     spidersRoamingXRange = 100, -- How far up and down from the centre of a teams lane the spider will roam.
     spidersFightingXRange = 1000, -- Random limit to stop it chasing infinitely.
@@ -1127,7 +1127,7 @@ Spider.CallNearbyBitersForHelp = function(spider, currentTick, attackingForce, s
     end
 end
 
---- Clear all state variables.
+--- Clear all variables related to a spider's state.
 ---@param spider JdSpiderRace_BossSpider
 Spider.ClearStateVariables = function(spider)
     spider.chasingPlayer = nil
@@ -1503,7 +1503,8 @@ Spider.OnSpiderDied = function(event)
     Spider.UpdateAllScoreGuis()
 end
 
---- When the spider_reset_state command is called. Resets it's state variables and teleports it home to fix any odd state it may have got into.
+--- When the spider_reset_state command is called. Resets it's state variables and teleports it home to try and fix any odd state it may have got into.
+--- This is an inheritently risky command and "should" work.
 ---@param commandEvent CustomCommandData
 Spider.Command_ResetSpiderState = function(commandEvent)
     local args = Commands.GetArgumentsFromCommand(commandEvent.parameter)
@@ -1525,7 +1526,14 @@ Spider.Command_ResetSpiderState = function(commandEvent)
 
     -- Impliment command as any errors would have been flagged by now.
     local spider = global.spider.playerTeamsSpider[playerTeamName]
+
+    -- Clear the variables back to defaults.
     Spider.ClearStateVariables(spider)
+    spider.damageTakenThisSecond = 0
+    spider.previousDamageToConsider = 0
+    spider.secondsWhenDamaged = {}
+
+    -- Teleport the spider home.
     local teleportPosition = {
         x = ((spider.roamingXMax - spider.roamingXMin) / 2) + spider.roamingXMin,
         y = ((spider.roamingYMax - spider.roamingYMin) / 2) + spider.roamingYMin
@@ -1534,6 +1542,8 @@ Spider.Command_ResetSpiderState = function(commandEvent)
     for _, gunSpider in pairs(spider.gunSpiders) do
         gunSpider.entity.teleport(teleportPosition)
     end
+
+    -- Return the spider to roaming.
     Spider.StartRoaming(spider, teleportPosition)
 end
 
