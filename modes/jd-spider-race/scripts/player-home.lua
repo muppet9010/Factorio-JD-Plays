@@ -92,6 +92,7 @@ PlayerHome.OnStartup = function()
         group.set_allows_action(perm, false)
     end
     group.set_allows_action(defines.input_action.write_to_console, true) -- Allow spamming of chat if forgotten to be placed in a group.
+    group.set_allows_action(defines.input_action.edit_permission_group, true) -- Needed for when the console command to assign a player is used the mod script can change the player's permission group, otherwise it fails. It wors fine ffor the GUI without this permission though. While admins could load up the default Factorio permission GUI and move themselves groups this would break other parts of the mod most likely.
     group.set_allows_action(defines.input_action.lua_shortcut, true) -- So admins can access the Player Manager GUI.
     group.set_allows_action(defines.input_action.gui_click, true) -- So admins can use the Player Manager GUI.
 end
