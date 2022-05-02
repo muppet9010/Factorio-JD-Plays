@@ -1124,6 +1124,9 @@ Spider.CallNearbyBitersForHelp = function(spider, currentTick, attackingForce, s
             end
             biterTargetEntity.destroy()
         end
+
+        -- Record each time this is used, for calculating the next time it can be used.
+        spider.lastSentBitersToAttackTick = currentTick
     end
 end
 
