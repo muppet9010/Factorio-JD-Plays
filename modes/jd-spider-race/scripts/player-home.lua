@@ -92,7 +92,6 @@ PlayerHome.OnStartup = function()
         group.set_allows_action(perm, false)
     end
     group.set_allows_action(defines.input_action.write_to_console, true) -- Allow spamming of chat if forgotten to be placed in a group.
-    group.set_allows_action(defines.input_action.edit_permission_group, true) -- For admins, if things go badly wrong.
     group.set_allows_action(defines.input_action.lua_shortcut, true) -- So admins can access the Player Manager GUI.
     group.set_allows_action(defines.input_action.gui_click, true) -- So admins can use the Player Manager GUI.
 end

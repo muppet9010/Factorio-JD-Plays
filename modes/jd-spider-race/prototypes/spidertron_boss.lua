@@ -99,6 +99,7 @@ local function create_boss_spidertron(arguments)
                 minable = nil, -- Will never be mined.
                 max_health = 10000, -- Increased to desired health level.
                 resistances = {
+                    -- These are all increased significantly.
                     {
                         type = "fire",
                         decrease = 30,
