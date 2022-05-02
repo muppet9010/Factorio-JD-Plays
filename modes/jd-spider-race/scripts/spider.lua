@@ -536,9 +536,21 @@ Spider.CheckRoamingForSecond = function(spider, spidersCurrentPosition)
 
         -- CODE NOTE: Without any water being on the map every tile should be reachable for the spider. So no validation of target required.
         spider.roamingTargetPosition = {x = math_random(spider.roamingXMin, spider.roamingXMax), y = math_random(spider.roamingYMin, spider.roamingYMax)}
+
+        if Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget(spider, spidersCurrentPosition, spider.roamingTargetPosition) then
+            -- Spider has stopped short of the target position and is in the fighting state now ready for the next second cycle to handle future actions.
+            return
+        end
+
         Spider.OrderSpiderToStartMovingToPosition(spider, spider.roamingTargetPosition)
     else
         -- Moving to the target at present.
+
+        if Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget(spider, spidersCurrentPosition, spider.roamingTargetPosition) then
+            -- Spider has stopped short of the target position and is in the fighting state now ready for the next second cycle to handle future actions.
+            return
+        end
+
         if spidersCurrentPosition.x == spider.spiderPositionLastSecond.x and spidersCurrentPosition.y == spider.spiderPositionLastSecond.y then
             -- The spider has stopped moving so its arrived or got as close as it can.
             -- CODE NOTE: This should detect if it ever got jammed in 1 spot and restart the cycle to find a new movement target and hopefully un-jam it.
@@ -587,8 +599,8 @@ Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
     else
         -- Spider is still moving towards its existing target location.
 
-        if Spider.CheckAndEngageNearEnemiesTowardsTarget(spider, spidersCurrentPosition, spider.chasingEntityLastPosition) then
-            -- Spider will stop short of the target position and fight for the next second.
+        if Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget(spider, spidersCurrentPosition, spider.chasingEntityLastPosition) then
+            -- Spider has stopped short of the target position and is in the fighting state now ready for the next second cycle to handle future actions.
             return
         end
 
@@ -993,8 +1005,8 @@ Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition)
     else
         -- Spider will start moving to the position the last attacking enemy was at.
 
-        if Spider.CheckAndEngageNearEnemiesTowardsTarget(spider, spidersCurrentPosition, currentTargetPosition) then
-            -- Spider will stop short of the target position and fight for the next second.
+        if Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget(spider, spidersCurrentPosition, currentTargetPosition) then
+            -- Spider has stopped short of the target position and is in the fighting state now ready for the next second cycle to handle future actions.
             return
         end
 
@@ -1017,12 +1029,13 @@ Spider.StartFighting = function(spider, spidersCurrentPosition)
     end
 end
 
---- Check if there is anything the spider needs to fight for where it will be in 1 seconds time. This is to avoid it chasing in to static defences.
+--- Check if there is anything the spider needs to fight for where it will be in 1 seconds time while heading towards its target. This is to avoid it chasing straight in to the middle of static defences before they wake up and start shooting the spider.
+--- If something is found the spider will be ordered to stop at the correct range from this enemy and enter the fighting state for the remainder of this second. Then next second cycle the fighting state will manage its future actions.
 ---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
 ---@param targetPosition MapPosition
 ---@return boolean targetFound
-Spider.CheckAndEngageNearEnemiesTowardsTarget = function(spider, spidersCurrentPosition, targetPosition)
+Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget = function(spider, spidersCurrentPosition, targetPosition)
     local spidersMaxShootingRange = Spider.GetSpidersEngagementRange(spider)
     local approximateSpiderPositionIn1Second = Utils.GetPositionForDistanceBetween2Points(spidersCurrentPosition, targetPosition, Settings.distanceSpiderMovesinSecond)
     local nearestEnemyIn1Second = global.general.surface.find_nearest_enemy {position = approximateSpiderPositionIn1Second, max_distance = spidersMaxShootingRange, force = spider.playerTeam.enemyForce}
