@@ -410,9 +410,10 @@ PlayerHome.OnBuiltEntity = function(event)
     else
         -- Entity valid so leave it be.
 
-        -- If this is the left most built entity for this team record its y position.
+        -- If this is the left most built entity for this team record its x position and notify spider code.
         if entity_position.x < team.mostLeftBuiltEntityXPosition then
             team.mostLeftBuiltEntityXPosition = entity_position.x
+            MOD.Interfaces.Spider.OnNewMostWestEntityBuilt(team, entity_position)
         end
     end
 end

@@ -46,7 +46,7 @@ local spiderArtilleryTurretGun = {
         type = "projectile",
         ammo_category = "artillery-shell",
         cooldown = 20,
-        range = refArtilleryTurretGun.attack_parameters.range * data.raw["artillery-turret"]["artillery-turret"].manual_range_modifier, -- So same range as a default artillery under manual fire control.
+        range = refArtilleryTurretGun.attack_parameters.range * data.raw["artillery-turret"]["artillery-turret"].manual_range_modifier, -- So same range as a default artillery under manual fire control. 560 at present.
         min_range = refArtilleryTurretGun.attack_parameters.min_range,
         sound = refArtilleryTurretGun.attack_parameters.sound
     }
