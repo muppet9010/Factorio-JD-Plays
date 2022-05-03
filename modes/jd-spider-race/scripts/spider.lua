@@ -719,7 +719,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
         end
     end
 
-    -- As spider can't pursue the current target look for anything near by to attack first, otherwise return to chasing the origional target if there was one, or return to roaming. Means the spider will attack down a line of defences, etc, before returning to a longer term behaviour.
+    -- As spider can't pursue the short term target look for anything near by to attack first, otherwise return to chasing the origional target if there was one, or return to roaming. Means the spider will attack down a line of defences, etc, before returning to a longer term behaviour.
 
     -- Look for nearest target nearby and set them as the new target entity.
     local nearbyEnemy = global.general.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = Settings.distanceToCheckForEnemiesNearby, force = spider.playerTeam.enemyForce}
@@ -742,6 +742,12 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
             if distanceToTarget <= (spidersMaxShootingRange * 2) then
                 -- Target near by so just advance a bit.
+
+                if Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget(spider, spidersCurrentPosition, spider.lastDamagedFromPosition) then
+                    -- Spider has stopped short of the target position and is in the fighting state now ready for the next second cycle to handle future actions.
+                    return
+                end
+
                 Spider.OrderSpiderToStartMovingToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.lastDamagedFromPosition, spidersCurrentPosition))
                 return
             else
@@ -769,6 +775,12 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
         local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.chasingEntityLastPosition)
         if distanceToTarget <= (spidersMaxShootingRange * 2) then
             -- Target near by so just advance a bit.
+
+            if Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget(spider, spidersCurrentPosition, spider.chasingEntityLastPosition) then
+                -- Spider has stopped short of the target position and is in the fighting state now ready for the next second cycle to handle future actions.
+                return
+            end
+
             Spider.OrderSpiderToStartMovingToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.chasingEntityLastPosition, spidersCurrentPosition))
             return
         else
@@ -822,6 +834,13 @@ Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosi
     -- React based on if the target is near by or not.
     if distanceToTarget <= (spidersMaxShootingRange * 2) then
         -- Target near by so just advance a bit.
+
+        -- Make sure we don;t walk in to range of other things whne chasing our target.
+        if Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget(spider, spidersCurrentPosition, spider[positionRefName]) then
+            -- Spider has stopped short of the target position and is in the fighting state now ready for the next second cycle to handle future actions.
+            return
+        end
+
         Spider.OrderSpiderToStartMovingToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider[positionRefName], spidersCurrentPosition))
         return
     else
@@ -1043,9 +1062,10 @@ Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget = function(spider, sp
     if nearestEnemyIn1Second ~= nil then
         -- Will be within range of an enemy in 1 second.
 
-        -- Order the spider to move to just within weapons range of the target and set the state for fighting so that the next 1 second cycle it will start fightign from the correct position. Don't enter fighting now as nothing will be in range until it's done this extra movement (distance up to the spiders movement per second).
+        -- Order the spider to move to just within weapons range of the target and set the state for fighting so that the next 1 second cycle it will start fighting from the correct position. Don't enter fighting now as nothing will be in range until it's done this extra movement (distance up to the spiders movement per second).
         -- Note that a spider has to slow down and so will likely overshoot the distance a bit.
         local positionToStopAt = Utils.GetPositionForDistanceBetween2Points(nearestEnemyIn1Second.position, spidersCurrentPosition, spidersMaxShootingRange)
+        Spider.ClearNonFightingStateVariables(spider)
         Spider.OrderSpiderToStartMovingToPosition(spider, positionToStopAt)
         spider.state = BossSpider_State.fighting
         if Settings.showSpiderPlans then
