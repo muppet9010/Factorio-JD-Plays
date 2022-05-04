@@ -992,7 +992,7 @@ Spider.Retreat = function(spider)
 
     spider.distanceFromSpawn = spider.distanceFromSpawn + Settings.spiderDistanceToRetreat
     Spider.UpdateSpidersRoamingValues(spider)
-    game.print({"message.jd_plays-jd_spider_race-spider_retreated", spider.playerTeam.prettyName}, Colors.green)
+    game.print({"message.jd_plays-jd_spider_race-spider_retreated", spider.playerTeam.prettyName}, Colors.lightgreen)
 
     spider.state = BossSpider_State.retreating
     spider.retreatingTargetPosition = {x = spider.roamingXMin, y = math_random(spider.roamingYMin, spider.roamingYMax)}
@@ -1522,7 +1522,7 @@ Spider.OnSpiderDied = function(event)
     -- Coin is dropped as loot automatically.
 
     -- Announce the death in chat and update the Score GUI.
-    game.print({"message.jd_plays-jd_spider_race-spider_killed", spider.playerTeam.prettyName}, Colors.green)
+    game.print({"message.jd_plays-jd_spider_race-spider_killed", spider.playerTeam.prettyName}, Colors.lightgreen)
     Spider.UpdateAllScoreGuis()
 end
 

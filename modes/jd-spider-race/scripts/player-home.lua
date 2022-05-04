@@ -167,8 +167,8 @@ PlayerHome.OnPlayerCreated = function(event)
     player.teleport({0, 0}, global.general.surface)
     player.permission_group = game.permissions.get_group("JDWaitingRoom")
 
-    player.print({"message.jd_plays-jd_spider_race-player_home_welcome_1"})
-    player.print({"message.jd_plays-jd_spider_race-player_home_welcome_2"})
+    player.print({"message.jd_plays-jd_spider_race-player_home_welcome_1"}, Colors.lightgreen)
+    player.print({"message.jd_plays-jd_spider_race-player_home_welcome_2"}, Colors.lightgreen)
 
     -- Update any player listing GUIs.
     PlayerHome.UpdateAllOpenPlayerManagerGuis()
