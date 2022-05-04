@@ -1721,7 +1721,7 @@ Spider.OnPlayerCreated = function(event)
     player.set_shortcut_toggled("jd_plays-jd_spider_race-score-gui_button", true)
     Spider.Gui_ShowScoreGuiForPlayer(player, event.player_index)
 
-    player.print({"message.jd_plays-jd_spider_race-spider_welcome_1"})
+    player.print({"message.jd_plays-jd_spider_race-spider_welcome_1"}, Colors.lightgreen)
 end
 
 --- Called each time a player joins the game (goes connected).
