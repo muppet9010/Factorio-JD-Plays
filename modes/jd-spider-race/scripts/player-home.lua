@@ -1,5 +1,6 @@
 local PlayerHome = {}
 
+local Utils = require("utility.utils")
 local Commands = require("utility/commands")
 local Events = require("utility/events")
 local EventScheduler = require("utility.event-scheduler")
@@ -16,6 +17,7 @@ local MuppetStyles = require("utility.style-data").MuppetStyles
 ---@field enemyForce LuaForce @ The biter force in this teams lane of the map.
 ---@field enemyForceName string
 ---@field spawnPosition MapPosition @ Position of this team's spawn.
+---@field spawnChunk ChunkPosition @ Chunk with the spawn in it.
 ---@field players table<PlayerIndex, LuaPlayer> @ Table of the player who have joined this team.
 ---@field playerNames table<string, boolean> @ Table of player names who will/are on this team, with the value being if they ahve already joined the server yet. Player names can be pre-assigned and to a team so they are auto assigned on joining.
 ---@field otherTeam JdSpiderRace_PlayerHome_Team @ Ref to the other teams global object.
@@ -106,6 +108,7 @@ PlayerHome.CreateTeam = function(teamId, spawnYPos, spawnXPos)
         id = teamId,
         prettyName = string.gsub(teamId .. " team", "^%l", string.upper), -- Default starting value with a capitalied first letter.
         spawnPosition = {x = spawnXPos, y = spawnYPos},
+        spawnChunk = Utils.GetChunkPositionForTilePosition({x = spawnXPos, y = spawnYPos}),
         players = {},
         playerNames = {},
         enemyForce = nil, -- Set later in this function.

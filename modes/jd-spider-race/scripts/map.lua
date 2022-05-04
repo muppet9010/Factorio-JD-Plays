@@ -63,12 +63,11 @@ Map.OnChunkGenerated = function(event)
         return
     end
 
-    -- Check if this is the chunk where the market should be placed for any team.
+    -- Check if for either team this is the chunk south east 1 chunk of spawn chunk. As if so then the spawn chunk for that team is generated and we can place their market now.
     for _, team in pairs(global.playerHome.teams) do
-        -- Check if the spawn point is somewhere within this chunk.
-        if event.area.left_top.x <= team.spawnPosition.x and event.area.right_bottom.x > team.spawnPosition.x and event.area.left_top.y <= team.spawnPosition.y and event.area.right_bottom.y > team.spawnPosition.y then
-            -- Spawn point is in this chunk.
-            Map.CreateMarketForTeam(team)
+        if event.position.x == team.spawnChunk.x + 1 and event.position.y == team.spawnChunk.y + 1 then
+            -- Chunk is 1 chunk south eastof the team's spawn chunk.
+            Map.CreateMarketForTeam(team, {x = event.area.left_top.x - 16, y = event.area.left_top.y - 16})
         end
     end
 
@@ -103,9 +102,11 @@ end
 
 --- Create a market for the team at its spawn area. Fully configures the market.
 ---@param team JdSpiderRace_PlayerHome_Team
-Map.CreateMarketForTeam = function(team)
-    -- Add a market somewhere near spawn. But we don't want it on top of ore.
-    local marketPosition = global.general.surface.find_non_colliding_position("jd_plays-jd_spider_race-market_placement_test", team.spawnPosition, 30, 1)
+---@param spawnChunkCenterPosition MapPosition
+Map.CreateMarketForTeam = function(team, spawnChunkCenterPosition)
+    -- Add a market within the spawn chunk or one of the sorrounding chunks. It won't create on top of ore (resources), entities or water.
+    -- CODE NOTE: Have to limit to a distance within spawn chunk and 1 chunk around it, as the chunks are generated in an outward spiral from spawn chunk.
+    local marketPosition = global.general.surface.find_non_colliding_position("jd_plays-jd_spider_race-market_placement_test", spawnChunkCenterPosition, 40, 1)
     if marketPosition == nil then
         error("No position found for market near spawn. UNACCEPTABLE")
     end
