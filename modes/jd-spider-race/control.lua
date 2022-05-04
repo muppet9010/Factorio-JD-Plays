@@ -84,3 +84,13 @@ script.on_event(
         -- As the spidertron is a player type entity, the biter unit and spawner exclusion filters work appropriately for it also.
     }
 )
+
+-- Mod wide function interface table creation. Means EmmyLua can support it and saves on UPS cost of old Interface function middelayer.
+---@class InternalInterfaces
+MOD.Interfaces = MOD.Interfaces or {} ---@type table<string, function>
+--[[
+    Populate and use from within module's OnLoad() functions with simple table reference structures, i.e:
+        MOD.Interfaces.Tunnel = MOD.Interfaces.Tunnel or {}
+        MOD.Interfaces.Tunnel.CompleteTunnel = Tunnel.CompleteTunnel
+--]]
+--

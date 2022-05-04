@@ -14,13 +14,13 @@ local MuppetStyles = require("utility.style-data").MuppetStyles
 local math_min, math_max, math_floor, math_ceil, math_random = math.min, math.max, math.floor, math.ceil, math.random
 
 ---@class JdSpiderRace_BossSpider
----@field id UnitNumber @ The UnitNumber of the boss spider entity. Also the key in global.spiders.
+---@field unitNumber UnitNumber|null @ The UnitNumber of the boss spider entity once the entity has been created, otherwise nil.
 ---@field state JdSpiderRace_BossSpider_State
 ---@field playerTeam JdSpiderRace_PlayerHome_Team
----@field bossEntity LuaEntity @ The main spider boss entity.
----@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
----@field gunSpiders table<JdSpiderRace_BossSpider_GunSpiderType, JdSpiderRace_GunSpider> @ The hidden spiders that move with the main spider. They are present just to carry the extra gun types.
----@field turrets table<JdSpiderRace_BossSpider_TurretType, JdSpiderRace_BossSpider_Turret> @ The hidden turrets that are moved once per second cycle to the spiders current position. The weapons on these should be happy to be out of sync with the spiders exact position.
+---@field bossEntity LuaEntity|null @ The main spider boss entity once the entity has been created, otherwise nil.
+---@field hasAmmo boolean|null @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance. Populated once the boss spider entity has been created, otherwise the table is empty.
+---@field gunSpiders table<JdSpiderRace_BossSpider_GunSpiderType, JdSpiderRace_GunSpider> @ The hidden spiders that move with the main spider. They are present just to carry the extra gun types. They are created once the boss spider entity has been created, otherwise the table is empty.
+---@field turrets table<JdSpiderRace_BossSpider_TurretType, JdSpiderRace_BossSpider_Turret> @ The hidden turrets that are moved once per second cycle to the spiders current position. The weapons on these should be happy to be out of sync with the spiders exact position. They are created once the boss spider entity has been created, otherwise the table is empty.
 ---@field distanceFromSpawn uint @ How far from spawn the spiders area is centered on (positive number).
 ---@field damageTakenThisSecond float @ Damage taken so far this second (in between spider monitoring cycles).
 ---@field previousDamageToConsider float @ Damage taken in the previous whole seconds that the Settings.spiderDamageSecondsConsidered covers. Used whne the spider takes damage to simply track damage to consider retreat.
@@ -33,7 +33,7 @@ local math_min, math_max, math_floor, math_ceil, math_random = math.min, math.ma
 ---@field fightingXMax uint @ Far right of its fighting area.
 ---@field fightingYMin uint @ Far top of its fighting area.
 ---@field fightingYMax uint @ Far bottom of its fighting area.
----@field spiderPositionLastSecond MapPosition @ The spiders position last second. Used by various state's cycle functions.
+---@field spiderPositionLastSecond MapPosition|null @ The spiders position last second once the boss spider entity has been created, otherwise nil. Used by various state's cycle functions.
 ---@field spiderPlanRenderIds Id[] -- Used for debugging and testing. But needs to be bleed throughout the code so made proper.
 ---@field spiderAreasRenderIds Id[] -- Used for debugging and testing. But needs to be bleed throughout the code so made proper.
 ---@field roamingTargetPosition MapPosition|null @ The target position the spider is roaming to.
@@ -45,6 +45,9 @@ local math_min, math_max, math_floor, math_ceil, math_random = math.min, math.ma
 ---@field chasingPlayer LuaPlayer|null @ If the chasingEntity was a player controlled entity then this references the player to allow tracking across multiple entities (vehicles/character).
 ---@field chasingEntityLastPosition MapPosition|null @ The last known position of the chasingEntity. To act as a fallback for if the entity is no longer valid. Only recorded/updated if it is within the spiders attacking range.
 ---@field lastSentBitersToAttackTick Tick @ Last tick that biters were sent to attack the player in response to the spider being attacked.
+---@field leftMostXChunkPositionGeneratedByTeamAwayFromDivide ChunkPosition @ The left (west) most chunk generated that is the >=7 chunks from the divide required to create the spider entities. Updated on every chunk generated and used when a spiders distance from spawn is moved negative.
+---@field ammoForCreationTime table<JdSpiderRace_BossSpider_RconAmmoName, uint> @ The ammo given to a spider by RCON before it is created.
+---@field spiderFullyArmCountForCreationTime uint @ How many times the spider should be given a full rearm count when its created.
 
 ---@class JdSpiderRace_GunSpider
 ---@field type JdSpiderRace_BossSpider_GunSpiderType
@@ -61,7 +64,8 @@ local BossSpider_State = {
     fighting = "fighting", -- Not significantly moving, but actively being managed in a combat state.
     chasing = "chasing", -- Actively chasing after a military target that attacked it.
     retreating = "retreating", -- Moving away from the threat.
-    dead = "dead" -- Its dead.
+    dead = "dead", -- Its dead.
+    notCreatedYet = "notCreatedYet" -- Spider entity not created yet.
 }
 
 ---@class JdSpiderRace_BossSpider_GunSpiderType
@@ -151,15 +155,18 @@ local BossSpider_TurretRearm = {
     }
 }
 
+---@class JdSpiderRace_BossSpider_RconAmmoName
+local BossSpider_RconAmmoNames = {bullet = "bullet", piercingBullet = "piercingBullet", uraniumBullet = "uraniumBullet", rocket = "rocket", explosiveRocket = "explosiveRocket", atomicRocket = "atomicRocket", cannonShell = "cannonShell", explosiveCannonShell = "explosiveCannonShell", uraniumCannonShell = "uraniumCannonShell", explosiveUraniumCannonShell = "explosiveUraniumCannonShell", artilleryShell = "artilleryShell", flamethrowerAmmo = "flamethrowerAmmo"}
+
 ---@class JdSpiderRace_BossSpider_RconAmmoType
----@field ammoItemName string @ The item prototype name.
----@field ammoItemPrettyName string @ The player printable name (with spaces).
+---@field ammoItemName string @ The item prototype name in Factorio.
+---@field ammoItemPrettyName JdSpiderRace_BossSpider_RconAmmoName @ The player printable name (with spaces).
 ---@field gunType JdSpiderRace_BossSpider_GunSpiderType|null
 ---@field bossSpider boolean|null
 ---@field turretType JdSpiderRace_BossSpider_TurretType|null
 
----@type table<string, JdSpiderRace_BossSpider_RconAmmoType> @ Command friendly name to item name.
-local BossSpider_RconAmmoNames = {
+---@type table<JdSpiderRace_BossSpider_RconAmmoName, JdSpiderRace_BossSpider_RconAmmoType> @ Command friendly name to item name.
+local BossSpider_RconAmmoTypes = {
     bullet = {ammoItemName = "firearm-magazine", gunType = BossSpider_GunSpiderType.machineGun, ammoItemPrettyName = "bullet"},
     piercingBullet = {ammoItemName = "piercing-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun, ammoItemPrettyName = "piercing bullet"},
     uraniumBullet = {ammoItemName = "uranium-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun, ammoItemPrettyName = "uranium bullet"},
@@ -200,7 +207,8 @@ local Settings = {
     distanceSpiderMovesinSecond = 21, -- Approximate distance a full speed boss spider will cover over 1 second. This is based o the spiders current speed and not for adhoc changing.
     showSpiderPlans = false, -- If enabled the plans of a spider are rendered.
     markSpiderAreas = false, -- If enabled the roaming and fighting areas of the spiders are marked with lines. Blue for roaming and red for fighting.
-    BitersSentToRetaliateMaxFrequency = 18000 -- The max frequency all biters near the spider can be sent at the players in retaliation for attacking the spider. 18,000 is 5 minutes.
+    BitersSentToRetaliateMaxFrequency = 18000, -- The max frequency all biters near the spider can be sent at the players in retaliation for attacking the spider. 18,000 is 5 minutes.
+    spiderArtilleryWeaponRange = 560 -- The hard coded range of the spiders artillery gun.
 }
 
 -- Testing is for development and is very adhoc in what it changes to allow simplier testing.
@@ -219,23 +227,27 @@ end
 
 Spider.CreateGlobals = function()
     global.spider = global.spider or {}
-    global.spider.spiders = global.spider.spiders or {} ---@type table<UnitNumber, JdSpiderRace_BossSpider> @ Key'd by spiders UnitNumber
+    global.spider.spiders = global.spider.spiders or {} ---@type JdSpiderRace_BossSpider[]
+    global.spider.spiderUnitNumberToSpider = global.spider.spiderUnitNumberToSpider or {} ---@type table<UnitNumber, JdSpiderRace_BossSpider>
     global.spider.playerTeamsSpider = global.spider.playerTeamsSpider or {} ---@type table<JdSpiderRace_PlayerHome_PlayerTeamNames, JdSpiderRace_BossSpider> @ The player team name to the spider they are fighting.
     global.spider.showSpiderPlans = global.spider.showSpiderPlans or Settings.showSpiderPlans ---@type boolean
-    global.spider.constantMovementFromSpawnPerMinute = global.spider.constantMovementFromSpawnPerMinute or 3 ---@type number
+    global.spider.constantMovementFromSpawnPerMinute = global.spider.constantMovementFromSpawnPerMinute or 3 ---@type number @ Should be >= 0. Less thab 0 isn't tested and will have some logic gaps.
     global.spider.playersMessageGuiEnabled = global.spider.playersMessageGuiEnabled or {} ---@type table<PlayerIndex, LuaPlayer> @ The players who have set that they want to recieve Message GUI notifications.
     global.spider.playersScoreGuiEnabled = global.spider.playersScoreGuiEnabled or {} ---@type table<PlayerIndex, LuaPlayer> @ The players who have set that they want the Scrore GUI enabled.
     global.spider.messageGuiId = global.spider.messageGuiId or 0 ---@type uint
 end
 
 Spider.OnLoad = function()
+    MOD.Interfaces.Spider = MOD.Interfaces.Spider or {}
+
     EventScheduler.RegisterScheduledEventType("Spider.CheckSpiders_Scheduled", Spider.CheckSpiders_Scheduled)
+    EventScheduler.RegisterScheduledEventType("Spider.SpidersMoveAwayFromSpawn_Scheduled", Spider.SpidersMoveAwayFromSpawn_Scheduled)
+    Events.RegisterHandlerEvent(defines.events.on_chunk_generated, "Spider.OnChunkGenerated", Spider.OnChunkGenerated)
+    Events.RegisterHandlerEvent(defines.events.on_entity_died, "Spider.OnSpiderDied", Spider.OnSpiderDied, {{filter = "name", name = "jd_plays-jd_spider_race-spidertron_boss"}})
+    MOD.Interfaces.Spider.OnNewMostWestEntityBuilt = Spider.OnNewMostWestEntityBuilt
+
     Commands.Register("spider_incrememt_distance_from_spawn", {"api-description.jd_plays-jd_spider_race-spider_incrememt_distance_from_spawn"}, Spider.Command_IncrementDistanceFromSpawn, true)
     Commands.Register("spider_set_movement_per_minute", {"api-description.jd_plays-jd_spider_race-spider_set_movement_per_minute"}, Spider.Command_SetSpiderMovementPerMinute, true)
-    EventScheduler.RegisterScheduledEventType("Spider.SpidersMoveAwayFromSpawn_Scheduled", Spider.SpidersMoveAwayFromSpawn_Scheduled)
-
-    Events.RegisterHandlerEvent(defines.events.on_entity_died, "Spider.OnSpiderDied", Spider.OnSpiderDied, {{filter = "name", name = "jd_plays-jd_spider_race-spidertron_boss"}})
-
     Commands.Register("spider_reset_state", {"api-description.jd_plays-jd_spider_race-spider_reset_state"}, Spider.Command_ResetSpiderState, true)
     Commands.Register("spider_full_rearm", {"api-description.jd_plays-jd_spider_race-spider_full_rearm"}, Spider.Command_FullyRearmSpider, true)
     Commands.Register("spider_give_ammo", {"api-description.jd_plays-jd_spider_race-spider_give_ammo"}, Spider.Command_GiveSpiderAmmo, true)
@@ -251,7 +263,7 @@ Spider.OnStartup = function()
     -- Create the spiders for each team if they don't exist.
     if next(global.spider.spiders) == nil then
         for _, playerTeam in pairs(global.playerHome.teams) do
-            Spider.CreateSpider(playerTeam)
+            Spider.CreateSpiderObject(playerTeam)
         end
 
         Spider.SetSpiderForcesTechs()
@@ -264,22 +276,15 @@ Spider.OnStartup = function()
     end
 end
 
---- Create a new spidertron for the specific player team to fight against.
+--- Create a new boss spider object for the specific player team to compete against.
+--- Doesn't create the actual entity, this is done when the player gets near. This avoids chunks with low evo biters being pre-generated.
 ---@param playerTeam JdSpiderRace_PlayerHome_Team
-Spider.CreateSpider = function(playerTeam)
-    local spiderPosition = {x = playerTeam.spawnPosition.x - Settings.bossSpiderStartingLeftDistance, y = playerTeam.spawnPosition.y}
-    -- They can be created in chunks that don't exist as they have a radar and thus will generate the chunks around them.
-    local bossEntity = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-spidertron_boss", position = spiderPosition, force = playerTeam.enemyForce}
-    if bossEntity == nil then
-        error("Failed to create boss spider for team " .. playerTeam.id .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
-    end
-    bossEntity.color = {0, 0, 0, 200} -- Deep black, but some highlighting still visible.
-
+Spider.CreateSpiderObject = function(playerTeam)
     ---@type JdSpiderRace_BossSpider
     local spider = {
-        id = bossEntity.unit_number,
-        bossEntity = bossEntity,
-        state = BossSpider_State.roaming,
+        unitNumber = nil, -- Populated when the spider's entities are created.
+        bossEntity = nil, -- Populated when the spider's entities are created.
+        state = BossSpider_State.notCreatedYet,
         playerTeam = playerTeam,
         distanceFromSpawn = Settings.bossSpiderStartingLeftDistance,
         damageTakenThisSecond = 0,
@@ -295,9 +300,9 @@ Spider.CreateSpider = function(playerTeam)
         fightingYMax = playerTeam.spawnPosition.y + (global.general.perTeamMapHeight / 2), -- Right up to the edge of the team's lane.
         spiderPlanRenderIds = {},
         spiderAreasRenderIds = {},
-        spiderPositionLastSecond = spiderPosition,
-        gunSpiders = {}, -- Populated later in creation function.
-        turrets = {}, -- Populated later in creation function.
+        spiderPositionLastSecond = nil, -- Populated when the spider's entities are created.
+        gunSpiders = {}, -- Populated when the spider's entities are created.
+        turrets = {}, -- Populated when the spider's entities are created.
         roamingTargetPosition = nil,
         retreatingTargetPosition = nil,
         lastDamagedByPlayer = nil,
@@ -306,11 +311,79 @@ Spider.CreateSpider = function(playerTeam)
         chasingPlayer = nil,
         chasingEntity = nil,
         chasingEntityLastPosition = nil,
-        hasAmmo = nil, -- Populated later in creation function.
-        lastSentBitersToAttackTick = -999999 -- Set to ages ago so first trigger attempt always works.
+        hasAmmo = nil, -- Populated when the spider's entities are created.
+        lastSentBitersToAttackTick = -999999, -- Set to ages ago so first trigger attempt always works.
+        leftMostXChunkPositionGeneratedByTeamAwayFromDivide = 0, -- Default starting value.
+        ammoForCreationTime = {}, -- Populated via RCON commands.
+        spiderFullyArmCountForCreationTime = 1 -- Increased via RCON commands. Start the spider with 1 full ammo count.
     }
 
     Spider.UpdateSpidersRoamingValues(spider)
+
+    -- Record the spider to globals.
+    table.insert(global.spider.spiders, spider)
+    global.spider.playerTeamsSpider[playerTeam.id] = spider
+end
+
+--- Called for each chunk being generated. Used to track if  we need to create the spider entities and do the extra chunk generation.
+---@param event on_chunk_generated
+Spider.OnChunkGenerated = function(event)
+    -- Check if the chunk generated needs to trigger a spider to be created. This just checks if the chunk contains some of the team's spider's roaming area. Anything within artillery range is handled as part of a valid entity being built on the correct side of the divide.
+    for _, spider in pairs(global.spider.spiders) do
+        -- If the spider doesn't have any entities yet then we inspect and record the further west chunks generated.
+        -- CODE NOTE: This is 7 chunks or more in from the divider, anything closer to the divider is ignored. This should stop teams from triggering each others spider generation unintentionally when clearing their own lanes, but does mean in theory a player running right down the egde of the divider wouldn't trigger the spider to appear on their own side. This seems to be an unavoidable comprimise.
+        if spider.state == BossSpider_State.notCreatedYet and ((spider.playerTeam.spawnPosition.y < 0 and event.position.y <= -7) or (spider.playerTeam.spawnPosition.y > 0 and event.position.y >= 7)) then
+            -- This is a chunk that could generate spider entities depending on where the spiders roaming area is (now or in future).
+
+            -- Keep a record of the left most potentially generating spider chunk incase the spiders distance is moved backwards.
+            if event.position.x < spider.leftMostXChunkPositionGeneratedByTeamAwayFromDivide then
+                spider.leftMostXChunkPositionGeneratedByTeamAwayFromDivide = event.position.x
+
+                -- If this chunk is within the roaming area then make the spiders entities now.
+                if event.area.right_bottom.x <= spider.roamingXMax then
+                    Spider.CreateSpiderEntities(spider)
+                end
+            end
+        end
+    end
+end
+
+--- Called when a new most westward valid entity is built for a team. As this may trigger the need for spider entities to be created.
+---@param team JdSpiderRace_PlayerHome_Team
+---@param position MapPosition
+Spider.OnNewMostWestEntityBuilt = function(team, position)
+    local spider = global.spider.playerTeamsSpider[team.id]
+    if spider.state ~= BossSpider_State.notCreatedYet then
+        -- Spider already exists for this team.
+        return
+    end
+
+    -- Check east from the spiders roaming max X range to cover the spiders artillery weapon range. See if the etity we just built is within this range.
+    if spider.roamingXMax + Settings.spiderArtilleryWeaponRange >= position.x then
+        -- This position is within the potential range of the spiders artillery so create the spider.
+        Spider.CreateSpiderEntities(spider)
+    end
+end
+
+--- Called to make the actual spider entities
+---@param spider JdSpiderRace_BossSpider
+Spider.CreateSpiderEntities = function(spider)
+    local spiderPosition = {x = spider.playerTeam.spawnPosition.x - spider.distanceFromSpawn, y = spider.playerTeam.spawnPosition.y}
+
+    -- Create the boss spider entity.
+    -- CODE NOTE: They can be created in chunks that don't exist as they have a radar and thus will generate the chunks around them.
+    local bossEntity = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-spidertron_boss", position = spiderPosition, force = spider.playerTeam.enemyForce}
+    if bossEntity == nil then
+        error("Failed to create boss spider for team " .. spider.playerTeam.id .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
+    end
+    bossEntity.color = {0, 0, 0, 200} -- Deep black, but some highlighting still visible.
+
+    -- Update spider object and globals to their proper active spider values.
+    spider.unitNumber = bossEntity.unit_number
+    spider.bossEntity = bossEntity
+    spider.state = BossSpider_State.roaming
+    spider.spiderPositionLastSecond = spiderPosition
+    global.spider.spiderUnitNumberToSpider[spider.unitNumber] = spider
 
     -- Fill the spiders equipment grid.
     local spiderEquipmentGrid = spider.bossEntity.grid
@@ -326,9 +399,9 @@ Spider.CreateSpider = function(playerTeam)
 
     -- Add the extra gun spiders.
     for shortName, entityDetails in pairs(BossSpider_GunSpiderDetails) do
-        local gunSpiderEntity = global.general.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = playerTeam.enemyForce}
+        local gunSpiderEntity = global.general.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = spider.playerTeam.enemyForce}
         if gunSpiderEntity == nil then
-            error("Failed to create gun spider " .. shortName .. " for team " .. playerTeam.id .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
+            error("Failed to create gun spider " .. shortName .. " for team " .. spider.playerTeam.id .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
         end
         gunSpiderEntity.destructible = false
         local ammoInventory = gunSpiderEntity.get_inventory(defines.inventory.spider_ammo)
@@ -340,19 +413,28 @@ Spider.CreateSpider = function(playerTeam)
 
     -- Add the extra turrets.
     for shortName, entityDetails in pairs(BossSpider_TurretDetails) do
-        local turretEntity = global.general.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = playerTeam.enemyForce}
+        local turretEntity = global.general.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = spider.playerTeam.enemyForce}
         if turretEntity == nil then
-            error("Failed to create turret " .. shortName .. " for team " .. playerTeam.id .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
+            error("Failed to create turret " .. shortName .. " for team " .. spider.playerTeam.id .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
         end
         turretEntity.destructible = false
         spider.turrets[shortName] = {type = shortName, entity = turretEntity}
     end
 
-    Spider.GiveSpiderFullAmmo(spider)
+    -- Give the spider the accumilated full ammo sets.
+    for i = 1, spider.spiderFullyArmCountForCreationTime do
+        Spider.GiveSpiderFullAmmo(spider)
+    end
+    spider.spiderFullyArmCountForCreationTime = 0
 
-    -- Record the spider to globals.
-    global.spider.spiders[spider.id] = spider
-    global.spider.playerTeamsSpider[playerTeam.id] = spider
+    -- Give the spider the accumilated adhock ammo counts.
+    for ammoFriendlyName, quantity in pairs(spider.ammoForCreationTime) do
+        Spider.GiveSpiderSpecificAmmo(spider, ammoFriendlyName, BossSpider_RconAmmoTypes[ammoFriendlyName], quantity)
+    end
+    spider.ammoForCreationTime = {}
+
+    -- Triggers the map chunks past the spider to be generated now, rather than waiting for the next distance from spawn movement event.
+    Spider.UpdateSpidersRoamingValues(spider)
 end
 
 --- Give the forces of the spiders all the shooting speed upgrades and damage upgrades.
@@ -389,19 +471,23 @@ Spider.UpdateSpidersRoamingValues = function(spider)
         table.insert(spider.spiderAreasRenderIds, rendering.draw_rectangle {color = Colors.red, filled = false, width = 10, left_top = {x = spider.fightingXMin, y = spider.fightingYMin}, right_bottom = {x = spider.fightingXMax, y = spider.fightingYMax}, surface = global.general.surface, draw_on_ground = true})
     end
 
-    -- Request the chunks to be generated around this spider area. The ones beyond the spider center will be important if the spider is attacked as we want bases to be there so the spider can call biters from them. Do a series of chunk requests to covered approximately 600 tiles west of the spider's raoming area as this is roughly how far it can call for reinforcements from.
-    local laneChunksHeight = math.ceil((global.general.perTeamMapHeight / 32) / 2) -- may be 1 chunk further out than the lane in some map width sizes.
-    global.general.surface.request_to_generate_chunks({x = spider.roamingXMin, y = spider.playerTeam.spawnPosition.y}, laneChunksHeight)
-    global.general.surface.request_to_generate_chunks({x = spider.roamingXMin - 180, y = spider.playerTeam.spawnPosition.y}, laneChunksHeight)
-    global.general.surface.request_to_generate_chunks({x = spider.roamingXMin - 360, y = spider.playerTeam.spawnPosition.y}, laneChunksHeight)
+    -- Create chunks for the spider if it exists.
+    if spider.state ~= BossSpider_State.notCreatedYet and spider.state ~= BossSpider_State.dead then
+        -- Request the chunks to be generated around this spider area. The ones beyond the spider center will be important if the spider is attacked as we want bases to be there so the spider can call biters from them. Do a series of chunk requests to covered approximately 600 tiles west of the spider's raoming area as this is roughly how far it can call for reinforcements from.
+        -- Only done if the spider exists so that we don't generate chunks with very low evo unnecessarily early.
+        local laneChunksHeight = math.ceil((global.general.perTeamMapHeight / 32) / 2) -- may be 1 chunk further out than the lane in some map width sizes.
+        global.general.surface.request_to_generate_chunks({x = spider.roamingXMin, y = spider.playerTeam.spawnPosition.y}, laneChunksHeight)
+        global.general.surface.request_to_generate_chunks({x = spider.roamingXMin - 180, y = spider.playerTeam.spawnPosition.y}, laneChunksHeight)
+        global.general.surface.request_to_generate_chunks({x = spider.roamingXMin - 360, y = spider.playerTeam.spawnPosition.y}, laneChunksHeight)
+    end
 end
 
 --- Called when only a boss spider named entity type has been damaged.
 ---@param event on_entity_damaged
 Spider.OnBossSpiderEntityDamaged = function(event)
-    local spider = global.spider.spiders[event.entity.unit_number]
+    local spider = global.spider.spiderUnitNumberToSpider[event.entity.unit_number]
     if spider == nil then
-        -- Non monitored spider, i.e. testing one.
+        -- Either spider doesn't exist yet or a testing spider entity (non monitored).
         return
     end
 
@@ -461,8 +547,8 @@ Spider.CheckSpiders_Scheduled = function(event)
     local updateScoreGuis = false
 
     for _, spider in pairs(global.spider.spiders) do
-        -- If spider is dead then nothing to be done.
-        if spider.state ~= BossSpider_State.dead then
+        -- If spider doesn't exist or is dead then nothing to be done for it.
+        if spider.state ~= BossSpider_State.notCreatedYet and spider.state ~= BossSpider_State.dead then
             -- Log the damage taken this second.
             local thisSecond = event.tick / 60
             if spider.damageTakenThisSecond > 0 then
@@ -990,8 +1076,7 @@ end
 Spider.Retreat = function(spider)
     Spider.ClearStateVariables(spider)
 
-    spider.distanceFromSpawn = spider.distanceFromSpawn + Settings.spiderDistanceToRetreat
-    Spider.UpdateSpidersRoamingValues(spider)
+    Spider.UpdateSpiderDistanceFromSpawn(spider, Settings.spiderDistanceToRetreat)
     game.print({"message.jd_plays-jd_spider_race-spider_retreated", spider.playerTeam.prettyName}, Colors.lightgreen)
 
     spider.state = BossSpider_State.retreating
@@ -1119,7 +1204,7 @@ end
 ---@param attackingForce LuaForce
 ---@param spidersCurrentPosition MapPosition
 Spider.CallNearbyBitersForHelp = function(spider, currentTick, attackingForce, spidersCurrentPosition)
-    if currentTick > spider.lastSentBitersToAttackTick + Settings.BitersSentToRetaliateMaxFrequency then
+    if currentTick > spider.lastSentBitersToAttackTick + Settings.bitersSentToRetaliateMaxFrequency then
         -- Send all the biters in a very large area 1,000 tiles east of the spider.
         -- CODE NOTES:
         --    - Creates a number of medium sized groups. Configured for use with biter attracter entity call_for_help_radius of 200. Also the chunk generation west of spider is set aroud these values.
@@ -1306,20 +1391,47 @@ Spider.Command_IncrementDistanceFromSpawn = function(commandEvent)
     if playerTeamName == "both" then
         -- Update both team's spiders.
         for _, spider in pairs(global.spider.spiders) do
-            spider.distanceFromSpawn = spider.distanceFromSpawn + distanceChange
-            Spider.UpdateSpidersRoamingValues(spider)
+            Spider.UpdateSpiderDistanceFromSpawn(spider, distanceChange)
             Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, messageLocalisedString)
         end
     else
         -- Just update the 1 team's spider.
         local spider = global.spider.playerTeamsSpider[playerTeamName]
-        spider.distanceFromSpawn = spider.distanceFromSpawn + distanceChange
-        Spider.UpdateSpidersRoamingValues(spider)
+        Spider.UpdateSpiderDistanceFromSpawn(spider, distanceChange)
         Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, messageLocalisedString)
     end
 
     -- Do one scoreboard update for all spiders.
     Spider.UpdateAllScoreGuis()
+end
+
+--- Update the spiders distance from spawn for a change amount and do the follow up tasks.
+---@param spider JdSpiderRace_BossSpider
+---@param distanceChange double
+Spider.UpdateSpiderDistanceFromSpawn = function(spider, distanceChange)
+    -- If the change was negative and the spider entity doesn't exist yet, check if the reduced spider's distance means we should now create the entities. As the players last built and generated chunk is now much closer than before.
+    -- Do this before we update the spiders distance so we create the spider at the old distance and then let it roam back towards its new roaming area. This behaviour will match if it had already existed when the distance was moved backwards.
+    if distanceChange < 0 and spider.state == BossSpider_State.notCreatedYet then
+        -- We need to check if the spider should be made now.
+        local makeSpiderEntities = false
+
+        -- CODE NOTE: Use the bottom right tile within the chunk as the on_chunk_generated event does (hence +1 to stored chunk number.)
+        -- CODE NOTE: distance is subtracted as its a negative number, but we want to add it to the XPosition.
+        if (spider.leftMostXChunkPositionGeneratedByTeamAwayFromDivide + 1) * 32 <= spider.roamingXMax - distanceChange then
+            -- Left most chunk is within the spiders roaming area.
+            makeSpiderEntities = true
+        elseif (spider.roamingXMax - distanceChange) + Settings.spiderArtilleryWeaponRange >= spider.playerTeam.mostLeftBuiltEntityXPosition then
+            -- Left most built entity is within the artillery's weapon range.
+            makeSpiderEntities = true
+        end
+
+        if makeSpiderEntities then
+            Spider.CreateSpiderEntities(spider)
+        end
+    end
+
+    spider.distanceFromSpawn = spider.distanceFromSpawn + distanceChange
+    Spider.UpdateSpidersRoamingValues(spider)
 end
 
 --- When the spider_set_movement_per_minute command is called.
@@ -1341,6 +1453,10 @@ Spider.Command_SetSpiderMovementPerMinute = function(commandEvent)
         game.print(commandErrorMessagePrefix .. "First argument of distance must be a number, recieved: " .. tostring(distance), Colors.lightred)
         return
     end
+    if distance < 0 then
+        game.print(commandErrorMessagePrefix .. "First argument of distance must be a positive number, recieved: " .. tostring(distance), Colors.lightred)
+        return
+    end
 
     -- Impliment command as any errors would have bene flagged by now.
     global.spider.constantMovementFromSpawnPerMinute = distance
@@ -1351,8 +1467,7 @@ end
 Spider.SpidersMoveAwayFromSpawn_Scheduled = function(event)
     -- Update both team's spiders.
     for _, spider in pairs(global.spider.spiders) do
-        spider.distanceFromSpawn = spider.distanceFromSpawn + global.spider.constantMovementFromSpawnPerMinute
-        Spider.UpdateSpidersRoamingValues(spider)
+        Spider.UpdateSpiderDistanceFromSpawn(spider, global.spider.constantMovementFromSpawnPerMinute)
     end
 
     -- Schedule the next Minutes event. As the first instance of this schedule always occurs exactly on a minute no fancy logic is needed for each reschedule.
@@ -1363,6 +1478,12 @@ end
 ---@param spider JdSpiderRace_BossSpider
 Spider.GiveSpiderFullAmmo = function(spider)
     if spider.state == BossSpider_State.dead then
+        return
+    end
+
+    -- If the spider entity doesn't exist yet just add the ammo to the spider object for when it is created, otherwise arm the spider now.
+    if spider.state == BossSpider_State.notCreatedYet then
+        spider.spiderFullyArmCountForCreationTime = spider.spiderFullyArmCountForCreationTime + 1
         return
     end
 
@@ -1444,7 +1565,7 @@ Spider.Command_GiveSpiderAmmo = function(commandEvent)
     end
 
     local ammoFriendlyName = args[2] ---@type string
-    local rconAmmoType = BossSpider_RconAmmoNames[ammoFriendlyName]
+    local rconAmmoType = BossSpider_RconAmmoTypes[ammoFriendlyName]
     if rconAmmoType == nil then
         game.print(commandErrorMessagePrefix .. "Second argument of ammoName must be one of the specific ammo types, recieved: " .. tostring(ammoFriendlyName) .. ". Options: bullet, piercingBullet, uraniumBullet, rocket, explosiveRocket, atomicRocket, cannonShell, explosiveCannonShell, uraniumCannonShell, explosiveUraniumCannonShell, artilleryShell, flamethrowerAmmo", Colors.lightred)
         return
@@ -1466,22 +1587,33 @@ Spider.Command_GiveSpiderAmmo = function(commandEvent)
     if playerTeamName == "both" then
         -- Update both team's spiders.
         for _, spider in pairs(global.spider.spiders) do
-            Spider.GiveSpiderSpecificAmmo(spider, rconAmmoType, quantity)
+            Spider.GiveSpiderSpecificAmmo(spider, ammoFriendlyName, rconAmmoType, quantity)
             Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_give_ammo", quantity, rconAmmoType.ammoItemPrettyName})
         end
     else
         -- Just update the 1 team's spider.
         local spider = global.spider.playerTeamsSpider[playerTeamName]
-        Spider.GiveSpiderSpecificAmmo(spider, rconAmmoType, quantity)
+        Spider.GiveSpiderSpecificAmmo(spider, ammoFriendlyName, rconAmmoType, quantity)
         Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_give_ammo", quantity, rconAmmoType.ammoItemPrettyName})
     end
 end
 
 --- Gives a spider a specific ammo type and count. Works out which entity to put the ammo in.
 ---@param spider JdSpiderRace_BossSpider
+---@param ammoFriendlyName JdSpiderRace_BossSpider_RconAmmoName
 ---@param rconAmmoType JdSpiderRace_BossSpider_RconAmmoType
 ---@param quantity uint
-Spider.GiveSpiderSpecificAmmo = function(spider, rconAmmoType, quantity)
+Spider.GiveSpiderSpecificAmmo = function(spider, ammoFriendlyName, rconAmmoType, quantity)
+    if spider.state == BossSpider_State.dead then
+        return
+    end
+
+    -- If the spider entity doesn't exist yet just add the ammo to the spider object for when it is created, otherwise arm the spider now.
+    if spider.state == BossSpider_State.notCreatedYet then
+        spider.ammoForCreationTime[ammoFriendlyName] = (spider.ammoForCreationTime[ammoFriendlyName] or 0) + quantity
+        return
+    end
+
     if rconAmmoType.bossSpider then
         spider.bossEntity.insert({name = rconAmmoType.ammoItemName, count = quantity})
         spider.hasAmmo = true
@@ -1501,13 +1633,15 @@ Spider.OnSpiderDied = function(event)
         return
     end
 
-    local spider = global.spider.spiders[event.entity.unit_number]
+    local spider = global.spider.spiderUnitNumberToSpider[event.entity.unit_number]
     if spider == nil then
-        -- Non monitored spider, i.e. testing one.
+        -- Either spider doesn't exist yet or a testing spider entity (non monitored).
         return
     end
 
+    -- Record spiders new state as this will stop other processing ocurring in future.
     spider.state = BossSpider_State.dead
+
     for _, gunSpiderDetails in pairs(spider.gunSpiders) do
         gunSpiderDetails.entity.destroy()
     end
@@ -1556,18 +1690,21 @@ Spider.Command_ResetSpiderState = function(commandEvent)
     spider.previousDamageToConsider = 0
     spider.secondsWhenDamaged = {}
 
-    -- Teleport the spider home.
-    local teleportPosition = {
-        x = ((spider.roamingXMax - spider.roamingXMin) / 2) + spider.roamingXMin,
-        y = ((spider.roamingYMax - spider.roamingYMin) / 2) + spider.roamingYMin
-    }
-    spider.bossEntity.teleport(teleportPosition)
-    for _, gunSpider in pairs(spider.gunSpiders) do
-        gunSpider.entity.teleport(teleportPosition)
-    end
+    -- Handle spider entities if they exist.
+    if spider.state ~= BossSpider_State.notCreatedYet and spider.state ~= BossSpider_State.dead then
+        -- Teleport the spider home.
+        local teleportPosition = {
+            x = ((spider.roamingXMax - spider.roamingXMin) / 2) + spider.roamingXMin,
+            y = ((spider.roamingYMax - spider.roamingYMin) / 2) + spider.roamingYMin
+        }
+        spider.bossEntity.teleport(teleportPosition)
+        for _, gunSpider in pairs(spider.gunSpiders) do
+            gunSpider.entity.teleport(teleportPosition)
+        end
 
-    -- Return the spider to roaming.
-    Spider.StartRoaming(spider, teleportPosition)
+        -- Return the spider to roaming.
+        Spider.StartRoaming(spider, teleportPosition)
+    end
 end
 
 --- Called for each new player who joins the server.
@@ -1809,15 +1946,19 @@ Spider.GetScoreGuiData = function()
     local spiderMaxHealth = game.entity_prototypes["jd_plays-jd_spider_race-spidertron_boss"].max_health
     local northSpiderObject, southSpiderObject = global.spider.playerTeamsSpider["north"], global.spider.playerTeamsSpider["south"]
     local northSpiderCurrentHealth, southSpiderCurrentHealth
-    if northSpiderObject.state ~= BossSpider_State.dead then
-        northSpiderCurrentHealth = northSpiderObject.bossEntity.health
-    else
+    if northSpiderObject.state == BossSpider_State.notCreatedYet then
+        northSpiderCurrentHealth = spiderMaxHealth
+    elseif northSpiderObject.state == BossSpider_State.dead then
         northSpiderCurrentHealth = 0
-    end
-    if southSpiderObject.state ~= BossSpider_State.dead then
-        southSpiderCurrentHealth = southSpiderObject.bossEntity.health
     else
+        northSpiderCurrentHealth = northSpiderObject.bossEntity.health
+    end
+    if southSpiderObject.state == BossSpider_State.notCreatedYet then
+        southSpiderCurrentHealth = spiderMaxHealth
+    elseif southSpiderObject.state == BossSpider_State.dead then
         southSpiderCurrentHealth = 0
+    else
+        southSpiderCurrentHealth = southSpiderObject.bossEntity.health
     end
     local northMostLeftBuiltEntityYDistance, southMostLeftBuiltEntityYDistance = 0 - math_floor(global.playerHome.teams["north"].mostLeftBuiltEntityXPosition - global.playerHome.spawnXOffset), 0 - math_floor(global.playerHome.teams["south"].mostLeftBuiltEntityXPosition - global.playerHome.spawnXOffset)
 

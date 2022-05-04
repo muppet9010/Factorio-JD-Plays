@@ -65,7 +65,8 @@ Map.OnChunkGenerated = function(event)
 
     -- Check if this is the chunk where the market should be placed for any team.
     for _, team in pairs(global.playerHome.teams) do
-        if event.area.left_top.x == team.spawnPosition.x and event.area.left_top.y == team.spawnPosition.y then
+        -- Check if the spawn point is somewhere within this chunk.
+        if event.area.left_top.x <= team.spawnPosition.x and event.area.right_bottom.x > team.spawnPosition.x and event.area.left_top.y <= team.spawnPosition.y and event.area.right_bottom.y > team.spawnPosition.y then
             -- Spawn point is in this chunk.
             Map.CreateMarketForTeam(team)
         end
