@@ -511,7 +511,6 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                                 {
                                     descriptiveName = "pm_closeButton",
                                     type = "sprite-button",
-                                    tooltip = "gui-tooltip.jd_plays-jd_spider_race-pm_closeButton",
                                     sprite = "utility/close_white",
                                     style = MuppetStyles.spriteButton.frameCloseButtonClickable,
                                     registerClick = {actionName = "PlayerHome.On_PlayerManagerCloseButtonClicked"}
