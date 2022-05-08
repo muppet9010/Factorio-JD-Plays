@@ -150,7 +150,7 @@ local function create_boss_spidertron(arguments)
                 equipment_grid = "spidertron-boss-equipment-grid", -- Changed to custom sized grid.
                 trash_inventory_size = 20,
                 height = 1 * scale * leg_scale, -- Changed height from 1.5x to 1x, as otherwsie it tended to bob up and down excessively.
-                torso_rotation_speed = 0.010, -- Made to rotate twice as fast.
+                torso_rotation_speed = 0.010, -- Made to rotate twice as fast, 0.005 to 0.010.
                 chunk_exploration_radius = 3,
                 selection_priority = 51,
                 graphics_set = spidertron_torso_graphics_set(scale),
@@ -251,6 +251,28 @@ local function create_boss_spidertron(arguments)
         }
     )
 end
+
+local function create_spidertron_light_cone(orientation, intensity, size, shift_adder)
+    local shift = {x = 0, y = -14 + shift_adder}
+    return {
+        type = "oriented",
+        minimum_darkness = 0.3,
+        picture = {
+            filename = "__core__/graphics/light-cone.png",
+            priority = "extra-high",
+            flags = {"light"},
+            scale = 2,
+            width = 200,
+            height = 200
+        },
+        source_orientation_offset = orientation,
+        --add_perspective = true,
+        shift = shift,
+        size = 2 * size,
+        intensity = 0.6 * intensity,
+        color = {r = 0.92, g = 0, b = 0} -- Made red colored for the eyes.
+    }
+end
 --[[
         End of copied spidertron creation code.
 ]]
@@ -263,6 +285,14 @@ create_boss_spidertron {
     leg_scale = 1, -- relative to scale
     leg_thickness = 1, -- relative to leg_scale
     leg_movement_speed = 3 -- Same approximate real speed as a regular spider with 3 (max) legs.
+}
+local bossSpider = data.raw["spider-vehicle"]["jd_plays-jd_spider_race-spidertron_boss"]
+-- Make the 4 eyes have red lights, but no auro light.
+bossSpider.graphics_set.light = {
+    create_spidertron_light_cone(0, 1, 1, -1),
+    create_spidertron_light_cone(-0.05, 0.7, 0.7, 2.5),
+    create_spidertron_light_cone(0.04, 0.5, 0.45, 5.5),
+    create_spidertron_light_cone(0.06, 0.6, 0.35, 6.5)
 }
 
 -- Make remnants the right size for the boss spidertron.
