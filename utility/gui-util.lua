@@ -419,7 +419,7 @@ end
 ---@alias UtilityGuiUtil_ElementDetails_style string
 
 --------------------------------------------------------------------------
--- A copy of the the base game's LuaGuiElement.add_param, but without the following attributes as thye are included in my parent class; name, style, caption, tooltip.
+-- A copy of the the base game's LuaGuiElement.add_param, but without the following attributes as they are included in my parent class; name, style, caption, tooltip.
 -- Copied from 1.1.53
 --------------------------------------------------------------------------
 
@@ -619,7 +619,7 @@ end
 ---The position the minimap centers on. Defaults to the player's current position.
 ---
 ---[View documentation](https://lua-api.factorio.com/latest/LuaGuiElement.html#LuaGuiElement.add)
----@field position Position<int,int>
+---@field position MapPosition<int,int>
 ---Applies to **"camera"**: (optional)
 ---The surface that the camera will render. Defaults to the player's current surface.
 ---
@@ -1016,7 +1016,7 @@ end
 ---The position this camera or minimap is focused on, if any.
 ---
 ---[View documentation](https://lua-api.factorio.com/latest/LuaGuiElement.html#LuaGuiElement.position)
----@field position Position<int,int>
+---@field position MapPosition<int,int>
 ---[RW]
 ---Whether this text-box is read-only. Defaults to `false`.
 ---

@@ -13,18 +13,19 @@ MOD.UTILITYPrototypeAttributes = MOD.UTILITYPrototypeAttributes or {} ---@type U
 ---@return any @ attribute value, can include nil.
 PrototypeAttributes.GetAttribute = function(prototypeType, prototypeName, attributeName)
     local utilityPrototypeAttributes = MOD.UTILITYPrototypeAttributes
-    if utilityPrototypeAttributes == nil then
-        MOD.UTILITYPrototypeAttributes = {}
-    end
 
-    local typeCache = utilityPrototypeAttributes[prototypeType]
-    if typeCache == nil then
+    local typeCache
+    if utilityPrototypeAttributes[prototypeType] ~= nil then
+        typeCache = utilityPrototypeAttributes[prototypeType]
+    else
         utilityPrototypeAttributes[prototypeType] = {}
         typeCache = utilityPrototypeAttributes[prototypeType]
     end
 
-    local prototypeCache = typeCache[prototypeName]
-    if prototypeCache == nil then
+    local prototypeCache
+    if typeCache[prototypeName] ~= nil then
+        prototypeCache = typeCache[prototypeName]
+    else
         typeCache[prototypeName] = {}
         prototypeCache = typeCache[prototypeName]
     end

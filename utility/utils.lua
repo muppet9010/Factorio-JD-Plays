@@ -1250,7 +1250,7 @@ end
 --- The dataset is a table of entries. Each entry has various keys that are used in the calling scope and ignored by this funciton. It also has a key of the name passed in as the chancePropertyName parameter that defines the chance of this result.
 ---@param dataSet table[] @ The dataSet to be reviewed and updated.
 ---@param chancePropertyName string @ The attribute name that has the chance value per dataSet entry.
----@param skipFillingEmptyChance boolean @ If TRUE then total chance below 1 will not be scaled up, so that nil results can be had in random selection.
+---@param skipFillingEmptyChance? boolean @ Defaults to FALSE. If TRUE then total chance below 1 will not be scaled up, so that nil results can be had in random selection.
 ---@return table[] @ Same object passed in by reference as dataSet, so technically no return is needed, legacy.
 Utils.NormaliseChanceList = function(dataSet, chancePropertyName, skipFillingEmptyChance)
     local totalChance = 0

@@ -109,10 +109,12 @@ Map.CreateMarketForTeam = function(team, spawnChunkCenterPosition)
     local marketPosition = global.general.surface.find_non_colliding_position("jd_plays-jd_spider_race-market_placement_test", spawnChunkCenterPosition, 40, 1)
     if marketPosition == nil then
         error("No position found for market near spawn. UNACCEPTABLE")
+        return
     end
     local market = global.general.surface.create_entity {name = "market", position = marketPosition, force = team.playerForce, move_stuck_players = true}
     if market == nil then
         error("Market failed to create at found position. UNACCEPTABLE")
+        return
     end
     market.destructible = false
 

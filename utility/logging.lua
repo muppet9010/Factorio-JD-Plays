@@ -24,7 +24,7 @@ Logging.BoundingBoxToString = function(boundingBox)
 end
 
 ---@param text string
----@param enabled boolean
+---@param enabled? boolean @ Defaults to True.
 Logging.Log = function(text, enabled)
     if enabled ~= nil and not enabled then
         return
@@ -42,7 +42,7 @@ Logging.Log = function(text, enabled)
 end
 
 ---@param text string
----@param enabled boolean
+---@param enabled? boolean @ Defaults to True.
 Logging.LogPrint = function(text, enabled)
     if enabled ~= nil and not enabled then
         return
@@ -120,7 +120,7 @@ end
 
 -- Used to make a text object of something's attributes that can be stringified. Supports LuaObjects with handling for specific ones.
 ---@param thing any @ can be a simple data type, table, or LuaObject.
----@param _tablesLogged table @ don't pass in, only used internally when slef referencing the function for looping.
+---@param _tablesLogged? table @ don't pass in, only used internally when self referencing the function for looping.
 ---@return table
 Logging.PrintThingsDetails = function(thing, _tablesLogged)
     _tablesLogged = _tablesLogged or {} -- Internal variable passed when self referencing to avoid loops.
