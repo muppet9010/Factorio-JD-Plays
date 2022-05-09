@@ -197,7 +197,7 @@ local BossSpider_RconAmmoTypes = {
 
 local Settings = {
     bossSpiderStartingLeftDistance = 5000, -- How far left of spawn the center of the spiders area starts the game at.
-    spiderDamageToRetreat = 1000,
+    spiderDamageToRetreat = 10000,
     spiderDamageSecondsConsidered = 600, -- How many seconds in the past the spider will consider to see if it has sustained enough damage to retreat. Set to 10 minutes to try and counter players doing slow damage to the spider to try and avoid it retreating.
     spiderDistanceToRetreat = 1000, -- How far to increment a spider's distance to the left by when it is forced to retreat.
     spidersRoamingXRange = 100, -- How far up and down from the centre of a teams lane the spider will roam.
@@ -1786,7 +1786,7 @@ Spider.Gui_ShowScoreGuiForPlayer = function(player, playerIndex)
             storeName = "Score",
             direction = "vertical",
             style = MuppetStyles.frame.main_shadowRisen.marginTL,
-            styling = {width = 259}, -- Width of the starting GUI size so the inner frames can stretch to fill it without the entire GUI growing when other large GUIs are added to the left of screen.
+            styling = {width = 266}, -- Width of the starting GUI size so the inner frames can stretch to fill it without the entire GUI growing when other large GUIs are added to the left of screen.
             children = {
                 {
                     -- Header title
