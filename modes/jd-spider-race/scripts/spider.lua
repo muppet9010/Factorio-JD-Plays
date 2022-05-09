@@ -207,7 +207,7 @@ local Settings = {
     distanceSpiderMovesinSecond = 21, -- Approximate distance a full speed boss spider will cover over 1 second. This is based o the spiders current speed and not for adhoc changing.
     showSpiderPlans = false, -- If enabled the plans of a spider are rendered.
     markSpiderAreas = false, -- If enabled the roaming and fighting areas of the spiders are marked with lines. Blue for roaming and red for fighting.
-    BitersSentToRetaliateMaxFrequency = 18000, -- The max frequency all biters near the spider can be sent at the players in retaliation for attacking the spider. 18,000 is 5 minutes.
+    bitersSentToRetaliateMaxFrequency = 18000, -- The max frequency all biters near the spider can be sent at the players in retaliation for attacking the spider. 18,000 is 5 minutes.
     spiderArtilleryWeaponRange = 560 -- The hard coded range of the spiders artillery gun.
 }
 
@@ -375,6 +375,7 @@ Spider.CreateSpiderEntities = function(spider)
     local bossEntity = global.general.surface.create_entity {name = "jd_plays-jd_spider_race-spidertron_boss", position = spiderPosition, force = spider.playerTeam.enemyForce}
     if bossEntity == nil then
         error("Failed to create boss spider for team " .. spider.playerTeam.id .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
+        return
     end
     bossEntity.color = {0, 0, 0, 200} -- Deep black, but some highlighting still visible.
 
@@ -402,6 +403,7 @@ Spider.CreateSpiderEntities = function(spider)
         local gunSpiderEntity = global.general.surface.create_entity {name = entityDetails.name, position = spiderPosition, force = spider.playerTeam.enemyForce}
         if gunSpiderEntity == nil then
             error("Failed to create gun spider " .. shortName .. " for team " .. spider.playerTeam.id .. " at: " .. Utils.FormatPositionTableToString(spiderPosition))
+            return
         end
         gunSpiderEntity.destructible = false
         local ammoInventory = gunSpiderEntity.get_inventory(defines.inventory.spider_ammo)
