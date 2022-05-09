@@ -732,7 +732,7 @@ PlayerHome.UpdateAllOpenPlayerManagerGuis = function()
         if player.connected then
             PlayerHome.UpdatePlayersInPlayerManagerGui(playerIndex)
         else
-            PlayerHome.Gui_ClosePlayerManagerForPlayer(playerIndex)
+            PlayerHome.Gui_ClosePlayerManagerForPlayer(player, playerIndex)
         end
     end
 end

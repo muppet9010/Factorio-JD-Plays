@@ -1175,6 +1175,7 @@ Spider.GetEntitiesControllingPlayer = function(entity)
         -- This will be the player controlling the character entity or nil.
         return entity.player
     elseif entityType == "spider-vehicle" or entityType == "car" or entityType == "artillery-wagon" or entityType == "cargo-wagon" or entityType == "fluid-wagon" or entityType == "locomotive" then
+        -- Is a vehicle of some type.
         local driverCharacter = entity.get_driver()
         if driverCharacter ~= nil then
             if driverCharacter.is_player() then
@@ -1185,7 +1186,7 @@ Spider.GetEntitiesControllingPlayer = function(entity)
         else
             local passengerCharacter = entity.get_passenger()
             if passengerCharacter ~= nil then
-                if driverCharacter.is_player() then
+                if passengerCharacter.is_player() then
                     return passengerCharacter -- Editor mode.
                 else
                     return passengerCharacter.player
@@ -1195,6 +1196,7 @@ Spider.GetEntitiesControllingPlayer = function(entity)
             end
         end
     else
+        -- Is anything else.
         return nil
     end
 end
