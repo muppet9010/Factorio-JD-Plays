@@ -206,7 +206,7 @@ Map.CheckForDivideCrossedPlayers_Scheduled = function(event)
                     end
                 end
 
-                correctXPos, teleportEntity, teleportTarget = nil, nil, nil -- Reset for next players check.
+                correctYPos = nil -- Reset for next players check.
             end
         end
     end
