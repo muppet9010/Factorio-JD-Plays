@@ -43,7 +43,7 @@ end
 -- Make each weapon variant of the boss spider.
 local gunSpiderRocketLauncher = Utils.DeepCopy(gunSpiderBase)
 gunSpiderRocketLauncher.name = "jd_plays-jd_spider_race-spidertron_boss_gun-rocket_launcher"
-gunSpiderRocketLauncher.guns = {"rocket-launcher", "rocket-launcher", "rocket-launcher"}
+gunSpiderRocketLauncher.guns = {"rocket-launcher", "rocket-launcher"}
 
 local gunSpiderMachineGun = Utils.DeepCopy(gunSpiderBase)
 gunSpiderMachineGun.name = "jd_plays-jd_spider_race-spidertron_boss_gun-machine_gun"
