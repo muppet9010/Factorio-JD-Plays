@@ -51,7 +51,7 @@ local spiderArtilleryTurretGun = {
         ammo_category = "artillery-shell",
         cooldown = 20,
         range = 560, -- So same range as a default artillery under manual fire control.
-        min_range = 96, -- Far enough away so that it shouldn't artillery and rocket/nuke the same target ever. As artillery shells are precious.
+        min_range = 128, -- Far enough away so that it shouldn't artillery a target that may be hit by a nuke damage wave ever. As artillery shells are precious.
         sound = refArtilleryTurretGun.attack_parameters.sound
     }
 }
