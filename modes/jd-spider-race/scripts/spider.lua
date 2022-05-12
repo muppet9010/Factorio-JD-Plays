@@ -200,7 +200,7 @@ local Settings = {
     markSpiderAreas = false, -- If enabled the roaming and fighting areas of the spiders are marked with lines. Blue for roaming and red for fighting.
     bitersSentToRetaliateMaxFrequency = 18000, -- The max frequency all biters near the spider can be sent at the players in retaliation for attacking the spider. 18,000 is 5 minutes.
     spiderArtilleryWeaponRange = 560, -- The hard coded range of the spiders artillery gun.
-    spiderNukeMaxFrequency = 300, -- One nuke no more frequently than every 5 seconds to avoid double firing at a target at max distance.
+    spiderNukeMaxFrequency = 240, -- One nuke no more frequently than every 4 seconds to try and avoiding double firing at a target at max distance. JD wanted this value rather than the 5 I knew was safe.
     spiderEngagementRange = 30 -- This is the tank cannon range, ignoring that the rocket launcher has further range. This is so the tank cannon is used when fighting things as it still outranges all defensive turrets.
 }
 
