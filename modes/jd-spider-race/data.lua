@@ -8,7 +8,7 @@ require("modes.jd-spider-race.prototypes.nuke_other_team_item")
 
 require("modes.jd-spider-race.prototypes.spidertron_boss")
 require("modes.jd-spider-race.prototypes.spidertron_boss-gun_variants")
-require("modes.jd-spider-race.prototypes.spidertron_boss-ammos")
+require("modes.jd-spider-race.prototypes.spidertron_boss-ammos_&_guns")
 require("modes.jd-spider-race.prototypes.spidertron_boss-artillery_turret")
 require("modes.jd-spider-race.prototypes.biter-attracter")
 

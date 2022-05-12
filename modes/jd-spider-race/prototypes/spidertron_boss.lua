@@ -159,7 +159,7 @@ local function create_boss_spidertron(arguments)
                 },
                 movement_energy_consumption = "250kW",
                 automatic_weapon_cycling = true,
-                chain_shooting_cooldown_modifier = 0.5,
+                chain_shooting_cooldown_modifier = 1, -- We want it to shoot the same speed regardless of if all weapons have ammo or not.
                 spider_engine = {
                     legs = {
                         {

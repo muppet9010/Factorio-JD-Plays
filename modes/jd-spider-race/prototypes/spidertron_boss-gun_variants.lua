@@ -43,15 +43,15 @@ end
 -- Make each weapon variant of the boss spider.
 local gunSpiderRocketLauncher = Utils.DeepCopy(gunSpiderBase)
 gunSpiderRocketLauncher.name = "jd_plays-jd_spider_race-spidertron_boss_gun-rocket_launcher"
-gunSpiderRocketLauncher.guns = {"rocket-launcher", "rocket-launcher"}
+gunSpiderRocketLauncher.guns = {"jd_plays-jd_spider_race-spidertron_boss-rocket_launcher_gun", "jd_plays-jd_spider_race-spidertron_boss-rocket_launcher_gun"}
 
 local gunSpiderMachineGun = Utils.DeepCopy(gunSpiderBase)
 gunSpiderMachineGun.name = "jd_plays-jd_spider_race-spidertron_boss_gun-machine_gun"
-gunSpiderMachineGun.guns = {"tank-machine-gun", "tank-machine-gun", "tank-machine-gun"}
+gunSpiderMachineGun.guns = {"jd_plays-jd_spider_race-spidertron_boss-tank_machine_gun", "jd_plays-jd_spider_race-spidertron_boss-tank_machine_gun", "jd_plays-jd_spider_race-spidertron_boss-tank_machine_gun"}
 
 local gunSpiderTankCannon = Utils.DeepCopy(gunSpiderBase)
 gunSpiderTankCannon.name = "jd_plays-jd_spider_race-spidertron_boss_gun-tank_cannon"
-gunSpiderTankCannon.guns = {"tank-cannon", "tank-cannon", "tank-cannon", "tank-cannon"}
+gunSpiderTankCannon.guns = {"jd_plays-jd_spider_race-spidertron_boss-tank_cannon_gun", "jd_plays-jd_spider_race-spidertron_boss-tank_cannon_gun", "jd_plays-jd_spider_race-spidertron_boss-tank_cannon_gun", "jd_plays-jd_spider_race-spidertron_boss-tank_cannon_gun"}
 
 data:extend(
     {

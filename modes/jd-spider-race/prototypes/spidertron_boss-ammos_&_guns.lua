@@ -50,6 +50,22 @@ local explosiveUraniumCannonShellProjecticleForBossSpider = Utils.DeepCopy(data.
 explosiveUraniumCannonShellProjecticleForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_projectile"
 explosiveUraniumCannonShellProjecticleForBossSpider.force_condition = "enemy"
 
+-- Special guns that have a naturally fast fire speed and thus don't rely upon the boss spider having ammo in all slots.
+local tankCannonGunForBossSpider = Utils.DeepCopy(data.raw["gun"]["tank-cannon"])
+tankCannonGunForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-tank_cannon_gun"
+tankCannonGunForBossSpider.attack_parameters.cooldown = 45 -- Half of default 90.
+tankCannonGunForBossSpider.movement_slow_down_factor = 1 -- Don't fire slower when moving.
+
+local rocketLauncherGunForBossSpider = Utils.DeepCopy(data.raw["gun"]["rocket-launcher"])
+rocketLauncherGunForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-rocket_launcher_gun"
+rocketLauncherGunForBossSpider.attack_parameters.cooldown = 30 -- Half of default 60.
+rocketLauncherGunForBossSpider.movement_slow_down_factor = 1 -- Don't fire slower when moving.
+
+local tankMachineGunGunForBossSpider = Utils.DeepCopy(data.raw["gun"]["tank-machine-gun"])
+tankMachineGunGunForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-tank_machine_gun"
+tankMachineGunGunForBossSpider.attack_parameters.cooldown = 2 -- Half of default 4
+tankMachineGunGunForBossSpider.movement_slow_down_factor = 1 -- Don't fire slower when moving.
+
 data:extend(
     {
         flamethrowerAmmoForBossSpider,
@@ -60,6 +76,9 @@ data:extend(
         uraniumCannonShellAmmoForBossSpider,
         uraniumCannonShellProjecticleForBossSpider,
         explosiveUraniumCannonShellAmmoForBossSpider,
-        explosiveUraniumCannonShellProjecticleForBossSpider
+        explosiveUraniumCannonShellProjecticleForBossSpider,
+        tankCannonGunForBossSpider,
+        rocketLauncherGunForBossSpider,
+        tankMachineGunGunForBossSpider
     }
 )
