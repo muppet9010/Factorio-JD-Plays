@@ -6,14 +6,18 @@ end
 
 local ammoFlags = {"hidden", "hide-from-bonus-gui"}
 
+--------------------------------------------
 -- Special flamethrower ammo that works like player held flamethrower for the spidertron. This means the spider will light the ground and trees on fire. But with FF disabled it won't hurt this biter forces units.
+--------------------------------------------
 local flamethrowerAmmoForBossSpider = Utils.DeepCopy(data.raw["ammo"]["flamethrower-ammo"])
 flamethrowerAmmoForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo"
 flamethrowerAmmoForBossSpider.ammo_type[2] = nil -- Remove the special vehicle version so every user gets the player version.
 flamethrowerAmmoForBossSpider.subgroup = nil
 flamethrowerAmmoForBossSpider.flags = ammoFlags
 
+--------------------------------------------
 -- Special tank shells that only collide with enemy force entities. This way they can be shot by the spider safely without hitting biters or the spiders legs.
+--------------------------------------------
 local cannonShellAmmoForBossSpider = Utils.DeepCopy(data.raw["ammo"]["cannon-shell"])
 cannonShellAmmoForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo"
 cannonShellAmmoForBossSpider.ammo_type.action.action_delivery.projectile = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_projectile"
@@ -50,7 +54,9 @@ local explosiveUraniumCannonShellProjecticleForBossSpider = Utils.DeepCopy(data.
 explosiveUraniumCannonShellProjecticleForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_projectile"
 explosiveUraniumCannonShellProjecticleForBossSpider.force_condition = "enemy"
 
+--------------------------------------------
 -- Special guns that have a naturally fast fire speed and thus don't rely upon the boss spider having ammo in all slots.
+--------------------------------------------
 local tankCannonGunForBossSpider = Utils.DeepCopy(data.raw["gun"]["tank-cannon"])
 tankCannonGunForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-tank_cannon_gun"
 tankCannonGunForBossSpider.attack_parameters.cooldown = 45 -- Half of default 90.
@@ -66,6 +72,29 @@ tankMachineGunGunForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-t
 tankMachineGunGunForBossSpider.attack_parameters.cooldown = 2 -- Half of default 4
 tankMachineGunGunForBossSpider.movement_slow_down_factor = 1 -- Don't fire slower when moving.
 
+--------------------------------------------
+-- Special basic ammo for each gun that never runs out.
+--------------------------------------------
+local firearmMagazineForBossSpider = Utils.DeepCopy(data.raw["ammo"]["firearm-magazine"])
+firearmMagazineForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-firearm_magazine_ammo"
+firearmMagazineForBossSpider.ammo_type.consumption_modifier = 0
+firearmMagazineForBossSpider.subgroup = nil
+firearmMagazineForBossSpider.flags = ammoFlags
+
+local rocketForBossSpider = Utils.DeepCopy(data.raw["ammo"]["rocket"])
+rocketForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-rocket_ammo"
+rocketForBossSpider.ammo_type.consumption_modifier = 0
+rocketForBossSpider.subgroup = nil
+rocketForBossSpider.flags = ammoFlags
+
+cannonShellAmmoForBossSpider.ammo_type.consumption_modifier = 0
+
+flamethrowerAmmoForBossSpider.ammo_type[1].consumption_modifier = 0
+
+--------------------------------------------
+-- Add the new prototypes to the game
+--------------------------------------------
+
 data:extend(
     {
         flamethrowerAmmoForBossSpider,
@@ -79,6 +108,8 @@ data:extend(
         explosiveUraniumCannonShellProjecticleForBossSpider,
         tankCannonGunForBossSpider,
         rocketLauncherGunForBossSpider,
-        tankMachineGunGunForBossSpider
+        tankMachineGunGunForBossSpider,
+        firearmMagazineForBossSpider,
+        rocketForBossSpider
     }
 )

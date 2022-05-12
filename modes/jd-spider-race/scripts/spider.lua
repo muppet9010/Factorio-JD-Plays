@@ -18,7 +18,6 @@ local math_min, math_max, math_floor, math_ceil, math_random = math.min, math.ma
 ---@field state JdSpiderRace_BossSpider_State
 ---@field playerTeam JdSpiderRace_PlayerHome_Team
 ---@field bossEntity LuaEntity|null @ The main spider boss entity once the entity has been created, otherwise nil.
----@field hasAmmo boolean|null @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance. Populated once the boss spider entity has been created, otherwise the table is empty.
 ---@field gunSpiders table<JdSpiderRace_BossSpider_GunSpiderType, JdSpiderRace_GunSpider> @ The hidden spiders that move with the main spider. They are present just to carry the extra gun types. They are created once the boss spider entity has been created, otherwise the table is empty.
 ---@field turrets table<JdSpiderRace_BossSpider_TurretType, JdSpiderRace_BossSpider_Turret> @ The hidden turrets that are moved once per second cycle to the spiders current position. The weapons on these should be happy to be out of sync with the spiders exact position. They are created once the boss spider entity has been created, otherwise the table is empty.
 ---@field distanceFromSpawn uint @ How far from spawn the spiders area is centered on (positive number).
@@ -54,7 +53,6 @@ local math_min, math_max, math_floor, math_ceil, math_random = math.min, math.ma
 ---@class JdSpiderRace_GunSpider
 ---@field type JdSpiderRace_BossSpider_GunSpiderType
 ---@field entity LuaEntity
----@field hasAmmo boolean @ Cache of if the spider is last known to have ammo or not. Updated on re-arming and on calculating fighting engagement distance.
 
 ---@class JdSpiderRace_BossSpider_Turret
 ---@field type JdSpiderRace_BossSpider_TurretType
@@ -86,7 +84,7 @@ local BossSpider_GunSpiderDetails = {
     [BossSpider_GunSpiderType.machineGun] = {
         name = "jd_plays-jd_spider_race-spidertron_boss_gun-machine_gun",
         gunFilters = {
-            [1] = "firearm-magazine",
+            [1] = "jd_plays-jd_spider_race-spidertron_boss-firearm_magazine_ammo",
             [2] = "piercing-rounds-magazine",
             [3] = "uranium-rounds-magazine"
         }
@@ -94,10 +92,8 @@ local BossSpider_GunSpiderDetails = {
     [BossSpider_GunSpiderType.rocketLauncher] = {
         name = "jd_plays-jd_spider_race-spidertron_boss_gun-rocket_launcher",
         gunFilters = {
-            [1] = "rocket",
+            [1] = "jd_plays-jd_spider_race-spidertron_boss-rocket_ammo",
             [2] = "explosive-rocket"
-            --,
-            --[3] = "atomic-bomb"
         }
     },
     [BossSpider_GunSpiderType.tankCannon] = {
@@ -128,23 +124,19 @@ local BossSpider_TurretDetails = {
 
 ---@type ItemStackDefinition[]
 local BossSpider_Rearm = {
-    {name = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", count = 100},
     {name = "atomic-bomb", count = 10}
 }
 
 ---@type table<JdSpiderRace_BossSpider_GunSpiderType, ItemStackDefinition[]>
 local BossSpider_GunSpiderRearm = {
     [BossSpider_GunSpiderType.machineGun] = {
-        {name = "firearm-magazine", count = 200},
         {name = "piercing-rounds-magazine", count = 200},
         {name = "uranium-rounds-magazine", count = 200}
     },
     [BossSpider_GunSpiderType.rocketLauncher] = {
-        {name = "rocket", count = 200},
         {name = "explosive-rocket", count = 200}
     },
     [BossSpider_GunSpiderType.tankCannon] = {
-        {name = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", count = 200},
         {name = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_ammo", count = 200},
         {name = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_ammo", count = 200},
         {name = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_ammo", count = 200}
@@ -159,7 +151,7 @@ local BossSpider_TurretRearm = {
 }
 
 ---@class JdSpiderRace_BossSpider_RconAmmoName
-local BossSpider_RconAmmoNames = {bullet = "bullet", piercingBullet = "piercingBullet", uraniumBullet = "uraniumBullet", rocket = "rocket", explosiveRocket = "explosiveRocket", atomicRocket = "atomicRocket", cannonShell = "cannonShell", explosiveCannonShell = "explosiveCannonShell", uraniumCannonShell = "uraniumCannonShell", explosiveUraniumCannonShell = "explosiveUraniumCannonShell", artilleryShell = "artilleryShell", flamethrowerAmmo = "flamethrowerAmmo"}
+local BossSpider_RconAmmoNames = {piercingBullet = "piercingBullet", uraniumBullet = "uraniumBullet", explosiveRocket = "explosiveRocket", atomicRocket = "atomicRocket", explosiveCannonShell = "explosiveCannonShell", uraniumCannonShell = "uraniumCannonShell", explosiveUraniumCannonShell = "explosiveUraniumCannonShell", artilleryShell = "artilleryShell"}
 
 ---@class JdSpiderRace_BossSpider_RconAmmoType
 ---@field ammoItemName string @ The item prototype name in Factorio.
@@ -170,18 +162,14 @@ local BossSpider_RconAmmoNames = {bullet = "bullet", piercingBullet = "piercingB
 
 ---@type table<JdSpiderRace_BossSpider_RconAmmoName, JdSpiderRace_BossSpider_RconAmmoType> @ Command friendly name to item name.
 local BossSpider_RconAmmoTypes = {
-    bullet = {ammoItemName = "firearm-magazine", gunType = BossSpider_GunSpiderType.machineGun, ammoItemPrettyName = "bullet"},
     piercingBullet = {ammoItemName = "piercing-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun, ammoItemPrettyName = "piercing bullet"},
     uraniumBullet = {ammoItemName = "uranium-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun, ammoItemPrettyName = "uranium bullet"},
-    rocket = {ammoItemName = "rocket", gunType = BossSpider_GunSpiderType.rocketLauncher, ammoItemPrettyName = "rocket"},
     explosiveRocket = {ammoItemName = "explosive-rocket", gunType = BossSpider_GunSpiderType.rocketLauncher, ammoItemPrettyName = "explosive rocket"},
     atomicRocket = {ammoItemName = "atomic-bomb", bossSpider = true, ammoItemPrettyName = "atomic rocket"},
-    cannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon, ammoItemPrettyName = "cannon shell"},
     explosiveCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon, ammoItemPrettyName = "explosive cannon shell"},
     uraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon, ammoItemPrettyName = "uranium cannon shell"},
     explosiveUraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon, ammoItemPrettyName = "explosive uranium cannon shell"},
-    artilleryShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-artillery_shell", turretType = BossSpider_TurretType.artillery, ammoItemPrettyName = "artillery shell"},
-    flamethrowerAmmo = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", bossSpider = true, ammoItemPrettyName = "flamethrower ammo"}
+    artilleryShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-artillery_shell", turretType = BossSpider_TurretType.artillery, ammoItemPrettyName = "artillery shell"}
 }
 
 ---@class JdSpiderRace_BossSpider_ScoreGuiData
@@ -212,14 +200,15 @@ local Settings = {
     markSpiderAreas = false, -- If enabled the roaming and fighting areas of the spiders are marked with lines. Blue for roaming and red for fighting.
     bitersSentToRetaliateMaxFrequency = 18000, -- The max frequency all biters near the spider can be sent at the players in retaliation for attacking the spider. 18,000 is 5 minutes.
     spiderArtilleryWeaponRange = 560, -- The hard coded range of the spiders artillery gun.
-    spiderNukeMaxFrequency = 300 -- One nuke no more frequently than every 5 seconds to avoid double firing at a target at max distance.
+    spiderNukeMaxFrequency = 300, -- One nuke no more frequently than every 5 seconds to avoid double firing at a target at max distance.
+    spiderEngagementRange = 30 -- This is the tank cannon range, ignoring that the rocket launcher has further range. This is so the tank cannon is used when fighting things as it still outranges all defensive turrets.
 }
 
 -- Testing is for development and is very adhoc in what it changes to allow simplier testing.
 local Testing = true
 if Testing then
     Settings.bossSpiderStartingLeftDistance = 1000
-    --Settings.spidersRoamingXRange = 20
+    Settings.spidersRoamingXRange = 100
     Settings.spidersFightingXRange = 300
 --Settings.showSpiderPlans = true
 --Settings.markSpiderAreas = true
@@ -315,7 +304,6 @@ Spider.CreateSpiderObject = function(playerTeam)
         chasingPlayer = nil,
         chasingEntity = nil,
         chasingEntityLastPosition = nil,
-        hasAmmo = nil, -- Populated when the spider's entities are created.
         lastSentBitersToAttackTick = -999999, -- Set to ages ago so first trigger attempt always works.
         leftMostXChunkPositionGeneratedByTeamAwayFromDivide = 0, -- Default starting value.
         ammoForCreationTime = {}, -- Populated via RCON commands.
@@ -416,7 +404,7 @@ Spider.CreateSpiderEntities = function(spider)
         for gunIndex, filterName in pairs(entityDetails.gunFilters) do
             ammoInventory.set_filter(gunIndex, filterName)
         end
-        spider.gunSpiders[shortName] = {type = shortName, entity = gunSpiderEntity, hasAmmo = true}
+        spider.gunSpiders[shortName] = {type = shortName, entity = gunSpiderEntity}
     end
 
     -- Add the extra turrets.
@@ -428,6 +416,12 @@ Spider.CreateSpiderEntities = function(spider)
         turretEntity.destructible = false
         spider.turrets[shortName] = {type = shortName, entity = turretEntity}
     end
+
+    -- Give the spider the special never ending basic ammos.
+    spider.bossEntity.insert({name = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", count = 1})
+    spider.gunSpiders[BossSpider_GunSpiderType.machineGun].entity.insert({name = "jd_plays-jd_spider_race-spidertron_boss-firearm_magazine_ammo", count = 1})
+    spider.gunSpiders[BossSpider_GunSpiderType.rocketLauncher].entity.insert({name = "jd_plays-jd_spider_race-spidertron_boss-rocket_ammo", count = 1})
+    spider.gunSpiders[BossSpider_GunSpiderType.tankCannon].entity.insert({name = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", count = 1})
 
     -- Give the spider the accumilated full ammo sets.
     for i = 1, spider.spiderFullyArmCountForCreationTime do
@@ -719,8 +713,6 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
     ---@typelist LuaEntity
     local nearestEnemyWithinRange = nil
 
-    local spidersMaxShootingRange = Spider.GetSpidersEngagementRange(spider)
-
     -- Initial reactions based on of the spider is taking damage at present.
     if spider.damageTakenThisSecond == 0 then
         -- The spider isn't taking damage so try to move towards the target.
@@ -733,7 +725,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
             -- No short term target exists.
 
             -- Check if there is anything to fight at the current location within weapons range. As we aren't being damaged so may as well kill anything we can before doing any longer term actions which may expose us to damage.
-            nearestEnemyWithinRange = nearestEnemyWithinRange or global.general.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.playerTeam.enemyForce} or "none" -- The find_nearest_enemy() returns nil if nothing found, but that won't be cached correctly, so use "none" as value of last resort.
+            nearestEnemyWithinRange = nearestEnemyWithinRange or global.general.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = Settings.spiderEngagementRange, force = spider.playerTeam.enemyForce} or "none" -- The find_nearest_enemy() returns nil if nothing found, but that won't be cached correctly, so use "none" as value of last resort.
             if nearestEnemyWithinRange ~= "none" then
                 -- There's enemies within current weapons range so just stand still and fight them.
                 -- There's no movement or retargeting involved here so no need to check fighting area.
@@ -748,7 +740,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
             end
         else
             -- There is a short term target so handle it.
-            Spider.FightTargetTypeWhileNotBeingDamaged(spider, spidersCurrentPosition, "lastDamaged", spidersMaxShootingRange, currentTick)
+            Spider.FightTargetTypeWhileNotBeingDamaged(spider, spidersCurrentPosition, "lastDamaged", currentTick)
             return
         end
 
@@ -762,7 +754,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
             -- So do fallback behaviour.
         else
             -- There is a long term target so handle it.
-            Spider.FightTargetTypeWhileNotBeingDamaged(spider, spidersCurrentPosition, "chasing", spidersMaxShootingRange, currentTick)
+            Spider.FightTargetTypeWhileNotBeingDamaged(spider, spidersCurrentPosition, "chasing", currentTick)
             return
         end
     else
@@ -770,7 +762,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
         -- As we are taking damage we aren't worried about pursuing any target initially.
 
         -- Check if an enemy is within current weapons range.
-        nearestEnemyWithinRange = nearestEnemyWithinRange or global.general.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = spidersMaxShootingRange, force = spider.playerTeam.enemyForce} or "none" -- The find_nearest_enemy() returns nil if nothing found, but that won't be cached correctly, so use "none" as value of last resort.
+        nearestEnemyWithinRange = nearestEnemyWithinRange or global.general.surface.find_nearest_enemy {position = spidersCurrentPosition, max_distance = Settings.spiderEngagementRange, force = spider.playerTeam.enemyForce} or "none" -- The find_nearest_enemy() returns nil if nothing found, but that won't be cached correctly, so use "none" as value of last resort.
 
         -- Advance only if we are currently out of weapon range. We don't want to close in otherwise.
         if nearestEnemyWithinRange ~= "none" then
@@ -779,7 +771,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
             -- Check how far away the target is and react based on this. We want to stay as far away from them while remaining within weapons range to return fire on them.
             local nearestEnemyWithinRangePosition = nearestEnemyWithinRange.position
             local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, nearestEnemyWithinRangePosition)
-            if distanceToTarget + Settings.spidersFightingStepDistance < spidersMaxShootingRange then
+            if distanceToTarget + Settings.spidersFightingStepDistance < Settings.spiderEngagementRange then
                 -- Step backwards to try and get out of being damaged while remaining within our weapons range.
                 Spider.OrderSpiderToStartMovingToPosition(spider, Spider.GetNewPositionForReversingFromTarget(spider, nearestEnemyWithinRangePosition, spidersCurrentPosition))
                 return
@@ -803,7 +795,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
 
                 -- Check how far away the target is and react based on this.
                 local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
-                if distanceToTarget <= (spidersMaxShootingRange * 2) then
+                if distanceToTarget <= (Settings.spiderEngagementRange * 2) then
                     -- Target near by so just advance a bit towards it.
                     Spider.OrderSpiderToStartMovingToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.lastDamagedFromPosition, spidersCurrentPosition))
                     return
@@ -840,7 +832,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
 
             -- React based on how far away it is.
             local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
-            if distanceToTarget <= (spidersMaxShootingRange * 2) then
+            if distanceToTarget <= (Settings.spiderEngagementRange * 2) then
                 -- Target near by so just advance a bit.
 
                 if Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget(spider, spidersCurrentPosition, spider.lastDamagedFromPosition) then
@@ -873,7 +865,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
     else
         -- There is still a chasing target so check its distance.
         local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.chasingEntityLastPosition)
-        if distanceToTarget <= (spidersMaxShootingRange * 2) then
+        if distanceToTarget <= (Settings.spiderEngagementRange * 2) then
             -- Target near by so just advance a bit.
 
             if Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget(spider, spidersCurrentPosition, spider.chasingEntityLastPosition) then
@@ -951,11 +943,10 @@ end
 ---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
 ---@param chasingOrLastDamaged '"chasing"'|'"lastDamaged"'
----@param spidersMaxShootingRange uint
 ---@param currentTick Tick
 ---@return boolean completed
 ---@return LuaEntity|'"none"' nearestEnemyWithinRange
-Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosition, chasingOrLastDamaged, spidersMaxShootingRange, currentTick)
+Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosition, chasingOrLastDamaged, currentTick)
     ---@typelist string, string, string
     local positionRefName
     if chasingOrLastDamaged == "chasing" then
@@ -983,7 +974,7 @@ Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosi
     -- Spider hasn't reached target area yet.
 
     -- React based on if the target is near by or not.
-    if distanceToTarget <= (spidersMaxShootingRange * 2) then
+    if distanceToTarget <= (Settings.Settings.spiderEngagementRange * 2) then
         -- Target near by so just advance a bit.
 
         -- Make sure we don;t walk in to range of other things whne chasing our target.
@@ -1168,8 +1159,7 @@ Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition, currentTick)
         currentTargetPosition = spider.chasingEntityLastPosition
     end
 
-    local distanceToAttacker, spidersMaxShootingRange = Utils.GetDistance(spidersCurrentPosition, currentTargetPosition), Spider.GetSpidersEngagementRange(spider)
-    if distanceToAttacker <= spidersMaxShootingRange then
+    if Utils.GetDistance(spidersCurrentPosition, currentTargetPosition) <= Settings.spiderEngagementRange then
         -- Attacker is close enough to start fighting already.
         Spider.StartFighting(spider, spidersCurrentPosition, currentTick)
     else
@@ -1207,16 +1197,15 @@ end
 ---@param targetPosition MapPosition
 ---@return boolean targetFound
 Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget = function(spider, spidersCurrentPosition, targetPosition)
-    local spidersMaxShootingRange = Spider.GetSpidersEngagementRange(spider)
     local approximateSpiderPositionIn1Second = Utils.GetPositionForDistanceBetween2Points(spidersCurrentPosition, targetPosition, Settings.distanceSpiderMovesinSecond)
-    local nearestEnemyIn1Second = global.general.surface.find_nearest_enemy {position = approximateSpiderPositionIn1Second, max_distance = spidersMaxShootingRange, force = spider.playerTeam.enemyForce}
+    local nearestEnemyIn1Second = global.general.surface.find_nearest_enemy {position = approximateSpiderPositionIn1Second, max_distance = Settings.spiderEngagementRange, force = spider.playerTeam.enemyForce}
 
     if nearestEnemyIn1Second ~= nil then
         -- Will be within range of an enemy in 1 second.
 
         -- Order the spider to move to just within weapons range of the target and set the state for fighting so that the next 1 second cycle it will start fighting from the correct position. Don't enter fighting now as nothing will be in range until it's done this extra movement (distance up to the spiders movement per second).
         -- Note that a spider has to slow down and so will likely overshoot the distance a bit.
-        local positionToStopAt = Utils.GetPositionForDistanceBetween2Points(nearestEnemyIn1Second.position, spidersCurrentPosition, spidersMaxShootingRange)
+        local positionToStopAt = Utils.GetPositionForDistanceBetween2Points(nearestEnemyIn1Second.position, spidersCurrentPosition, Settings.spiderEngagementRange)
         Spider.ClearNonFightingStateVariables(spider)
         Spider.OrderSpiderToStartMovingToPosition(spider, positionToStopAt)
         spider.state = BossSpider_State.fighting
@@ -1322,31 +1311,6 @@ end
 Spider.ClearNonFightingStateVariables = function(spider)
     spider.retreatingTargetPosition = nil
     spider.roamingTargetPosition = nil
-end
-
---- Gets the max distance the spider can fight from right now based on the weapons it has ammo for. This is either long (30) or short (15), rather than being truely maximum single weapon range.
----@param spider JdSpiderRace_BossSpider
----@return double maxEngagementRange
-Spider.GetSpidersEngagementRange = function(spider)
-    if spider.gunSpiders[BossSpider_GunSpiderType.rocketLauncher].hasAmmo then
-        if not spider.gunSpiders[BossSpider_GunSpiderType.rocketLauncher].entity.get_inventory(defines.inventory.spider_ammo).is_empty() then
-            -- Intentionally return the cannon range rather than the missile one. Just so the spider tries to engage with both weapons when ammo allows. As this range is still more than laser turrets. This is the long range value.
-            return 30
-        else
-            spider.gunSpiders[BossSpider_GunSpiderType.rocketLauncher].hasAmmo = false
-        end
-    end
-    if spider.gunSpiders[BossSpider_GunSpiderType.tankCannon].hasAmmo then
-        if not spider.gunSpiders[BossSpider_GunSpiderType.tankCannon].entity.get_inventory(defines.inventory.spider_ammo).is_empty() then
-            -- This is the long range value.
-            return 30
-        else
-            spider.gunSpiders[BossSpider_GunSpiderType.tankCannon].hasAmmo = false
-        end
-    end
-
-    -- Otherwise just return the short distance.
-    return 15
 end
 
 --- Checks if the target position if its within the allowed fighting area.
@@ -1566,14 +1530,12 @@ Spider.GiveSpiderFullAmmo = function(spider)
             spider.bossEntity.insert(ammo)
         end
     end
-    spider.hasAmmo = true
 
     -- Arm each of the gun spiders.
     for bossSpiderGunType, ammoItems in pairs(BossSpider_GunSpiderRearm) do
         for _, ammo in pairs(ammoItems) do
             spider.gunSpiders[bossSpiderGunType].entity.insert(ammo)
         end
-        spider.gunSpiders[bossSpiderGunType].hasAmmo = true
     end
 
     -- Arm each of the turrets.
@@ -1639,12 +1601,13 @@ Spider.Command_GiveSpiderAmmo = function(commandEvent)
         return
     end
 
-    local ammoFriendlyName = args[2] ---@type string
-    local rconAmmoType = BossSpider_RconAmmoTypes[ammoFriendlyName]
-    if rconAmmoType == nil then
-        game.print(commandErrorMessagePrefix .. "Second argument of ammoName must be one of the specific ammo types, recieved: " .. tostring(ammoFriendlyName) .. ". Options: bullet, piercingBullet, uraniumBullet, rocket, explosiveRocket, atomicRocket, cannonShell, explosiveCannonShell, uraniumCannonShell, explosiveUraniumCannonShell, artilleryShell, flamethrowerAmmo", Colors.lightred)
+    local ammoName_raw = args[2] ---@type string
+    local ammoFriendlyName = BossSpider_RconAmmoNames[ammoName_raw]
+    if ammoFriendlyName == nil then
+        game.print(commandErrorMessagePrefix .. "Second argument of ammoName must be one of the specific ammo types, recieved: " .. tostring(ammoName_raw) .. ". Options: piercingBullet, uraniumBullet, explosiveRocket, atomicRocket, explosiveCannonShell, uraniumCannonShell, explosiveUraniumCannonShell, artilleryShell", Colors.lightred)
         return
     end
+    local rconAmmoType = BossSpider_RconAmmoTypes[ammoFriendlyName]
 
     local quantity = args[3] ---@type number
     if type(quantity) ~= "number" then
@@ -1697,10 +1660,8 @@ Spider.GiveSpiderSpecificAmmo = function(spider, ammoFriendlyName, rconAmmoType,
             -- All real weapon ammos.
             spider.bossEntity.insert({name = rconAmmoType.ammoItemName, count = quantity})
         end
-        spider.hasAmmo = true
     elseif rconAmmoType.gunType then
         spider.gunSpiders[rconAmmoType.gunType].entity.insert({name = rconAmmoType.ammoItemName, count = quantity})
-        spider.gunSpiders[rconAmmoType.gunType].hasAmmo = true
     elseif rconAmmoType.turretType then
         spider.turrets[rconAmmoType.turretType].entity.insert({name = rconAmmoType.ammoItemName, count = quantity})
     end
