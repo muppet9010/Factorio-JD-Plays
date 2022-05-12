@@ -449,12 +449,12 @@ end
 Spider.SetSpiderForcesTechs = function()
     for _, spider in pairs(global.spider.spiders) do
         local spiderForce = spider.playerTeam.enemyForce
-        spiderForce.technologies["weapon-shooting-speed-6"].researched = true
-        spiderForce.technologies["laser-shooting-speed-7"].researched = true
-        spiderForce.technologies["physical-projectile-damage-7"].researched = true
-        spiderForce.technologies["refined-flammables-7"].researched = true
-        spiderForce.technologies["stronger-explosives-7"].researched = true
-        spiderForce.technologies["energy-weapons-damage-7"].researched = true
+        -- Have to give each tech rather than just the final one as they each add a bonus (cumulative).
+        for techName, maxLevel in pairs({["weapon-shooting-speed-"] = 6, ["laser-shooting-speed-"] = 7, ["physical-projectile-damage-"] = 6, ["refined-flammables-"] = 6, ["stronger-explosives-"] = 6, ["energy-weapons-damage-"] = 6}) do
+            for level = 1, maxLevel do
+                spiderForce.technologies[techName .. level].researched = true
+            end
+        end
     end
 end
 
