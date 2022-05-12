@@ -48,6 +48,8 @@ local math_min, math_max, math_floor, math_ceil, math_random = math.min, math.ma
 ---@field leftMostXChunkPositionGeneratedByTeamAwayFromDivide ChunkPosition @ The left (west) most chunk generated that is the >=7 chunks from the divide required to create the spider entities. Updated on every chunk generated and used when a spiders distance from spawn is moved negative.
 ---@field ammoForCreationTime table<JdSpiderRace_BossSpider_RconAmmoName, uint> @ The ammo given to a spider by RCON before it is created.
 ---@field spiderFullyArmCountForCreationTime uint @ How many times the spider should be given a full rearm count when its created.
+---@field lastFiredNukeTick Tick @ Last tick that the boss spider fired a nuke at an enemy.
+---@field nukeAmmo uint @ How many nukes the spider has left.
 
 ---@class JdSpiderRace_GunSpider
 ---@field type JdSpiderRace_BossSpider_GunSpiderType
@@ -93,8 +95,9 @@ local BossSpider_GunSpiderDetails = {
         name = "jd_plays-jd_spider_race-spidertron_boss_gun-rocket_launcher",
         gunFilters = {
             [1] = "rocket",
-            [2] = "explosive-rocket",
-            [3] = "atomic-bomb"
+            [2] = "explosive-rocket"
+            --,
+            --[3] = "atomic-bomb"
         }
     },
     [BossSpider_GunSpiderType.tankCannon] = {
@@ -125,7 +128,8 @@ local BossSpider_TurretDetails = {
 
 ---@type ItemStackDefinition[]
 local BossSpider_Rearm = {
-    {name = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", count = 100}
+    {name = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_ammo", count = 100},
+    {name = "atomic-bomb", count = 10}
 }
 
 ---@type table<JdSpiderRace_BossSpider_GunSpiderType, ItemStackDefinition[]>
@@ -137,8 +141,7 @@ local BossSpider_GunSpiderRearm = {
     },
     [BossSpider_GunSpiderType.rocketLauncher] = {
         {name = "rocket", count = 200},
-        {name = "explosive-rocket", count = 200},
-        {name = "atomic-bomb", count = 10}
+        {name = "explosive-rocket", count = 200}
     },
     [BossSpider_GunSpiderType.tankCannon] = {
         {name = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", count = 200},
@@ -172,7 +175,7 @@ local BossSpider_RconAmmoTypes = {
     uraniumBullet = {ammoItemName = "uranium-rounds-magazine", gunType = BossSpider_GunSpiderType.machineGun, ammoItemPrettyName = "uranium bullet"},
     rocket = {ammoItemName = "rocket", gunType = BossSpider_GunSpiderType.rocketLauncher, ammoItemPrettyName = "rocket"},
     explosiveRocket = {ammoItemName = "explosive-rocket", gunType = BossSpider_GunSpiderType.rocketLauncher, ammoItemPrettyName = "explosive rocket"},
-    atomicRocket = {ammoItemName = "atomic-bomb", gunType = BossSpider_GunSpiderType.rocketLauncher, ammoItemPrettyName = "atomic rocket"},
+    atomicRocket = {ammoItemName = "atomic-bomb", bossSpider = true, ammoItemPrettyName = "atomic rocket"},
     cannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon, ammoItemPrettyName = "cannon shell"},
     explosiveCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon, ammoItemPrettyName = "explosive cannon shell"},
     uraniumCannonShell = {ammoItemName = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_ammo", gunType = BossSpider_GunSpiderType.tankCannon, ammoItemPrettyName = "uranium cannon shell"},
@@ -208,7 +211,8 @@ local Settings = {
     showSpiderPlans = false, -- If enabled the plans of a spider are rendered.
     markSpiderAreas = false, -- If enabled the roaming and fighting areas of the spiders are marked with lines. Blue for roaming and red for fighting.
     bitersSentToRetaliateMaxFrequency = 18000, -- The max frequency all biters near the spider can be sent at the players in retaliation for attacking the spider. 18,000 is 5 minutes.
-    spiderArtilleryWeaponRange = 560 -- The hard coded range of the spiders artillery gun.
+    spiderArtilleryWeaponRange = 560, -- The hard coded range of the spiders artillery gun.
+    spiderNukeMaxFrequency = 300 -- One nuke no more frequently than every 5 seconds to avoid double firing at a target at max distance.
 }
 
 -- Testing is for development and is very adhoc in what it changes to allow simplier testing.
@@ -315,7 +319,9 @@ Spider.CreateSpiderObject = function(playerTeam)
         lastSentBitersToAttackTick = -999999, -- Set to ages ago so first trigger attempt always works.
         leftMostXChunkPositionGeneratedByTeamAwayFromDivide = 0, -- Default starting value.
         ammoForCreationTime = {}, -- Populated via RCON commands.
-        spiderFullyArmCountForCreationTime = 1 -- Increased via RCON commands. Start the spider with 1 full ammo count.
+        spiderFullyArmCountForCreationTime = 1, -- Increased via RCON commands. Start the spider with 1 full ammo count.
+        lastFiredNukeTick = -999999, -- Set to ages ago so first trigger attempt always works.
+        nukeAmmo = 0
     }
 
     Spider.UpdateSpidersRoamingValues(spider)
@@ -534,7 +540,7 @@ Spider.OnBossSpiderEntityDamaged = function(event)
                 spider.lastDamagedByEntity = event.cause
                 spider.lastDamagedFromPosition = lastDamagedFromPosition
             end
-            Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
+            Spider.ChargeAtAttacker(spider, spidersCurrentPosition, event.tick)
 
             return
         end
@@ -575,16 +581,20 @@ Spider.CheckSpiders_Scheduled = function(event)
             end
             spider.previousDamageToConsider = damageSufferedRecently
 
-            -- Handle continuation of standard behaviours.
             local spidersCurrentPosition = spider.bossEntity.position
+
+            -- Check for anything within nuke range right now and shoot if approperaite. This won't change spider's behavour under any situation. As any target found will either be outside of regular enaggement range, or regular engagement range checks will detect and handle the wider variety of dangers within each behaviour appropriately.
+            Spider.HandleNukeTargets(spider, event.tick, spidersCurrentPosition)
+
+            -- Handle continuation of standard behaviours.
             if spider.state == BossSpider_State.roaming then
                 Spider.CheckRoamingForSecond(spider, spidersCurrentPosition)
             elseif spider.state == BossSpider_State.retreating then
                 Spider.CheckRetreatingForSecond(spider, spidersCurrentPosition)
             elseif spider.state == BossSpider_State.chasing then
-                Spider.CheckChasingForSecond(spider, spidersCurrentPosition)
+                Spider.CheckChasingForSecond(spider, spidersCurrentPosition, event.tick)
             elseif spider.state == BossSpider_State.fighting then
-                Spider.ManageFightingForSecond(spider, spidersCurrentPosition)
+                Spider.ManageFightingForSecond(spider, spidersCurrentPosition, event.tick)
             end
 
             -- Move the turrets.
@@ -669,21 +679,22 @@ end
 --- Checks how the spiders chasing to a target location is going and gives new orders one it reaches the target area. If it gets damaged on route it will be changed to the fighting state as part of the damage reaction event.
 ---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
-Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition)
+---@param currentTick Tick
+Spider.CheckChasingForSecond = function(spider, spidersCurrentPosition, currentTick)
     Spider.UpdateTargetsDetails(spider, "chasing")
 
     -- Handle if the target is gone.
     if spider.chasingEntityLastPosition == nil then
         -- Chasing target is gone.
         -- As the spider hasn't already been attacked then go in to fighting mode. This will handle working out what to do next.
-        Spider.StartFighting(spider, spidersCurrentPosition)
+        Spider.StartFighting(spider, spidersCurrentPosition, currentTick)
         return
     end
 
     -- Check if the spider has got close enough to its target.
     if Utils.GetDistance(spidersCurrentPosition, spider.chasingEntityLastPosition) < 10 then
         -- Spider is very close to where it's going. Set up next action rather than waiting for it to have stopped for a full second.
-        Spider.StartFighting(spider, spidersCurrentPosition)
+        Spider.StartFighting(spider, spidersCurrentPosition, currentTick)
     else
         -- Spider is still moving towards its existing target location.
 
@@ -700,7 +711,8 @@ end
 --- Manages the spiders fighting for this second. Will react to taking damage, having things to fight or looking for near by things to attack. As a last resort it will return home.
 ---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
-Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
+---@param currentTick Tick
+Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, currentTick)
     -- The spider will "dance" to keep engaging targets with its longer range weapons until its killed the real target or retreats. It will be a bit crude as otherwise it needs far more active managemnt.
 
     -- Generic values that may be cached within the function.
@@ -736,7 +748,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             end
         else
             -- There is a short term target so handle it.
-            Spider.FightTargetTypeWhileNotBeingDamaged(spider, spidersCurrentPosition, "lastDamaged", spidersMaxShootingRange)
+            Spider.FightTargetTypeWhileNotBeingDamaged(spider, spidersCurrentPosition, "lastDamaged", spidersMaxShootingRange, currentTick)
             return
         end
 
@@ -750,7 +762,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             -- So do fallback behaviour.
         else
             -- There is a long term target so handle it.
-            Spider.FightTargetTypeWhileNotBeingDamaged(spider, spidersCurrentPosition, "chasing", spidersMaxShootingRange)
+            Spider.FightTargetTypeWhileNotBeingDamaged(spider, spidersCurrentPosition, "chasing", spidersMaxShootingRange, currentTick)
             return
         end
     else
@@ -797,7 +809,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
                     return
                 else
                     -- Target far away and within the fighting area, so resume the chase on it. This will run away from whatever is shooting at us at present until we next take damage and then the chase will be broken.
-                    Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
+                    Spider.ChargeAtAttacker(spider, spidersCurrentPosition, currentTick)
                     return
                 end
             else
@@ -840,7 +852,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
                 return
             else
                 -- Target far away, so start chasing it.
-                Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
+                Spider.ChargeAtAttacker(spider, spidersCurrentPosition, currentTick)
                 return
             end
         else
@@ -873,7 +885,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
             return
         else
             -- Target far away, so start chasing it.
-            Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
+            Spider.ChargeAtAttacker(spider, spidersCurrentPosition, currentTick)
             return
         end
     end
@@ -885,14 +897,65 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition)
     Spider.StartRoaming(spider, spidersCurrentPosition)
 end
 
+-- Fire a nuke at a suitable target if nuke cooldown allows and theres anything worth nuking nearby. Doesn't prioritise nearest targets by design.
+---@param spider JdSpiderRace_BossSpider
+---@param currentTick Tick
+---@param spidersCurrentPosition MapPosition
+Spider.HandleNukeTargets = function(spider, currentTick, spidersCurrentPosition)
+    -- CODE NOTE: Nuke ammo has x1.5 range of regular rockets in Factorio. So rocket launchers 36 range becomes 54 for atomic rockets.
+
+    if spider.nukeAmmo > 0 and currentTick >= spider.lastFiredNukeTick + Settings.spiderNukeMaxFrequency then
+        -- Check for any high priority singular target first, then try looking for any groups of turrets.
+        local nukeTarget
+        local singularTargetEntities = global.general.surface.find_entities_filtered {position = spidersCurrentPosition, radius = 54, force = spider.playerTeam.playerForce, type = {"character", "spider-vehicle"}}
+        if #singularTargetEntities > 0 then
+            -- Nuke a random priority target.
+            nukeTarget = singularTargetEntities[math.random(1, #singularTargetEntities)]
+        else
+            -- As no singular target found look for a clump of turrets togeather.
+            -- Get all the turrets nearby.
+            local turretsNearby = global.general.surface.find_entities_filtered {position = spidersCurrentPosition, radius = 54, force = spider.playerTeam.playerForce, type = {"turret", "ammo-turret", "electric-turret", "fluid-turret"}}
+
+            -- Check up to 3 of the turrets found to see if any are part of a clump.
+            if #turretsNearby > 0 then
+                for _ = 1, 3 do
+                    local targetTurret_index = math.random(1, #turretsNearby)
+                    local targetTurret = turretsNearby[targetTurret_index]
+
+                    -- See how many other turrets are within the high damage from a nuke explosion of the target turret.
+                    local targetTurretsNeighbousCount = global.general.surface.count_entities_filtered {position = targetTurret.position, radius = 30, force = spider.playerTeam.playerForce, type = {"turret", "ammo-turret", "electric-turret", "fluid-turret"}}
+                    if targetTurretsNeighbousCount > 30 then
+                        -- This is a clump of turrets so nuke them.
+                        nukeTarget = targetTurret
+                        break
+                    else
+                        -- Not enough turrets so don't nuke them.
+                        table.remove(turretsNearby, targetTurret_index)
+                        if #turretsNearby == 0 then
+                            break
+                        end
+                    end
+                end
+            end
+        end
+
+        if nukeTarget ~= nil then
+            global.general.surface.create_entity {name = "atomic-rocket", position = spidersCurrentPosition, force = spider.playerTeam.enemyForce, target = nukeTarget, source = spider.bossEntity, speed = 0.05, max_range = 54}
+            spider.nukeAmmo = spider.nukeAmmo - 1
+            spider.lastFiredNukeTick = currentTick
+        end
+    end
+end
+
 --- Handle how to fight against a specific target type which is always currently valid.
 ---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
 ---@param chasingOrLastDamaged '"chasing"'|'"lastDamaged"'
 ---@param spidersMaxShootingRange uint
+---@param currentTick Tick
 ---@return boolean completed
 ---@return LuaEntity|'"none"' nearestEnemyWithinRange
-Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosition, chasingOrLastDamaged, spidersMaxShootingRange)
+Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosition, chasingOrLastDamaged, spidersMaxShootingRange, currentTick)
     ---@typelist string, string, string
     local positionRefName
     if chasingOrLastDamaged == "chasing" then
@@ -933,7 +996,7 @@ Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosi
         return
     else
         -- Target far away so start chase it as we aren't taking damage.
-        Spider.ChargeAtAttacker(spider, spidersCurrentPosition)
+        Spider.ChargeAtAttacker(spider, spidersCurrentPosition, currentTick)
         return
     end
 end
@@ -1093,7 +1156,8 @@ end
 --- Set the spider to charge towards its latest attacker and start fighting there. Will starting moving there if needed, otherwise just enter fighting mode.
 ---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
-Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition)
+---@param currentTick Tick
+Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition, currentTick)
     Spider.ClearNonFightingStateVariables(spider)
 
     -- Prioritise charging at the more recent damage causer.
@@ -1107,7 +1171,7 @@ Spider.ChargeAtAttacker = function(spider, spidersCurrentPosition)
     local distanceToAttacker, spidersMaxShootingRange = Utils.GetDistance(spidersCurrentPosition, currentTargetPosition), Spider.GetSpidersEngagementRange(spider)
     if distanceToAttacker <= spidersMaxShootingRange then
         -- Attacker is close enough to start fighting already.
-        Spider.StartFighting(spider, spidersCurrentPosition)
+        Spider.StartFighting(spider, spidersCurrentPosition, currentTick)
     else
         -- Spider will start moving to the position the last attacking enemy was at.
 
@@ -1127,9 +1191,10 @@ end
 --- Set the spider to start fighting in the area its currently at.
 ---@param spider JdSpiderRace_BossSpider
 ---@param spidersCurrentPosition MapPosition
-Spider.StartFighting = function(spider, spidersCurrentPosition)
+---@param currentTick Tick
+Spider.StartFighting = function(spider, spidersCurrentPosition, currentTick)
     spider.state = BossSpider_State.fighting
-    Spider.ManageFightingForSecond(spider, spidersCurrentPosition)
+    Spider.ManageFightingForSecond(spider, spidersCurrentPosition, currentTick)
     if Settings.showSpiderPlans then
         Spider.UpdatePlanRenders(spider)
     end
@@ -1493,7 +1558,13 @@ Spider.GiveSpiderFullAmmo = function(spider)
 
     -- Arm the boss spider.
     for _, ammo in pairs(BossSpider_Rearm) do
-        spider.bossEntity.insert(ammo)
+        if ammo.name == "atomic-bomb" then
+            -- Atomic bombs are just stored virtually as fired via script.
+            spider.nukeAmmo = spider.nukeAmmo + ammo.count
+        else
+            -- All real weapon ammos.
+            spider.bossEntity.insert(ammo)
+        end
     end
     spider.hasAmmo = true
 
@@ -1619,7 +1690,13 @@ Spider.GiveSpiderSpecificAmmo = function(spider, ammoFriendlyName, rconAmmoType,
     end
 
     if rconAmmoType.bossSpider then
-        spider.bossEntity.insert({name = rconAmmoType.ammoItemName, count = quantity})
+        if rconAmmoType.ammoItemName == "atomic-bomb" then
+            -- Atomic bombs are just stored virtually as fired via script.
+            spider.nukeAmmo = spider.nukeAmmo + quantity
+        else
+            -- All real weapon ammos.
+            spider.bossEntity.insert({name = rconAmmoType.ammoItemName, count = quantity})
+        end
         spider.hasAmmo = true
     elseif rconAmmoType.gunType then
         spider.gunSpiders[rconAmmoType.gunType].entity.insert({name = rconAmmoType.ammoItemName, count = quantity})
@@ -1646,6 +1723,7 @@ Spider.OnSpiderDied = function(event)
     -- Record spiders new state as this will stop other processing ocurring in future.
     spider.state = BossSpider_State.dead
 
+    -- Remove all the hidden entities related to the spider as many of these will attack on their own.
     for _, gunSpiderDetails in pairs(spider.gunSpiders) do
         gunSpiderDetails.entity.destroy()
     end
