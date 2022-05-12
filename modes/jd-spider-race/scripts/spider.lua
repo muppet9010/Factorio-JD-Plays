@@ -212,7 +212,7 @@ local Settings = {
     markSpiderAreas = false, -- If enabled the roaming and fighting areas of the spiders are marked with lines. Blue for roaming and red for fighting.
     bitersSentToRetaliateMaxFrequency = 18000, -- The max frequency all biters near the spider can be sent at the players in retaliation for attacking the spider. 18,000 is 5 minutes.
     spiderArtilleryWeaponRange = 560, -- The hard coded range of the spiders artillery gun.
-    spiderNukeMaxFrequency = 300 -- One nuke no more frequently than every 5 seconds.
+    spiderNukeMaxFrequency = 300 -- One nuke no more frequently than every 5 seconds to avoid double firing at a target at max distance.
 }
 
 -- Testing is for development and is very adhoc in what it changes to allow simplier testing.
@@ -581,8 +581,12 @@ Spider.CheckSpiders_Scheduled = function(event)
             end
             spider.previousDamageToConsider = damageSufferedRecently
 
-            -- Handle continuation of standard behaviours.
             local spidersCurrentPosition = spider.bossEntity.position
+
+            -- Check for anything within nuke range right now and shoot if approperaite. This won't change spider's behavour under any situation. As any target found will either be outside of regular enaggement range, or regular engagement range checks will detect and handle the wider variety of dangers within each behaviour appropriately.
+            Spider.HandleNukeTargets(spider, event.tick, spidersCurrentPosition)
+
+            -- Handle continuation of standard behaviours.
             if spider.state == BossSpider_State.roaming then
                 Spider.CheckRoamingForSecond(spider, spidersCurrentPosition)
             elseif spider.state == BossSpider_State.retreating then
@@ -716,50 +720,6 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
     local nearestEnemyWithinRange = nil
 
     local spidersMaxShootingRange = Spider.GetSpidersEngagementRange(spider)
-
-    -- Check if we can fire a nuke (cooldown) and then if theres anything worth nuking as we are in combat.
-    if currentTick >= spider.lastFiredNukeTick + Settings.spiderNukeMaxFrequency and spider.nukeAmmo > 0 then
-        -- Check for any high priority singular target first, then try looking for any groups of turrets.
-        local nukeTarget
-        local singularTargetEntities = global.general.surface.find_entities_filtered {position = spidersCurrentPosition, radius = 54, force = spider.playerTeam.playerForce, limit = 1, type = {"character", "spider-vehicle"}}
-        if #singularTargetEntities > 0 then
-            -- Nuke it.
-            nukeTarget = singularTargetEntities[1]
-        else
-            -- As no singular target found look for a clump of turrets togeather.
-            -- Get all the turrets nearby.
-            local turretsNearby = global.general.surface.find_entities_filtered {position = spidersCurrentPosition, radius = 54, force = spider.playerTeam.playerForce, type = {"turret", "ammo-turret", "electric-turret", "fluid-turret"}}
-
-            -- Check up to 3 of them to see if any are part of a clump.
-            if #turretsNearby > 0 then
-                for i = 1, 3 do
-                    local targetTurret_index = math.random(1, #turretsNearby)
-                    local targetTurret = turretsNearby[targetTurret_index]
-
-                    -- See how many other turrets are within the high damage from a nuke explosion of the target turret.
-                    local targetTurretsNeighbousCount = global.general.surface.count_entities_filtered {position = targetTurret.position, radius = 30, force = spider.playerTeam.playerForce, type = {"turret", "ammo-turret", "electric-turret", "fluid-turret"}}
-                    if targetTurretsNeighbousCount > 30 then
-                        -- This is a clump of turrets so nuke them.
-                        nukeTarget = targetTurret
-                        break
-                    else
-                        -- Not enough turrets so don't nuke them.
-                        table.remove(turretsNearby, targetTurret_index)
-                        if #turretsNearby == 0 then
-                            break
-                        end
-                    end
-                end
-            end
-        end
-
-        if nukeTarget ~= nil then
-            global.general.surface.create_entity {name = "atomic-rocket", position = spidersCurrentPosition, force = spider.playerTeam.enemyForce, target = nukeTarget, source = spider.bossEntity, speed = 0.05, max_range = 54} -- Nuke ammo has x1.5 range of regular rockets in Factorio.
-            spider.bossEntity.remove_item({name = "atomic-bomb", count = 1})
-            spider.nukeAmmo = spider.nukeAmmo - 1
-            spider.lastFiredNukeTick = currentTick
-        end
-    end
 
     -- Initial reactions based on of the spider is taking damage at present.
     if spider.damageTakenThisSecond == 0 then
@@ -935,6 +895,56 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
         rendering.draw_text {text = "going home as last resort", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
     end
     Spider.StartRoaming(spider, spidersCurrentPosition)
+end
+
+-- Fire a nuke at a suitable target if nuke cooldown allows and theres anything worth nuking nearby. Doesn't prioritise nearest targets by design.
+---@param spider JdSpiderRace_BossSpider
+---@param currentTick Tick
+---@param spidersCurrentPosition MapPosition
+Spider.HandleNukeTargets = function(spider, currentTick, spidersCurrentPosition)
+    -- CODE NOTE: Nuke ammo has x1.5 range of regular rockets in Factorio. So rocket launchers 36 range becomes 54 for atomic rockets.
+
+    if spider.nukeAmmo > 0 and currentTick >= spider.lastFiredNukeTick + Settings.spiderNukeMaxFrequency then
+        -- Check for any high priority singular target first, then try looking for any groups of turrets.
+        local nukeTarget
+        local singularTargetEntities = global.general.surface.find_entities_filtered {position = spidersCurrentPosition, radius = 54, force = spider.playerTeam.playerForce, type = {"character", "spider-vehicle"}}
+        if #singularTargetEntities > 0 then
+            -- Nuke a random priority target.
+            nukeTarget = singularTargetEntities[math.random(1, #singularTargetEntities)]
+        else
+            -- As no singular target found look for a clump of turrets togeather.
+            -- Get all the turrets nearby.
+            local turretsNearby = global.general.surface.find_entities_filtered {position = spidersCurrentPosition, radius = 54, force = spider.playerTeam.playerForce, type = {"turret", "ammo-turret", "electric-turret", "fluid-turret"}}
+
+            -- Check up to 3 of the turrets found to see if any are part of a clump.
+            if #turretsNearby > 0 then
+                for _ = 1, 3 do
+                    local targetTurret_index = math.random(1, #turretsNearby)
+                    local targetTurret = turretsNearby[targetTurret_index]
+
+                    -- See how many other turrets are within the high damage from a nuke explosion of the target turret.
+                    local targetTurretsNeighbousCount = global.general.surface.count_entities_filtered {position = targetTurret.position, radius = 30, force = spider.playerTeam.playerForce, type = {"turret", "ammo-turret", "electric-turret", "fluid-turret"}}
+                    if targetTurretsNeighbousCount > 30 then
+                        -- This is a clump of turrets so nuke them.
+                        nukeTarget = targetTurret
+                        break
+                    else
+                        -- Not enough turrets so don't nuke them.
+                        table.remove(turretsNearby, targetTurret_index)
+                        if #turretsNearby == 0 then
+                            break
+                        end
+                    end
+                end
+            end
+        end
+
+        if nukeTarget ~= nil then
+            global.general.surface.create_entity {name = "atomic-rocket", position = spidersCurrentPosition, force = spider.playerTeam.enemyForce, target = nukeTarget, source = spider.bossEntity, speed = 0.05, max_range = 54}
+            spider.nukeAmmo = spider.nukeAmmo - 1
+            spider.lastFiredNukeTick = currentTick
+        end
+    end
 end
 
 --- Handle how to fight against a specific target type which is always currently valid.
@@ -1199,7 +1209,6 @@ end
 Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget = function(spider, spidersCurrentPosition, targetPosition)
     local spidersMaxShootingRange = Spider.GetSpidersEngagementRange(spider)
     local approximateSpiderPositionIn1Second = Utils.GetPositionForDistanceBetween2Points(spidersCurrentPosition, targetPosition, Settings.distanceSpiderMovesinSecond)
-    -- TODO: should check for anything within nuke range (1.5) rocket range and then check if any found target is worth a nuke, if not then downgrade to if the distance is within spiders engagement range.
     local nearestEnemyIn1Second = global.general.surface.find_nearest_enemy {position = approximateSpiderPositionIn1Second, max_distance = spidersMaxShootingRange, force = spider.playerTeam.enemyForce}
 
     if nearestEnemyIn1Second ~= nil then
@@ -1549,9 +1558,12 @@ Spider.GiveSpiderFullAmmo = function(spider)
 
     -- Arm the boss spider.
     for _, ammo in pairs(BossSpider_Rearm) do
-        spider.bossEntity.insert(ammo)
         if ammo.name == "atomic-bomb" then
+            -- Atomic bombs are just stored virtually as fired via script.
             spider.nukeAmmo = spider.nukeAmmo + ammo.count
+        else
+            -- All real weapon ammos.
+            spider.bossEntity.insert(ammo)
         end
     end
     spider.hasAmmo = true
@@ -1678,11 +1690,14 @@ Spider.GiveSpiderSpecificAmmo = function(spider, ammoFriendlyName, rconAmmoType,
     end
 
     if rconAmmoType.bossSpider then
-        spider.bossEntity.insert({name = rconAmmoType.ammoItemName, count = quantity})
-        spider.hasAmmo = true
         if rconAmmoType.ammoItemName == "atomic-bomb" then
+            -- Atomic bombs are just stored virtually as fired via script.
             spider.nukeAmmo = spider.nukeAmmo + quantity
+        else
+            -- All real weapon ammos.
+            spider.bossEntity.insert({name = rconAmmoType.ammoItemName, count = quantity})
         end
+        spider.hasAmmo = true
     elseif rconAmmoType.gunType then
         spider.gunSpiders[rconAmmoType.gunType].entity.insert({name = rconAmmoType.ammoItemName, count = quantity})
         spider.gunSpiders[rconAmmoType.gunType].hasAmmo = true
@@ -1708,6 +1723,7 @@ Spider.OnSpiderDied = function(event)
     -- Record spiders new state as this will stop other processing ocurring in future.
     spider.state = BossSpider_State.dead
 
+    -- Remove all the hidden entities related to the spider as many of these will attack on their own.
     for _, gunSpiderDetails in pairs(spider.gunSpiders) do
         gunSpiderDetails.entity.destroy()
     end
