@@ -16,13 +16,23 @@ flamethrowerAmmoForBossSpider.subgroup = nil
 flamethrowerAmmoForBossSpider.flags = ammoFlags
 
 --------------------------------------------
+-- Special tank cannon with longer range to be the same as rockets. Really just anti turret as they don't jurt enemy spidertrons.
+--------------------------------------------
+local tankCannonGunForBossSpider = Utils.DeepCopy(data.raw["gun"]["tank-cannon"])
+tankCannonGunForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-tank_cannon_gun"
+tankCannonGunForBossSpider.attack_parameters.range = 36
+
+--------------------------------------------
 -- Special tank shells that only collide with enemy force entities. This way they can be shot by the spider safely without hitting biters or the spiders legs.
+-- They also don't have accuracy and range deviation as this leads to them shooting short often whch looks odd for an AI unit.
+-- Also increaed range on the cannon shell ammo so that they don't explode before the gun's increased max range and actually go a bit beyond them.
 --------------------------------------------
 local cannonShellAmmoForBossSpider = Utils.DeepCopy(data.raw["ammo"]["cannon-shell"])
 cannonShellAmmoForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_ammo"
 cannonShellAmmoForBossSpider.ammo_type.action.action_delivery.projectile = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_projectile"
 cannonShellAmmoForBossSpider.subgroup = nil
 cannonShellAmmoForBossSpider.flags = ammoFlags
+cannonShellAmmoForBossSpider.ammo_type.action.action_delivery.max_range = 40
 local cannonShellProjecticleForBossSpider = Utils.DeepCopy(data.raw["projectile"]["cannon-projectile"])
 cannonShellProjecticleForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-cannon_shell_projectile"
 cannonShellProjecticleForBossSpider.force_condition = "enemy"
@@ -32,6 +42,7 @@ explosiveCannonShellAmmoForBossSpider.name = "jd_plays-jd_spider_race-spidertron
 explosiveCannonShellAmmoForBossSpider.ammo_type.action.action_delivery.projectile = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_projectile"
 explosiveCannonShellAmmoForBossSpider.subgroup = nil
 explosiveCannonShellAmmoForBossSpider.flags = ammoFlags
+explosiveCannonShellAmmoForBossSpider.ammo_type.action.action_delivery.max_range = 40
 local explosiveCannonShellProjecticleForBossSpider = Utils.DeepCopy(data.raw["projectile"]["explosive-cannon-projectile"])
 explosiveCannonShellProjecticleForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-explosive_cannon_shell_projectile"
 explosiveCannonShellProjecticleForBossSpider.force_condition = "enemy"
@@ -41,6 +52,7 @@ uraniumCannonShellAmmoForBossSpider.name = "jd_plays-jd_spider_race-spidertron_b
 uraniumCannonShellAmmoForBossSpider.ammo_type.action.action_delivery.projectile = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_projectile"
 uraniumCannonShellAmmoForBossSpider.subgroup = nil
 uraniumCannonShellAmmoForBossSpider.flags = ammoFlags
+uraniumCannonShellAmmoForBossSpider.ammo_type.action.action_delivery.max_range = 40
 local uraniumCannonShellProjecticleForBossSpider = Utils.DeepCopy(data.raw["projectile"]["uranium-cannon-projectile"])
 uraniumCannonShellProjecticleForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-uranium_cannon_shell_projectile"
 uraniumCannonShellProjecticleForBossSpider.force_condition = "enemy"
@@ -50,6 +62,7 @@ explosiveUraniumCannonShellAmmoForBossSpider.name = "jd_plays-jd_spider_race-spi
 explosiveUraniumCannonShellAmmoForBossSpider.ammo_type.action.action_delivery.projectile = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_projectile"
 explosiveUraniumCannonShellAmmoForBossSpider.subgroup = nil
 explosiveUraniumCannonShellAmmoForBossSpider.flags = ammoFlags
+explosiveUraniumCannonShellAmmoForBossSpider.ammo_type.action.action_delivery.max_range = 40
 local explosiveUraniumCannonShellProjecticleForBossSpider = Utils.DeepCopy(data.raw["projectile"]["explosive-uranium-cannon-projectile"])
 explosiveUraniumCannonShellProjecticleForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-explosive_uranium_cannon_shell_projectile"
 explosiveUraniumCannonShellProjecticleForBossSpider.force_condition = "enemy"
@@ -57,8 +70,6 @@ explosiveUraniumCannonShellProjecticleForBossSpider.force_condition = "enemy"
 --------------------------------------------
 -- Special guns that have a naturally fast fire speed and thus don't rely upon the boss spider having ammo in all slots.
 --------------------------------------------
-local tankCannonGunForBossSpider = Utils.DeepCopy(data.raw["gun"]["tank-cannon"])
-tankCannonGunForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-tank_cannon_gun"
 tankCannonGunForBossSpider.attack_parameters.cooldown = 45 -- Half of default 90.
 tankCannonGunForBossSpider.attack_parameters.movement_slow_down_factor = 1 -- Don't fire slower when moving.
 

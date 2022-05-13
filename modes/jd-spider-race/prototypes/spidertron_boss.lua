@@ -39,7 +39,7 @@ local function make_spidertron_leg(spidertron_name, scale, leg_thickness, moveme
         icon_size = 64,
         icon_mipmaps = 4,
         walking_sound_volume_modifier = 0.6,
-        target_position_randomisation_distance = 0.25 * scale,
+        target_position_randomisation_distance = 0, -- No randomisation as otherwise it oversteps in to turrets worse. Also should reduce invisible spider position variation.
         minimal_step_size = 1 * scale,
         working_sound = {
             match_progress_to_activity = true,

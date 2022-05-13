@@ -1,5 +1,7 @@
 --[[
     The spiders mangement is done as a very light touch and as such its movements are a bit all or nothing. But it does perform far better in combat than if it just mindlessly followed a target until it was made to retreat. Its designed to be primarily reactive, with only limited simple proactive behaviour in certain combat situations.
+    Spiders movement accuracy looks to be based on it's speed and leg length, so as ours is fast and has is large with long legs it seems to be very inaccurate in its stopping position. This can lead to it dancing back and fourth sometimes, but as soon as it kills the "odd" target it will return to regular behavour. It has ended up like this as a comprise to avoid it being damaged by base defences given its inaccurate movement. Also the invisble spiders may have taken the exact position and so the real spider ends up slightly offset.
+    The inviisbel spiders tend to shuffle/float around the main spider when its fighting as they can't reach the exact target position. So this should even out any brief range issues when a gun spider is further away from a target than the real spider. The less invisble spiders the better for this. The invisble spiders have to have legs, etc so they move at the same speed as the real spider when crossing larger distances.
 ]]
 --
 
@@ -201,7 +203,7 @@ local Settings = {
     bitersSentToRetaliateMaxFrequency = 18000, -- The max frequency all biters near the spider can be sent at the players in retaliation for attacking the spider. 18,000 is 5 minutes.
     spiderArtilleryWeaponRange = 560, -- The hard coded range of the spiders artillery gun.
     spiderNukeMaxFrequency = 240, -- One nuke no more frequently than every 4 seconds to try and avoiding double firing at a target at max distance. JD wanted this value rather than the 5 I knew was safe.
-    spiderEngagementRange = 30 -- This is the tank cannon range, ignoring that the rocket launcher has further range. This is so the tank cannon is used when fighting things as it still outranges all defensive turrets.
+    spiderEngagementRange = 34 -- This is just within the tank cannon and rocket range. We go short of max range as the invisible gun spiders will be within a tile or so of the main spider.
 }
 
 -- Testing is for development and is very adhoc in what it changes to allow simplier testing.
@@ -210,11 +212,9 @@ if Testing then
     Settings.bossSpiderStartingLeftDistance = 1000
     Settings.spidersRoamingXRange = 100
     Settings.spidersFightingXRange = 300
---Settings.showSpiderPlans = true
---Settings.markSpiderAreas = true
+    Settings.showSpiderPlans = true
+    Settings.markSpiderAreas = true
 --BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher][3] = nil -- No atomic weapons.
---BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.rocketLauncher] = {} -- Test short range weapon spider.
---BossSpider_GunSpiderRearm[BossSpider_GunSpiderType.tankCannon] = {} -- Test short range weapon spider.
 --BossSpider_TurretRearm[BossSpider_TurretType.artillery] = {} -- No artillery shells.
 end
 
@@ -795,12 +795,12 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
 
                 -- Check how far away the target is and react based on this.
                 local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
-                if distanceToTarget <= (Settings.spiderEngagementRange * 2) then
+                if distanceToTarget <= Settings.spiderEngagementRange + Settings.distanceSpiderMovesinSecond then
                     -- Target near by so just advance a bit towards it.
                     Spider.OrderSpiderToStartMovingToPosition(spider, Spider.GetNewPositionForAdvancingOnTarget(spider, spider.lastDamagedFromPosition, spidersCurrentPosition))
                     return
                 else
-                    -- Target far away and within the fighting area, so resume the chase on it. This will run away from whatever is shooting at us at present until we next take damage and then the chase will be broken.
+                    -- Target far away and within the fightinwg area, so resume the chase on it. This will run away from whatever is shooting at us at present until we next take damage and then the chase will be broken.
                     Spider.ChargeAtAttacker(spider, spidersCurrentPosition, currentTick)
                     return
                 end
@@ -832,7 +832,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
 
             -- React based on how far away it is.
             local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.lastDamagedFromPosition)
-            if distanceToTarget <= (Settings.spiderEngagementRange * 2) then
+            if distanceToTarget <= Settings.spiderEngagementRange + Settings.distanceSpiderMovesinSecond then
                 -- Target near by so just advance a bit.
 
                 if Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget(spider, spidersCurrentPosition, spider.lastDamagedFromPosition) then
@@ -865,7 +865,7 @@ Spider.ManageFightingForSecond = function(spider, spidersCurrentPosition, curren
     else
         -- There is still a chasing target so check its distance.
         local distanceToTarget = Utils.GetDistance(spidersCurrentPosition, spider.chasingEntityLastPosition)
-        if distanceToTarget <= (Settings.spiderEngagementRange * 2) then
+        if distanceToTarget <= Settings.spiderEngagementRange + Settings.distanceSpiderMovesinSecond then
             -- Target near by so just advance a bit.
 
             if Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget(spider, spidersCurrentPosition, spider.chasingEntityLastPosition) then
@@ -974,7 +974,7 @@ Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosi
     -- Spider hasn't reached target area yet.
 
     -- React based on if the target is near by or not.
-    if distanceToTarget <= (Settings.spiderEngagementRange * 2) then
+    if distanceToTarget <= Settings.spiderEngagementRange + Settings.distanceSpiderMovesinSecond then
         -- Target near by so just advance a bit.
 
         -- Make sure we don;t walk in to range of other things whne chasing our target.
@@ -1205,13 +1205,13 @@ Spider.CheckIfWillEncounterEnemiesWhileMovingTowardsTarget = function(spider, sp
 
         -- Order the spider to move to just within weapons range of the target and set the state for fighting so that the next 1 second cycle it will start fighting from the correct position. Don't enter fighting now as nothing will be in range until it's done this extra movement (distance up to the spiders movement per second).
         -- Note that a spider has to slow down and so will likely overshoot the distance a bit.
-        local positionToStopAt = Utils.GetPositionForDistanceBetween2Points(nearestEnemyIn1Second.position, spidersCurrentPosition, Settings.spiderEngagementRange)
+        local positionToStopAt = Utils.GetPositionForDistanceBetween2Points(nearestEnemyIn1Second.position, spidersCurrentPosition, Settings.spiderEngagementRange) -- Aim to stop a few tiles short of the target as this movement tends to overshoot the most. The fightng will shuffle it forwards a tad if needed.
         Spider.ClearNonFightingStateVariables(spider)
         Spider.OrderSpiderToStartMovingToPosition(spider, positionToStopAt)
         spider.state = BossSpider_State.fighting
         if Settings.showSpiderPlans then
             rendering.draw_text {text = "stopping charge before walking in to enemy", surface = global.general.surface, target = spider.bossEntity, color = Colors.white, scale_with_zoom = true, time_to_live = 60, vertical_alignment = "baseline"} -- Vertial alignment so it doesn't overlap the state text.
-            Spider.UpdatePlanRenders(spider)
+            Spider.UpdatePlanRenders(spider, positionToStopAt)
         end
         return true
     else
@@ -1328,13 +1328,20 @@ Spider.IsFightingTargetPositionWithinAllowedFightingArea = function(spider, targ
 end
 
 --- Render the spiders current plans and remove any old ones first. This is for debugging/testing and so doesn't matter than not optimal UPS.
+--- White lines for standard movement, red lines for chasing specific target, yellow lines for short movements (within same second).
 ---@param spider JdSpiderRace_BossSpider
-Spider.UpdatePlanRenders = function(spider)
+---@param shortTermSpiderTargetPosition? MapPosition @ The very short term position the spider is moving too. This isn't recorded in its state, i.e. position to stop at this second before walking in to enemies.
+Spider.UpdatePlanRenders = function(spider, shortTermSpiderTargetPosition)
     -- Just remove all the old renders.
     for _, renderId in pairs(spider.spiderPlanRenderIds) do
         rendering.destroy(renderId)
     end
     spider.spiderPlanRenderIds = {}
+
+    -- If there is a very short terms movement target draw this in yellow line for just 1 second. This isn't correctly stateful across spider behavour changes and so just lasts 1 second in all cases.
+    if shortTermSpiderTargetPosition ~= nil then
+        rendering.draw_line {color = Colors.yellow, width = 2, from = spider.bossEntity, to = shortTermSpiderTargetPosition, surface = global.general.surface, time_to_live = 60}
+    end
 
     -- Add any state specific renders for the spider.
     if spider.state == BossSpider_State.roaming then
