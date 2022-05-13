@@ -328,7 +328,7 @@ PlayerHome.OnEntityDamaged = function(event)
     local event_entity = event.entity
 
     if event_force == nil or event_entity == nil then
-        -- should never happen. Defensive coding
+        -- Should never happen. Defensive coding to handle script caused damage.
         return
     end
 
@@ -348,6 +348,12 @@ end
 --- Stop deconstruction from the wrong side of the wall.
 ---@param event on_marked_for_deconstruction
 PlayerHome.OnMarkedForDeconstruction = function(event)
+    -- If its a script generated deconstruction just let it go through.
+    if event.player_index == nil then
+        -- We can't check if this is for the streamer on this side of the wall or not. But if it isn't as the player teams aren;t freidns they can;t deconstruct each others stuff.
+        return
+    end
+
     local player = game.get_player(event.player_index)
     local entity = event.entity
 
