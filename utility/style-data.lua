@@ -22,7 +22,7 @@ local styleData = {}
 
 local Colors = require("utility.colors")
 
-styleData.styleVersion = "_1_0_0"
+styleData.styleVersion = "_1_1_0"
 local styleNamesGenerated = {}
 
 -- Enable to write the styles out to a text file to use for updating EmmyLua class. This is for when updating the styles library only during development.
@@ -199,7 +199,6 @@ styleData.GeneratePrototypes = function()
             height = size[2],
             margin = 0,
             padding = 0,
-            scalable = true,
             stretch_image_to_widget_size = true
         }
         styleNamesGenerated.sprite[GenerateDetailsName(detailsName)] = styleName
@@ -224,10 +223,7 @@ styleData.GeneratePrototypes = function()
                 width = size[2],
                 height = size[2],
                 margin = 0,
-                padding = 0,
-                scalable = true,
-                minimal_width = 0,
-                minimal_height = 0
+                padding = 0
             }
             for k, v in pairs(attributes[2]) do
                 if type(k) == "number" then
@@ -242,46 +238,40 @@ styleData.GeneratePrototypes = function()
 
     -- BUTTON
     styleNamesGenerated.button = {}
-    for _, purpose in pairs({{"_text", Colors.black}, {"_heading", Colors.guiheadingcolor}}) do
-        local purposeEmmyLuaName = string.sub(purpose[1], 2)
-        styleNamesGenerated.button[purposeEmmyLuaName] = {}
-        for _, textSize in pairs({{"_small", "_small"}, {"_medium", "_medium"}, {"_large", "_large"}}) do
-            local textSizeEmmyLuaName = string.sub(textSize[1], 2)
-            styleNamesGenerated.button[purposeEmmyLuaName][textSizeEmmyLuaName] = {}
-            for _, boldness in pairs({{"", ""}, {"_semibold", "_semibold"}, {"_bold", "_bold"}}) do
-                for _, attributes in pairs(
-                    {
-                        {"", {}},
-                        {"_frame", {default_graphical_set = {base = {position = {0, 0}, corner_size = 8}, shadow = {position = {440, 24}, corner_size = 8, draw_type = "outer"}}, default_font_color = Colors.white, hovered_font_color = Colors.white, clicked_font_color = Colors.white}},
-                        {"_noBorder", {default_graphical_set = {}, hovered_graphical_set = {}, clicked_graphical_set = {}}}
+    for _, textSize in pairs({{"_small", "_small"}, {"_medium", "_medium"}, {"_large", "_large"}}) do
+        local textSizeEmmyLuaName = string.sub(textSize[1], 2)
+        styleNamesGenerated.button[textSizeEmmyLuaName] = {}
+        for _, boldness in pairs({{"", ""}, {"_semibold", "_semibold"}, {"_bold", "_bold"}}) do
+            for _, attributes in pairs(
+                {
+                    {"", {}},
+                    {"_frame", {default_graphical_set = {base = {position = {0, 0}, corner_size = 8}, shadow = {position = {440, 24}, corner_size = 8, draw_type = "outer"}}, default_font_color = Colors.white, hovered_font_color = Colors.white, clicked_font_color = Colors.white}},
+                    {"_noBorder", {default_graphical_set = {}, hovered_graphical_set = {}, clicked_graphical_set = {}}}
+                }
+            ) do
+                for _, padding in pairs({{"", 0, -2, 0, -2}, {"_paddingSides", 4, 0, 4, 0}, {"_paddingNone", -2, -6, -2, -6}, {"_paddingTight", 0, -4, 0, -4}}) do
+                    local detailsName = boldness[1] .. attributes[1] .. padding[1]
+                    local styleName = "muppet_button_text" .. textSize[1] .. detailsName
+                    local styleNameVersion = styleName .. styleData.styleVersion
+                    defaultStyle[styleNameVersion] = {
+                        type = "button_style",
+                        font = "muppet" .. textSize[2] .. boldness[2] .. styleData.styleVersion,
+                        margin = 0,
+                        left_padding = padding[2],
+                        top_padding = padding[3],
+                        right_padding = padding[4],
+                        bottom_padding = padding[5],
+                        minimal_width = 0,
+                        minimal_height = 0
                     }
-                ) do
-                    for _, padding in pairs({{"", 0, -2, 0, -2}, {"_paddingSides", 4, 0, 4, 0}, {"_paddingNone", -2, -6, -2, -6}, {"_paddingTight", 0, -4, 0, -4}}) do
-                        local detailsName = boldness[1] .. attributes[1] .. padding[1]
-                        local styleName = "muppet_button" .. purpose[1] .. textSize[1] .. detailsName
-                        local styleNameVersion = styleName .. styleData.styleVersion
-                        defaultStyle[styleNameVersion] = {
-                            type = "button_style",
-                            font = "muppet" .. textSize[2] .. boldness[2] .. styleData.styleVersion,
-                            font_color = purpose[2],
-                            single_line = false,
-                            margin = 0,
-                            left_padding = padding[2],
-                            top_padding = padding[3],
-                            right_padding = padding[4],
-                            bottom_padding = padding[5],
-                            minimal_width = 0,
-                            minimal_height = 0
-                        }
-                        for k, v in pairs(attributes[2]) do
-                            if type(k) == "number" then
-                                defaultStyle[styleNameVersion][k] = (defaultStyle[styleNameVersion][k] or 0) + v
-                            else
-                                defaultStyle[styleNameVersion][k] = v
-                            end
+                    for k, v in pairs(attributes[2]) do
+                        if type(k) == "number" then
+                            defaultStyle[styleNameVersion][k] = (defaultStyle[styleNameVersion][k] or 0) + v
+                        else
+                            defaultStyle[styleNameVersion][k] = v
                         end
-                        styleNamesGenerated.button[purposeEmmyLuaName][textSizeEmmyLuaName][GenerateDetailsName(detailsName)] = styleName
                     end
+                    styleNamesGenerated.button[textSizeEmmyLuaName][GenerateDetailsName(detailsName)] = styleName
                 end
             end
         end
@@ -607,237 +597,119 @@ styleData.MuppetStyles = {
         ["frameCloseButtonClickable_64"] = "muppet_sprite_button_frameCloseButtonClickable_64"
     },
     button = {
-        text = {
-            small = {
-                ["plain"] = "muppet_button_text_small",
-                ["paddingSides"] = "muppet_button_text_small_paddingSides",
-                ["paddingNone"] = "muppet_button_text_small_paddingNone",
-                ["paddingTight"] = "muppet_button_text_small_paddingTight",
-                ["frame"] = "muppet_button_text_small_frame",
-                ["frame_paddingSides"] = "muppet_button_text_small_frame_paddingSides",
-                ["frame_paddingNone"] = "muppet_button_text_small_frame_paddingNone",
-                ["frame_paddingTight"] = "muppet_button_text_small_frame_paddingTight",
-                ["noBorder"] = "muppet_button_text_small_noBorder",
-                ["noBorder_paddingSides"] = "muppet_button_text_small_noBorder_paddingSides",
-                ["noBorder_paddingNone"] = "muppet_button_text_small_noBorder_paddingNone",
-                ["noBorder_paddingTight"] = "muppet_button_text_small_noBorder_paddingTight",
-                ["semibold"] = "muppet_button_text_small_semibold",
-                ["semibold_paddingSides"] = "muppet_button_text_small_semibold_paddingSides",
-                ["semibold_paddingNone"] = "muppet_button_text_small_semibold_paddingNone",
-                ["semibold_paddingTight"] = "muppet_button_text_small_semibold_paddingTight",
-                ["semibold_frame"] = "muppet_button_text_small_semibold_frame",
-                ["semibold_frame_paddingSides"] = "muppet_button_text_small_semibold_frame_paddingSides",
-                ["semibold_frame_paddingNone"] = "muppet_button_text_small_semibold_frame_paddingNone",
-                ["semibold_frame_paddingTight"] = "muppet_button_text_small_semibold_frame_paddingTight",
-                ["semibold_noBorder"] = "muppet_button_text_small_semibold_noBorder",
-                ["semibold_noBorder_paddingSides"] = "muppet_button_text_small_semibold_noBorder_paddingSides",
-                ["semibold_noBorder_paddingNone"] = "muppet_button_text_small_semibold_noBorder_paddingNone",
-                ["semibold_noBorder_paddingTight"] = "muppet_button_text_small_semibold_noBorder_paddingTight",
-                ["bold"] = "muppet_button_text_small_bold",
-                ["bold_paddingSides"] = "muppet_button_text_small_bold_paddingSides",
-                ["bold_paddingNone"] = "muppet_button_text_small_bold_paddingNone",
-                ["bold_paddingTight"] = "muppet_button_text_small_bold_paddingTight",
-                ["bold_frame"] = "muppet_button_text_small_bold_frame",
-                ["bold_frame_paddingSides"] = "muppet_button_text_small_bold_frame_paddingSides",
-                ["bold_frame_paddingNone"] = "muppet_button_text_small_bold_frame_paddingNone",
-                ["bold_frame_paddingTight"] = "muppet_button_text_small_bold_frame_paddingTight",
-                ["bold_noBorder"] = "muppet_button_text_small_bold_noBorder",
-                ["bold_noBorder_paddingSides"] = "muppet_button_text_small_bold_noBorder_paddingSides",
-                ["bold_noBorder_paddingNone"] = "muppet_button_text_small_bold_noBorder_paddingNone",
-                ["bold_noBorder_paddingTight"] = "muppet_button_text_small_bold_noBorder_paddingTight"
-            },
-            medium = {
-                ["plain"] = "muppet_button_text_medium",
-                ["paddingSides"] = "muppet_button_text_medium_paddingSides",
-                ["paddingNone"] = "muppet_button_text_medium_paddingNone",
-                ["paddingTight"] = "muppet_button_text_medium_paddingTight",
-                ["frame"] = "muppet_button_text_medium_frame",
-                ["frame_paddingSides"] = "muppet_button_text_medium_frame_paddingSides",
-                ["frame_paddingNone"] = "muppet_button_text_medium_frame_paddingNone",
-                ["frame_paddingTight"] = "muppet_button_text_medium_frame_paddingTight",
-                ["noBorder"] = "muppet_button_text_medium_noBorder",
-                ["noBorder_paddingSides"] = "muppet_button_text_medium_noBorder_paddingSides",
-                ["noBorder_paddingNone"] = "muppet_button_text_medium_noBorder_paddingNone",
-                ["noBorder_paddingTight"] = "muppet_button_text_medium_noBorder_paddingTight",
-                ["semibold"] = "muppet_button_text_medium_semibold",
-                ["semibold_paddingSides"] = "muppet_button_text_medium_semibold_paddingSides",
-                ["semibold_paddingNone"] = "muppet_button_text_medium_semibold_paddingNone",
-                ["semibold_paddingTight"] = "muppet_button_text_medium_semibold_paddingTight",
-                ["semibold_frame"] = "muppet_button_text_medium_semibold_frame",
-                ["semibold_frame_paddingSides"] = "muppet_button_text_medium_semibold_frame_paddingSides",
-                ["semibold_frame_paddingNone"] = "muppet_button_text_medium_semibold_frame_paddingNone",
-                ["semibold_frame_paddingTight"] = "muppet_button_text_medium_semibold_frame_paddingTight",
-                ["semibold_noBorder"] = "muppet_button_text_medium_semibold_noBorder",
-                ["semibold_noBorder_paddingSides"] = "muppet_button_text_medium_semibold_noBorder_paddingSides",
-                ["semibold_noBorder_paddingNone"] = "muppet_button_text_medium_semibold_noBorder_paddingNone",
-                ["semibold_noBorder_paddingTight"] = "muppet_button_text_medium_semibold_noBorder_paddingTight",
-                ["bold"] = "muppet_button_text_medium_bold",
-                ["bold_paddingSides"] = "muppet_button_text_medium_bold_paddingSides",
-                ["bold_paddingNone"] = "muppet_button_text_medium_bold_paddingNone",
-                ["bold_paddingTight"] = "muppet_button_text_medium_bold_paddingTight",
-                ["bold_frame"] = "muppet_button_text_medium_bold_frame",
-                ["bold_frame_paddingSides"] = "muppet_button_text_medium_bold_frame_paddingSides",
-                ["bold_frame_paddingNone"] = "muppet_button_text_medium_bold_frame_paddingNone",
-                ["bold_frame_paddingTight"] = "muppet_button_text_medium_bold_frame_paddingTight",
-                ["bold_noBorder"] = "muppet_button_text_medium_bold_noBorder",
-                ["bold_noBorder_paddingSides"] = "muppet_button_text_medium_bold_noBorder_paddingSides",
-                ["bold_noBorder_paddingNone"] = "muppet_button_text_medium_bold_noBorder_paddingNone",
-                ["bold_noBorder_paddingTight"] = "muppet_button_text_medium_bold_noBorder_paddingTight"
-            },
-            large = {
-                ["plain"] = "muppet_button_text_large",
-                ["paddingSides"] = "muppet_button_text_large_paddingSides",
-                ["paddingNone"] = "muppet_button_text_large_paddingNone",
-                ["paddingTight"] = "muppet_button_text_large_paddingTight",
-                ["frame"] = "muppet_button_text_large_frame",
-                ["frame_paddingSides"] = "muppet_button_text_large_frame_paddingSides",
-                ["frame_paddingNone"] = "muppet_button_text_large_frame_paddingNone",
-                ["frame_paddingTight"] = "muppet_button_text_large_frame_paddingTight",
-                ["noBorder"] = "muppet_button_text_large_noBorder",
-                ["noBorder_paddingSides"] = "muppet_button_text_large_noBorder_paddingSides",
-                ["noBorder_paddingNone"] = "muppet_button_text_large_noBorder_paddingNone",
-                ["noBorder_paddingTight"] = "muppet_button_text_large_noBorder_paddingTight",
-                ["semibold"] = "muppet_button_text_large_semibold",
-                ["semibold_paddingSides"] = "muppet_button_text_large_semibold_paddingSides",
-                ["semibold_paddingNone"] = "muppet_button_text_large_semibold_paddingNone",
-                ["semibold_paddingTight"] = "muppet_button_text_large_semibold_paddingTight",
-                ["semibold_frame"] = "muppet_button_text_large_semibold_frame",
-                ["semibold_frame_paddingSides"] = "muppet_button_text_large_semibold_frame_paddingSides",
-                ["semibold_frame_paddingNone"] = "muppet_button_text_large_semibold_frame_paddingNone",
-                ["semibold_frame_paddingTight"] = "muppet_button_text_large_semibold_frame_paddingTight",
-                ["semibold_noBorder"] = "muppet_button_text_large_semibold_noBorder",
-                ["semibold_noBorder_paddingSides"] = "muppet_button_text_large_semibold_noBorder_paddingSides",
-                ["semibold_noBorder_paddingNone"] = "muppet_button_text_large_semibold_noBorder_paddingNone",
-                ["semibold_noBorder_paddingTight"] = "muppet_button_text_large_semibold_noBorder_paddingTight",
-                ["bold"] = "muppet_button_text_large_bold",
-                ["bold_paddingSides"] = "muppet_button_text_large_bold_paddingSides",
-                ["bold_paddingNone"] = "muppet_button_text_large_bold_paddingNone",
-                ["bold_paddingTight"] = "muppet_button_text_large_bold_paddingTight",
-                ["bold_frame"] = "muppet_button_text_large_bold_frame",
-                ["bold_frame_paddingSides"] = "muppet_button_text_large_bold_frame_paddingSides",
-                ["bold_frame_paddingNone"] = "muppet_button_text_large_bold_frame_paddingNone",
-                ["bold_frame_paddingTight"] = "muppet_button_text_large_bold_frame_paddingTight",
-                ["bold_noBorder"] = "muppet_button_text_large_bold_noBorder",
-                ["bold_noBorder_paddingSides"] = "muppet_button_text_large_bold_noBorder_paddingSides",
-                ["bold_noBorder_paddingNone"] = "muppet_button_text_large_bold_noBorder_paddingNone",
-                ["bold_noBorder_paddingTight"] = "muppet_button_text_large_bold_noBorder_paddingTight"
-            }
+        small = {
+            ["plain"] = "muppet_button_text_small",
+            ["paddingSides"] = "muppet_button_text_small_paddingSides",
+            ["paddingNone"] = "muppet_button_text_small_paddingNone",
+            ["paddingTight"] = "muppet_button_text_small_paddingTight",
+            ["frame"] = "muppet_button_text_small_frame",
+            ["frame_paddingSides"] = "muppet_button_text_small_frame_paddingSides",
+            ["frame_paddingNone"] = "muppet_button_text_small_frame_paddingNone",
+            ["frame_paddingTight"] = "muppet_button_text_small_frame_paddingTight",
+            ["noBorder"] = "muppet_button_text_small_noBorder",
+            ["noBorder_paddingSides"] = "muppet_button_text_small_noBorder_paddingSides",
+            ["noBorder_paddingNone"] = "muppet_button_text_small_noBorder_paddingNone",
+            ["noBorder_paddingTight"] = "muppet_button_text_small_noBorder_paddingTight",
+            ["semibold"] = "muppet_button_text_small_semibold",
+            ["semibold_paddingSides"] = "muppet_button_text_small_semibold_paddingSides",
+            ["semibold_paddingNone"] = "muppet_button_text_small_semibold_paddingNone",
+            ["semibold_paddingTight"] = "muppet_button_text_small_semibold_paddingTight",
+            ["semibold_frame"] = "muppet_button_text_small_semibold_frame",
+            ["semibold_frame_paddingSides"] = "muppet_button_text_small_semibold_frame_paddingSides",
+            ["semibold_frame_paddingNone"] = "muppet_button_text_small_semibold_frame_paddingNone",
+            ["semibold_frame_paddingTight"] = "muppet_button_text_small_semibold_frame_paddingTight",
+            ["semibold_noBorder"] = "muppet_button_text_small_semibold_noBorder",
+            ["semibold_noBorder_paddingSides"] = "muppet_button_text_small_semibold_noBorder_paddingSides",
+            ["semibold_noBorder_paddingNone"] = "muppet_button_text_small_semibold_noBorder_paddingNone",
+            ["semibold_noBorder_paddingTight"] = "muppet_button_text_small_semibold_noBorder_paddingTight",
+            ["bold"] = "muppet_button_text_small_bold",
+            ["bold_paddingSides"] = "muppet_button_text_small_bold_paddingSides",
+            ["bold_paddingNone"] = "muppet_button_text_small_bold_paddingNone",
+            ["bold_paddingTight"] = "muppet_button_text_small_bold_paddingTight",
+            ["bold_frame"] = "muppet_button_text_small_bold_frame",
+            ["bold_frame_paddingSides"] = "muppet_button_text_small_bold_frame_paddingSides",
+            ["bold_frame_paddingNone"] = "muppet_button_text_small_bold_frame_paddingNone",
+            ["bold_frame_paddingTight"] = "muppet_button_text_small_bold_frame_paddingTight",
+            ["bold_noBorder"] = "muppet_button_text_small_bold_noBorder",
+            ["bold_noBorder_paddingSides"] = "muppet_button_text_small_bold_noBorder_paddingSides",
+            ["bold_noBorder_paddingNone"] = "muppet_button_text_small_bold_noBorder_paddingNone",
+            ["bold_noBorder_paddingTight"] = "muppet_button_text_small_bold_noBorder_paddingTight"
         },
-        heading = {
-            small = {
-                ["plain"] = "muppet_button_heading_small",
-                ["paddingSides"] = "muppet_button_heading_small_paddingSides",
-                ["paddingNone"] = "muppet_button_heading_small_paddingNone",
-                ["paddingTight"] = "muppet_button_heading_small_paddingTight",
-                ["frame"] = "muppet_button_heading_small_frame",
-                ["frame_paddingSides"] = "muppet_button_heading_small_frame_paddingSides",
-                ["frame_paddingNone"] = "muppet_button_heading_small_frame_paddingNone",
-                ["frame_paddingTight"] = "muppet_button_heading_small_frame_paddingTight",
-                ["noBorder"] = "muppet_button_heading_small_noBorder",
-                ["noBorder_paddingSides"] = "muppet_button_heading_small_noBorder_paddingSides",
-                ["noBorder_paddingNone"] = "muppet_button_heading_small_noBorder_paddingNone",
-                ["noBorder_paddingTight"] = "muppet_button_heading_small_noBorder_paddingTight",
-                ["semibold"] = "muppet_button_heading_small_semibold",
-                ["semibold_paddingSides"] = "muppet_button_heading_small_semibold_paddingSides",
-                ["semibold_paddingNone"] = "muppet_button_heading_small_semibold_paddingNone",
-                ["semibold_paddingTight"] = "muppet_button_heading_small_semibold_paddingTight",
-                ["semibold_frame"] = "muppet_button_heading_small_semibold_frame",
-                ["semibold_frame_paddingSides"] = "muppet_button_heading_small_semibold_frame_paddingSides",
-                ["semibold_frame_paddingNone"] = "muppet_button_heading_small_semibold_frame_paddingNone",
-                ["semibold_frame_paddingTight"] = "muppet_button_heading_small_semibold_frame_paddingTight",
-                ["semibold_noBorder"] = "muppet_button_heading_small_semibold_noBorder",
-                ["semibold_noBorder_paddingSides"] = "muppet_button_heading_small_semibold_noBorder_paddingSides",
-                ["semibold_noBorder_paddingNone"] = "muppet_button_heading_small_semibold_noBorder_paddingNone",
-                ["semibold_noBorder_paddingTight"] = "muppet_button_heading_small_semibold_noBorder_paddingTight",
-                ["bold"] = "muppet_button_heading_small_bold",
-                ["bold_paddingSides"] = "muppet_button_heading_small_bold_paddingSides",
-                ["bold_paddingNone"] = "muppet_button_heading_small_bold_paddingNone",
-                ["bold_paddingTight"] = "muppet_button_heading_small_bold_paddingTight",
-                ["bold_frame"] = "muppet_button_heading_small_bold_frame",
-                ["bold_frame_paddingSides"] = "muppet_button_heading_small_bold_frame_paddingSides",
-                ["bold_frame_paddingNone"] = "muppet_button_heading_small_bold_frame_paddingNone",
-                ["bold_frame_paddingTight"] = "muppet_button_heading_small_bold_frame_paddingTight",
-                ["bold_noBorder"] = "muppet_button_heading_small_bold_noBorder",
-                ["bold_noBorder_paddingSides"] = "muppet_button_heading_small_bold_noBorder_paddingSides",
-                ["bold_noBorder_paddingNone"] = "muppet_button_heading_small_bold_noBorder_paddingNone",
-                ["bold_noBorder_paddingTight"] = "muppet_button_heading_small_bold_noBorder_paddingTight"
-            },
-            medium = {
-                ["plain"] = "muppet_button_heading_medium",
-                ["paddingSides"] = "muppet_button_heading_medium_paddingSides",
-                ["paddingNone"] = "muppet_button_heading_medium_paddingNone",
-                ["paddingTight"] = "muppet_button_heading_medium_paddingTight",
-                ["frame"] = "muppet_button_heading_medium_frame",
-                ["frame_paddingSides"] = "muppet_button_heading_medium_frame_paddingSides",
-                ["frame_paddingNone"] = "muppet_button_heading_medium_frame_paddingNone",
-                ["frame_paddingTight"] = "muppet_button_heading_medium_frame_paddingTight",
-                ["noBorder"] = "muppet_button_heading_medium_noBorder",
-                ["noBorder_paddingSides"] = "muppet_button_heading_medium_noBorder_paddingSides",
-                ["noBorder_paddingNone"] = "muppet_button_heading_medium_noBorder_paddingNone",
-                ["noBorder_paddingTight"] = "muppet_button_heading_medium_noBorder_paddingTight",
-                ["semibold"] = "muppet_button_heading_medium_semibold",
-                ["semibold_paddingSides"] = "muppet_button_heading_medium_semibold_paddingSides",
-                ["semibold_paddingNone"] = "muppet_button_heading_medium_semibold_paddingNone",
-                ["semibold_paddingTight"] = "muppet_button_heading_medium_semibold_paddingTight",
-                ["semibold_frame"] = "muppet_button_heading_medium_semibold_frame",
-                ["semibold_frame_paddingSides"] = "muppet_button_heading_medium_semibold_frame_paddingSides",
-                ["semibold_frame_paddingNone"] = "muppet_button_heading_medium_semibold_frame_paddingNone",
-                ["semibold_frame_paddingTight"] = "muppet_button_heading_medium_semibold_frame_paddingTight",
-                ["semibold_noBorder"] = "muppet_button_heading_medium_semibold_noBorder",
-                ["semibold_noBorder_paddingSides"] = "muppet_button_heading_medium_semibold_noBorder_paddingSides",
-                ["semibold_noBorder_paddingNone"] = "muppet_button_heading_medium_semibold_noBorder_paddingNone",
-                ["semibold_noBorder_paddingTight"] = "muppet_button_heading_medium_semibold_noBorder_paddingTight",
-                ["bold"] = "muppet_button_heading_medium_bold",
-                ["bold_paddingSides"] = "muppet_button_heading_medium_bold_paddingSides",
-                ["bold_paddingNone"] = "muppet_button_heading_medium_bold_paddingNone",
-                ["bold_paddingTight"] = "muppet_button_heading_medium_bold_paddingTight",
-                ["bold_frame"] = "muppet_button_heading_medium_bold_frame",
-                ["bold_frame_paddingSides"] = "muppet_button_heading_medium_bold_frame_paddingSides",
-                ["bold_frame_paddingNone"] = "muppet_button_heading_medium_bold_frame_paddingNone",
-                ["bold_frame_paddingTight"] = "muppet_button_heading_medium_bold_frame_paddingTight",
-                ["bold_noBorder"] = "muppet_button_heading_medium_bold_noBorder",
-                ["bold_noBorder_paddingSides"] = "muppet_button_heading_medium_bold_noBorder_paddingSides",
-                ["bold_noBorder_paddingNone"] = "muppet_button_heading_medium_bold_noBorder_paddingNone",
-                ["bold_noBorder_paddingTight"] = "muppet_button_heading_medium_bold_noBorder_paddingTight"
-            },
-            large = {
-                ["plain"] = "muppet_button_heading_large",
-                ["paddingSides"] = "muppet_button_heading_large_paddingSides",
-                ["paddingNone"] = "muppet_button_heading_large_paddingNone",
-                ["paddingTight"] = "muppet_button_heading_large_paddingTight",
-                ["frame"] = "muppet_button_heading_large_frame",
-                ["frame_paddingSides"] = "muppet_button_heading_large_frame_paddingSides",
-                ["frame_paddingNone"] = "muppet_button_heading_large_frame_paddingNone",
-                ["frame_paddingTight"] = "muppet_button_heading_large_frame_paddingTight",
-                ["noBorder"] = "muppet_button_heading_large_noBorder",
-                ["noBorder_paddingSides"] = "muppet_button_heading_large_noBorder_paddingSides",
-                ["noBorder_paddingNone"] = "muppet_button_heading_large_noBorder_paddingNone",
-                ["noBorder_paddingTight"] = "muppet_button_heading_large_noBorder_paddingTight",
-                ["semibold"] = "muppet_button_heading_large_semibold",
-                ["semibold_paddingSides"] = "muppet_button_heading_large_semibold_paddingSides",
-                ["semibold_paddingNone"] = "muppet_button_heading_large_semibold_paddingNone",
-                ["semibold_paddingTight"] = "muppet_button_heading_large_semibold_paddingTight",
-                ["semibold_frame"] = "muppet_button_heading_large_semibold_frame",
-                ["semibold_frame_paddingSides"] = "muppet_button_heading_large_semibold_frame_paddingSides",
-                ["semibold_frame_paddingNone"] = "muppet_button_heading_large_semibold_frame_paddingNone",
-                ["semibold_frame_paddingTight"] = "muppet_button_heading_large_semibold_frame_paddingTight",
-                ["semibold_noBorder"] = "muppet_button_heading_large_semibold_noBorder",
-                ["semibold_noBorder_paddingSides"] = "muppet_button_heading_large_semibold_noBorder_paddingSides",
-                ["semibold_noBorder_paddingNone"] = "muppet_button_heading_large_semibold_noBorder_paddingNone",
-                ["semibold_noBorder_paddingTight"] = "muppet_button_heading_large_semibold_noBorder_paddingTight",
-                ["bold"] = "muppet_button_heading_large_bold",
-                ["bold_paddingSides"] = "muppet_button_heading_large_bold_paddingSides",
-                ["bold_paddingNone"] = "muppet_button_heading_large_bold_paddingNone",
-                ["bold_paddingTight"] = "muppet_button_heading_large_bold_paddingTight",
-                ["bold_frame"] = "muppet_button_heading_large_bold_frame",
-                ["bold_frame_paddingSides"] = "muppet_button_heading_large_bold_frame_paddingSides",
-                ["bold_frame_paddingNone"] = "muppet_button_heading_large_bold_frame_paddingNone",
-                ["bold_frame_paddingTight"] = "muppet_button_heading_large_bold_frame_paddingTight",
-                ["bold_noBorder"] = "muppet_button_heading_large_bold_noBorder",
-                ["bold_noBorder_paddingSides"] = "muppet_button_heading_large_bold_noBorder_paddingSides",
-                ["bold_noBorder_paddingNone"] = "muppet_button_heading_large_bold_noBorder_paddingNone",
-                ["bold_noBorder_paddingTight"] = "muppet_button_heading_large_bold_noBorder_paddingTight"
-            }
+        medium = {
+            ["plain"] = "muppet_button_text_medium",
+            ["paddingSides"] = "muppet_button_text_medium_paddingSides",
+            ["paddingNone"] = "muppet_button_text_medium_paddingNone",
+            ["paddingTight"] = "muppet_button_text_medium_paddingTight",
+            ["frame"] = "muppet_button_text_medium_frame",
+            ["frame_paddingSides"] = "muppet_button_text_medium_frame_paddingSides",
+            ["frame_paddingNone"] = "muppet_button_text_medium_frame_paddingNone",
+            ["frame_paddingTight"] = "muppet_button_text_medium_frame_paddingTight",
+            ["noBorder"] = "muppet_button_text_medium_noBorder",
+            ["noBorder_paddingSides"] = "muppet_button_text_medium_noBorder_paddingSides",
+            ["noBorder_paddingNone"] = "muppet_button_text_medium_noBorder_paddingNone",
+            ["noBorder_paddingTight"] = "muppet_button_text_medium_noBorder_paddingTight",
+            ["semibold"] = "muppet_button_text_medium_semibold",
+            ["semibold_paddingSides"] = "muppet_button_text_medium_semibold_paddingSides",
+            ["semibold_paddingNone"] = "muppet_button_text_medium_semibold_paddingNone",
+            ["semibold_paddingTight"] = "muppet_button_text_medium_semibold_paddingTight",
+            ["semibold_frame"] = "muppet_button_text_medium_semibold_frame",
+            ["semibold_frame_paddingSides"] = "muppet_button_text_medium_semibold_frame_paddingSides",
+            ["semibold_frame_paddingNone"] = "muppet_button_text_medium_semibold_frame_paddingNone",
+            ["semibold_frame_paddingTight"] = "muppet_button_text_medium_semibold_frame_paddingTight",
+            ["semibold_noBorder"] = "muppet_button_text_medium_semibold_noBorder",
+            ["semibold_noBorder_paddingSides"] = "muppet_button_text_medium_semibold_noBorder_paddingSides",
+            ["semibold_noBorder_paddingNone"] = "muppet_button_text_medium_semibold_noBorder_paddingNone",
+            ["semibold_noBorder_paddingTight"] = "muppet_button_text_medium_semibold_noBorder_paddingTight",
+            ["bold"] = "muppet_button_text_medium_bold",
+            ["bold_paddingSides"] = "muppet_button_text_medium_bold_paddingSides",
+            ["bold_paddingNone"] = "muppet_button_text_medium_bold_paddingNone",
+            ["bold_paddingTight"] = "muppet_button_text_medium_bold_paddingTight",
+            ["bold_frame"] = "muppet_button_text_medium_bold_frame",
+            ["bold_frame_paddingSides"] = "muppet_button_text_medium_bold_frame_paddingSides",
+            ["bold_frame_paddingNone"] = "muppet_button_text_medium_bold_frame_paddingNone",
+            ["bold_frame_paddingTight"] = "muppet_button_text_medium_bold_frame_paddingTight",
+            ["bold_noBorder"] = "muppet_button_text_medium_bold_noBorder",
+            ["bold_noBorder_paddingSides"] = "muppet_button_text_medium_bold_noBorder_paddingSides",
+            ["bold_noBorder_paddingNone"] = "muppet_button_text_medium_bold_noBorder_paddingNone",
+            ["bold_noBorder_paddingTight"] = "muppet_button_text_medium_bold_noBorder_paddingTight"
+        },
+        large = {
+            ["plain"] = "muppet_button_text_large",
+            ["paddingSides"] = "muppet_button_text_large_paddingSides",
+            ["paddingNone"] = "muppet_button_text_large_paddingNone",
+            ["paddingTight"] = "muppet_button_text_large_paddingTight",
+            ["frame"] = "muppet_button_text_large_frame",
+            ["frame_paddingSides"] = "muppet_button_text_large_frame_paddingSides",
+            ["frame_paddingNone"] = "muppet_button_text_large_frame_paddingNone",
+            ["frame_paddingTight"] = "muppet_button_text_large_frame_paddingTight",
+            ["noBorder"] = "muppet_button_text_large_noBorder",
+            ["noBorder_paddingSides"] = "muppet_button_text_large_noBorder_paddingSides",
+            ["noBorder_paddingNone"] = "muppet_button_text_large_noBorder_paddingNone",
+            ["noBorder_paddingTight"] = "muppet_button_text_large_noBorder_paddingTight",
+            ["semibold"] = "muppet_button_text_large_semibold",
+            ["semibold_paddingSides"] = "muppet_button_text_large_semibold_paddingSides",
+            ["semibold_paddingNone"] = "muppet_button_text_large_semibold_paddingNone",
+            ["semibold_paddingTight"] = "muppet_button_text_large_semibold_paddingTight",
+            ["semibold_frame"] = "muppet_button_text_large_semibold_frame",
+            ["semibold_frame_paddingSides"] = "muppet_button_text_large_semibold_frame_paddingSides",
+            ["semibold_frame_paddingNone"] = "muppet_button_text_large_semibold_frame_paddingNone",
+            ["semibold_frame_paddingTight"] = "muppet_button_text_large_semibold_frame_paddingTight",
+            ["semibold_noBorder"] = "muppet_button_text_large_semibold_noBorder",
+            ["semibold_noBorder_paddingSides"] = "muppet_button_text_large_semibold_noBorder_paddingSides",
+            ["semibold_noBorder_paddingNone"] = "muppet_button_text_large_semibold_noBorder_paddingNone",
+            ["semibold_noBorder_paddingTight"] = "muppet_button_text_large_semibold_noBorder_paddingTight",
+            ["bold"] = "muppet_button_text_large_bold",
+            ["bold_paddingSides"] = "muppet_button_text_large_bold_paddingSides",
+            ["bold_paddingNone"] = "muppet_button_text_large_bold_paddingNone",
+            ["bold_paddingTight"] = "muppet_button_text_large_bold_paddingTight",
+            ["bold_frame"] = "muppet_button_text_large_bold_frame",
+            ["bold_frame_paddingSides"] = "muppet_button_text_large_bold_frame_paddingSides",
+            ["bold_frame_paddingNone"] = "muppet_button_text_large_bold_frame_paddingNone",
+            ["bold_frame_paddingTight"] = "muppet_button_text_large_bold_frame_paddingTight",
+            ["bold_noBorder"] = "muppet_button_text_large_bold_noBorder",
+            ["bold_noBorder_paddingSides"] = "muppet_button_text_large_bold_noBorder_paddingSides",
+            ["bold_noBorder_paddingNone"] = "muppet_button_text_large_bold_noBorder_paddingNone",
+            ["bold_noBorder_paddingTight"] = "muppet_button_text_large_bold_noBorder_paddingTight"
         }
     },
     label = {
