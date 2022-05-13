@@ -207,7 +207,7 @@ local Settings = {
 }
 
 -- Testing is for development and is very adhoc in what it changes to allow simplier testing.
-local Testing = true
+local Testing = false
 if Testing then
     Settings.bossSpiderStartingLeftDistance = 1000
     Settings.spidersRoamingXRange = 100
