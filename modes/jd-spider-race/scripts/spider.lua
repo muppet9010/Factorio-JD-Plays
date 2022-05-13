@@ -974,7 +974,7 @@ Spider.FightTargetTypeWhileNotBeingDamaged = function(spider, spidersCurrentPosi
     -- Spider hasn't reached target area yet.
 
     -- React based on if the target is near by or not.
-    if distanceToTarget <= (Settings.Settings.spiderEngagementRange * 2) then
+    if distanceToTarget <= (Settings.spiderEngagementRange * 2) then
         -- Target near by so just advance a bit.
 
         -- Make sure we don;t walk in to range of other things whne chasing our target.

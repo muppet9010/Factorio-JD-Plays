@@ -60,17 +60,22 @@ explosiveUraniumCannonShellProjecticleForBossSpider.force_condition = "enemy"
 local tankCannonGunForBossSpider = Utils.DeepCopy(data.raw["gun"]["tank-cannon"])
 tankCannonGunForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-tank_cannon_gun"
 tankCannonGunForBossSpider.attack_parameters.cooldown = 45 -- Half of default 90.
-tankCannonGunForBossSpider.movement_slow_down_factor = 1 -- Don't fire slower when moving.
+tankCannonGunForBossSpider.attack_parameters.movement_slow_down_factor = 1 -- Don't fire slower when moving.
 
 local rocketLauncherGunForBossSpider = Utils.DeepCopy(data.raw["gun"]["rocket-launcher"])
 rocketLauncherGunForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-rocket_launcher_gun"
 rocketLauncherGunForBossSpider.attack_parameters.cooldown = 30 -- Half of default 60.
-rocketLauncherGunForBossSpider.movement_slow_down_factor = 1 -- Don't fire slower when moving.
+rocketLauncherGunForBossSpider.attack_parameters.movement_slow_down_factor = 1 -- Don't fire slower when moving.
 
 local tankMachineGunGunForBossSpider = Utils.DeepCopy(data.raw["gun"]["tank-machine-gun"])
 tankMachineGunGunForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-tank_machine_gun"
 tankMachineGunGunForBossSpider.attack_parameters.cooldown = 2 -- Half of default 4
-tankMachineGunGunForBossSpider.movement_slow_down_factor = 1 -- Don't fire slower when moving.
+tankMachineGunGunForBossSpider.attack_parameters.movement_slow_down_factor = 1 -- Don't fire slower when moving.
+
+local flamethrowerGunForBossSpider = Utils.DeepCopy(data.raw["gun"]["flamethrower"])
+flamethrowerGunForBossSpider.name = "jd_plays-jd_spider_race-spidertron_boss-flamethrower_gun"
+flamethrowerGunForBossSpider.attack_parameters.cooldown = 0.5 -- Half of default 1
+flamethrowerGunForBossSpider.attack_parameters.movement_slow_down_factor = 1 -- Don't fire slower when moving.
 
 --------------------------------------------
 -- Special basic ammo for each gun that never runs out.
@@ -109,6 +114,7 @@ data:extend(
         tankCannonGunForBossSpider,
         rocketLauncherGunForBossSpider,
         tankMachineGunGunForBossSpider,
+        flamethrowerGunForBossSpider,
         firearmMagazineForBossSpider,
         rocketForBossSpider
     }

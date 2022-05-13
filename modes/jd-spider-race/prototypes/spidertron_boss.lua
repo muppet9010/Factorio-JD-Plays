@@ -145,7 +145,7 @@ local function create_boss_spidertron(arguments)
                 corpse = "jd_plays-jd_spider_race-spidertron_boss_remnants", -- Changed to custom sized remnants.
                 dying_explosion = "spidertron-explosion",
                 energy_per_hit_point = 1,
-                guns = {"flamethrower"}, -- The flamer gun must be on the real spider as when it fires it clearly shows the originating point.
+                guns = {"jd_plays-jd_spider_race-spidertron_boss-flamethrower_gun"}, -- The flamer gun must be on the real spider as when it fires it clearly shows the originating point.
                 inventory_size = 80,
                 equipment_grid = "spidertron-boss-equipment-grid", -- Changed to custom sized grid.
                 trash_inventory_size = 20,
