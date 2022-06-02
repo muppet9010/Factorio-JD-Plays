@@ -263,7 +263,7 @@ Commands.ParseTableArgument = function(value, mandatory, commandName, argumentNa
     return true
 end
 
---- Internal comands function that returns the input text as its correct type.
+--- Internal commands function that returns the input text as its correct type.
 ---@param inputText string
 ---@return null|number|boolean|table|string typedValue
 Commands._StringToTypedObject = function(inputText)
@@ -278,10 +278,16 @@ Commands._StringToTypedObject = function(inputText)
     if castedText ~= nil then
         return castedText
     end
-    castedText = game.json_to_table(inputText)
-    if castedText ~= nil then
-        return castedText
+
+    -- Only try to handle JSON to table conversation if it looks like a JSON string. The games built in conversation handler can return some non JSON things as other basic types, but with some special characters being stripped in the process.
+    local firstCharacter = string.sub(inputText, 1, 1)
+    if firstCharacter == "{" or firstCharacter == "[" then
+        castedText = game.json_to_table(inputText)
+        if castedText ~= nil then
+            return castedText
+        end
     end
+
     return inputText
 end
 

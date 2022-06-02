@@ -1403,42 +1403,75 @@ Spider.Command_IncrementDistanceFromSpawn = function(commandEvent)
         game.print(commandErrorMessagePrefix .. "No arguments provided.", Colors.lightred)
         return
     end
-    if #args ~= 2 then
-        game.print(commandErrorMessagePrefix .. "Wrong number of arguments provided. Expected 2, got" .. #args, Colors.lightred)
+    if #args < 2 or #args > 3 then
+        game.print(commandErrorMessagePrefix .. "Wrong number of arguments provided. Expected 2 or 3, got" .. #args, Colors.lightred)
         return
     end
 
-    local playerTeamName = args[1] ---@type string
-    if playerTeamName ~= "both" and global.playerHome.teams[playerTeamName] == nil then
-        game.print(commandErrorMessagePrefix .. 'First argument of player team name was invalid, either "north", "south" or "both". Recieved: ' .. tostring(playerTeamName), Colors.lightred)
+    local primaryPlayerTeamName = args[1] ---@type string
+    local primaryPlayerTeam = global.playerHome.teams[primaryPlayerTeamName] ---@type JdSpiderRace_PlayerHome_Team
+    if primaryPlayerTeam == nil then
+        game.print(commandErrorMessagePrefix .. 'First argument of player team name was invalid, either "north", "south" or "both". Recieved: ' .. tostring(primaryPlayerTeamName), Colors.lightred)
         return
     end
 
-    local distanceChange = args[2] ---@type number
-    if type(distanceChange) ~= "number" then
-        game.print(commandErrorMessagePrefix .. "Second argument of distance to change by must be a number, recieved: " .. tostring(distanceChange), Colors.lightred)
+    local primaryDistanceChange = args[2] ---@type number
+    if type(primaryDistanceChange) ~= "number" then
+        game.print(commandErrorMessagePrefix .. "Second argument of distance to change by must be a number, recieved: " .. tostring(primaryDistanceChange), Colors.lightred)
         return
     end
-    distanceChange = math_ceil(distanceChange) -- Must be in whole tiles, so round it.
+    primaryDistanceChange = math_ceil(primaryDistanceChange) -- Must be in whole tiles, so round it.
 
-    -- Impliment command as any errors would have bene flagged by now.
-    local messageLocalisedString
-    if distanceChange > 0 then
-        messageLocalisedString = {"message.jd_plays-jd_spider_race-spider_moved_away_from_spawn", Utils.DisplayNumberPretty(distanceChange)}
-    else
-        messageLocalisedString = {"message.jd_plays-jd_spider_race-spider_moved_towards_spawn", Utils.DisplayNumberPretty(-distanceChange)}
-    end
-    if playerTeamName == "both" then
-        -- Update both team's spiders.
-        for _, spider in pairs(global.spider.spiders) do
-            Spider.UpdateSpiderDistanceFromSpawn(spider, distanceChange)
-            Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, messageLocalisedString)
+    -- Record the primary team's changes.
+    local primaryDistanceChangeDetails = {team = primaryPlayerTeam, distanceChange = primaryDistanceChange}
+    local spiderDistanceChanges = {
+        primaryDistanceChangeDetails
+    }
+
+    -- Optional other team's changes handling.
+    local otherTeamDistanceChangeRaw = args[3] ---@type string|number
+    if otherTeamDistanceChangeRaw ~= nil then
+        if type(otherTeamDistanceChangeRaw) == "number" then
+            -- Is a straight number so just use it.
+            table.insert(spiderDistanceChanges, {team = primaryPlayerTeam.otherTeam, distanceChange = math_ceil(otherTeamDistanceChangeRaw)}) -- Must be in whole tiles, so round it.
+        else
+            -- Should be a percentage value.
+
+            -- Check it has a percentage sign.
+            if not string.find(otherTeamDistanceChangeRaw, "%%") then
+                game.print(commandErrorMessagePrefix .. "Third argument of other team's distance/percentage to change by wasn't a number or a number and % sign, recieved: " .. tostring(otherTeamDistanceChangeRaw), Colors.lightred)
+                return
+            end
+
+            -- Remove the percentage sign and convert to a number.
+            local otherTeamDistanceChange = string.gsub(otherTeamDistanceChangeRaw, "%%", "")
+            otherTeamDistanceChange = tonumber(otherTeamDistanceChange)
+
+            -- Check its a valid number.
+            if otherTeamDistanceChange == nil or type(otherTeamDistanceChange) ~= "number" then
+                game.print(commandErrorMessagePrefix .. "Third argument of other team's distance/percentage to change by wasn't a valid number once the % sign was removed, recieved: " .. tostring(otherTeamDistanceChangeRaw), Colors.lightred)
+                return
+            end
+
+            -- Record the resulting distance from the percentage number.
+            table.insert(spiderDistanceChanges, {team = primaryPlayerTeam.otherTeam, distanceChange = math_ceil((otherTeamDistanceChange / 100) * primaryDistanceChange)}) -- Must be in whole tiles, so round it.
         end
-    else
-        -- Just update the 1 team's spider.
-        local spider = global.spider.playerTeamsSpider[playerTeamName]
-        Spider.UpdateSpiderDistanceFromSpawn(spider, distanceChange)
-        Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, messageLocalisedString)
+    end
+
+    -- Apply the change to each team that needs it.
+    for _, changeDetails in pairs(spiderDistanceChanges) do
+        -- Impliment command as any errors would have bene flagged by now.
+        local messageLocalisedString
+        if changeDetails.distanceChange > 0 then
+            messageLocalisedString = {"message.jd_plays-jd_spider_race-spider_moved_away_from_spawn", Utils.DisplayNumberPretty(changeDetails.distanceChange)}
+        else
+            messageLocalisedString = {"message.jd_plays-jd_spider_race-spider_moved_towards_spawn", Utils.DisplayNumberPretty(-changeDetails.distanceChange)}
+        end
+
+        -- Update the primary team's spider.
+        local spider = global.spider.playerTeamsSpider[changeDetails.team.id]
+        Spider.UpdateSpiderDistanceFromSpawn(spider, changeDetails.distanceChange)
+        Spider.ShowMessageToEnabledTeamPlayers(changeDetails.team, messageLocalisedString)
     end
 
     -- Do one scoreboard update for all spiders.
