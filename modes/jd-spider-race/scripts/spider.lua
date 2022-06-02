@@ -239,7 +239,7 @@ Spider.OnLoad = function()
     Events.RegisterHandlerEvent(defines.events.on_entity_died, "Spider.OnSpiderDied", Spider.OnSpiderDied, {{filter = "name", name = "jd_plays-jd_spider_race-spidertron_boss"}})
     MOD.Interfaces.Spider.OnNewMostWestEntityBuilt = Spider.OnNewMostWestEntityBuilt
 
-    Commands.Register("spider_incrememt_distance_from_spawn", {"api-description.jd_plays-jd_spider_race-spider_incrememt_distance_from_spawn"}, Spider.Command_IncrementDistanceFromSpawn, true)
+    Commands.Register("spider_increment_distance_from_spawn", {"api-description.jd_plays-jd_spider_race-spider_increment_distance_from_spawn"}, Spider.Command_IncrementDistanceFromSpawn, true)
     Commands.Register("spider_set_movement_per_minute", {"api-description.jd_plays-jd_spider_race-spider_set_movement_per_minute"}, Spider.Command_SetSpiderMovementPerMinute, true)
     Commands.Register("spider_reset_state", {"api-description.jd_plays-jd_spider_race-spider_reset_state"}, Spider.Command_ResetSpiderState, true)
     Commands.Register("spider_full_rearm", {"api-description.jd_plays-jd_spider_race-spider_full_rearm"}, Spider.Command_FullyRearmSpider, true)
@@ -1394,11 +1394,11 @@ Spider.UpdatePlanRenders = function(spider, shortTermSpiderTargetPosition)
     end
 end
 
---- When the spider_incrememt_distance_from_spawn command is called.
+--- When the spider_increment_distance_from_spawn command is called.
 ---@param commandEvent CustomCommandData
 Spider.Command_IncrementDistanceFromSpawn = function(commandEvent)
     local args = Commands.GetArgumentsFromCommand(commandEvent.parameter)
-    local commandErrorMessagePrefix = "ERROR: spider_incrememt_distance_from_spawn command - "
+    local commandErrorMessagePrefix = "ERROR: spider_increment_distance_from_spawn command - "
     if args == nil or type(args) ~= "table" or #args == 0 then
         game.print(commandErrorMessagePrefix .. "No arguments provided.", Colors.lightred)
         return
