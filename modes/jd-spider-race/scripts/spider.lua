@@ -1444,23 +1444,22 @@ Spider.Command_IncrementDistanceFromSpawn = function(commandEvent)
             end
 
             -- Remove the percentage sign and convert to a number.
-            local otherTeamDistanceChange = string.gsub(otherTeamDistanceChangeRaw, "%%", "")
-            otherTeamDistanceChange = tonumber(otherTeamDistanceChange)
+            local otherTeamDistanceChangePercentage = string.gsub(otherTeamDistanceChangeRaw, "%%", "")
+            otherTeamDistanceChangePercentage = tonumber(otherTeamDistanceChangePercentage)
 
             -- Check its a valid number.
-            if otherTeamDistanceChange == nil or type(otherTeamDistanceChange) ~= "number" then
+            if otherTeamDistanceChangePercentage == nil or type(otherTeamDistanceChangePercentage) ~= "number" then
                 game.print(commandErrorMessagePrefix .. "Third argument of other team's distance/percentage to change by wasn't a valid number once the % sign was removed, recieved: " .. tostring(otherTeamDistanceChangeRaw), Colors.lightred)
                 return
             end
 
             -- Record the resulting distance from the percentage number.
-            table.insert(spiderDistanceChanges, {team = primaryPlayerTeam.otherTeam, distanceChange = math_ceil((otherTeamDistanceChange / 100) * primaryDistanceChange)}) -- Must be in whole tiles, so round it.
+            table.insert(spiderDistanceChanges, {team = primaryPlayerTeam.otherTeam, distanceChange = math_ceil((otherTeamDistanceChangePercentage / 100) * primaryDistanceChange)}) -- Must be in whole tiles, so round it.
         end
     end
 
     -- Apply the change to each team that needs it.
     for _, changeDetails in pairs(spiderDistanceChanges) do
-        -- Impliment command as any errors would have bene flagged by now.
         local messageLocalisedString
         if changeDetails.distanceChange > 0 then
             messageLocalisedString = {"message.jd_plays-jd_spider_race-spider_moved_away_from_spawn", Utils.DisplayNumberPretty(changeDetails.distanceChange)}
@@ -1630,14 +1629,15 @@ Spider.Command_GiveSpiderAmmo = function(commandEvent)
         game.print(commandErrorMessagePrefix .. "No arguments provided.", Colors.lightred)
         return
     end
-    if #args ~= 3 then
-        game.print(commandErrorMessagePrefix .. "Wrong number of arguments provided. Expected 3, got" .. #args, Colors.lightred)
+    if #args < 3 or #args > 4 then
+        game.print(commandErrorMessagePrefix .. "Wrong number of arguments provided. Expected either 3 or 4, got" .. #args, Colors.lightred)
         return
     end
 
-    local playerTeamName = args[1] ---@type string
-    if playerTeamName ~= "both" and global.playerHome.teams[playerTeamName] == nil then
-        game.print(commandErrorMessagePrefix .. 'First argument of player team name was invalid, either "north", "south" or "both". Recieved: ' .. tostring(playerTeamName), Colors.lightred)
+    local primaryPlayerTeamName = args[1] ---@type string
+    local primaryPlayerTeam = global.playerHome.teams[primaryPlayerTeamName] ---@type JdSpiderRace_PlayerHome_Team
+    if primaryPlayerTeam == nil then
+        game.print(commandErrorMessagePrefix .. 'First argument of player team name was invalid, either "north", "south" or "both". Recieved: ' .. tostring(primaryPlayerTeamName), Colors.lightred)
         return
     end
 
@@ -1649,30 +1649,68 @@ Spider.Command_GiveSpiderAmmo = function(commandEvent)
     end
     local rconAmmoType = BossSpider_RconAmmoTypes[ammoFriendlyName]
 
-    local quantity = args[3] ---@type number
-    if type(quantity) ~= "number" then
-        game.print(commandErrorMessagePrefix .. "Third argument of quantity must be a number, recieved: " .. tostring(quantity), Colors.lightred)
+    local primaryQuantity = args[3] ---@type number
+    if type(primaryQuantity) ~= "number" then
+        game.print(commandErrorMessagePrefix .. "Third argument of quantity must be a number, recieved: " .. tostring(primaryQuantity), Colors.lightred)
         return
     end
-    quantity = math_floor(quantity)
-
-    if quantity <= 0 then
-        game.print(commandErrorMessagePrefix .. "Quantity of 0 or less is ignored, recieved after rounding down: " .. tostring(quantity), Colors.lightred)
+    primaryQuantity = math_floor(primaryQuantity) -- Must be in whole ammo units, so round it.
+    if primaryQuantity <= 0 then
+        game.print(commandErrorMessagePrefix .. "Quantity of 0 or less is ignored, recieved after rounding down: " .. tostring(primaryQuantity), Colors.lightred)
         return
     end
 
-    -- Impliment command as any errors would have bene flagged by now.
-    if playerTeamName == "both" then
-        -- Update both team's spiders.
-        for _, spider in pairs(global.spider.spiders) do
-            Spider.GiveSpiderSpecificAmmo(spider, ammoFriendlyName, rconAmmoType, quantity)
-            Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_give_ammo", quantity, rconAmmoType.ammoItemPrettyName})
+    -- Record the primary team's changes.
+    local primaryAmmoDetails = {team = primaryPlayerTeam, quantity = primaryQuantity}
+    local spiderAmmosToGive = {
+        primaryAmmoDetails
+    }
+
+    -- Optional other team's changes handling.
+    local otherTeamAmmoRaw = args[4] ---@type string|number
+    if otherTeamAmmoRaw ~= nil then
+        local otherTeamAmmoQuantity
+
+        -- Get the final number based on the setting type.
+        if type(otherTeamAmmoRaw) == "number" then
+            -- Is a straight number so just use it.
+            otherTeamAmmoQuantity = math_floor(otherTeamAmmoRaw) -- Must be in whole ammo units, so round it.
+        else
+            -- Should be a percentage value.
+
+            -- Check it has a percentage sign.
+            if not string.find(otherTeamAmmoRaw, "%%") then
+                game.print(commandErrorMessagePrefix .. "Fourth argument of other team's quantity/percentage to change by wasn't a number or a number and % sign, recieved: " .. tostring(otherTeamAmmoRaw), Colors.lightred)
+                return
+            end
+
+            -- Remove the percentage sign and convert to a number.
+            local otherTeamAmmoQuantityPercentage = string.gsub(otherTeamAmmoRaw, "%%", "")
+            otherTeamAmmoQuantityPercentage = tonumber(otherTeamAmmoQuantityPercentage)
+
+            -- Check its a valid number.
+            if otherTeamAmmoQuantityPercentage == nil or type(otherTeamAmmoQuantityPercentage) ~= "number" then
+                game.print(commandErrorMessagePrefix .. "Fourth argument of other team's quantity/percentage to change by wasn't a valid number once the % sign was removed, recieved: " .. tostring(otherTeamAmmoRaw), Colors.lightred)
+                return
+            end
+
+            otherTeamAmmoQuantity = math_floor((otherTeamAmmoQuantityPercentage / 100) * primaryQuantity)
         end
-    else
-        -- Just update the 1 team's spider.
-        local spider = global.spider.playerTeamsSpider[playerTeamName]
-        Spider.GiveSpiderSpecificAmmo(spider, ammoFriendlyName, rconAmmoType, quantity)
-        Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_give_ammo", quantity, rconAmmoType.ammoItemPrettyName})
+
+        -- Silently ignore any results of 0 or less for this optional dynamically generated value.
+        if otherTeamAmmoQuantity <= 0 then
+            -- Silently ignore this value.
+        else
+            -- Record the resulting quantity from the percentage number.
+            table.insert(spiderAmmosToGive, {team = primaryPlayerTeam.otherTeam, quantity = otherTeamAmmoQuantity}) -- Must be in whole ammo units, so round it.
+        end
+    end
+
+    -- Apply the change to each team that needs it.
+    for _, ammoDetails in pairs(spiderAmmosToGive) do
+        local spider = global.spider.playerTeamsSpider[ammoDetails.team.id]
+        Spider.GiveSpiderSpecificAmmo(spider, ammoFriendlyName, rconAmmoType, ammoDetails.quantity)
+        Spider.ShowMessageToEnabledTeamPlayers(spider.playerTeam, {"message.jd_plays-jd_spider_race-spider_give_ammo", ammoDetails.quantity, rconAmmoType.ammoItemPrettyName})
     end
 end
 
