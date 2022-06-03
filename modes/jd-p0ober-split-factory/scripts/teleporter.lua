@@ -1,7 +1,6 @@
 local Teleporter = {}
 local Events = require("utility/events")
 local Utils = require("utility/utils")
-local Interfaces = require("utility/interfaces")
 local EventScheduler = require("utility/event-scheduler")
 local Logging = require("utility/logging")
 
@@ -22,8 +21,10 @@ Teleporter.CreateGlobals = function()
 end
 
 Teleporter.OnLoad = function()
+    MOD.Interfaces.Teleporter = MOD.Interfaces.Teleporter or {}
+
     Events.RegisterHandlerEvent(defines.events.on_script_trigger_effect, "Teleporter.OnScriptTriggerEffect", Teleporter.OnScriptTriggerEffect)
-    Interfaces.RegisterInterface("Teleporter.AddTeleporter", Teleporter.AddTeleporter)
+    MOD.Interfaces.Teleporter.AddTeleporter = Teleporter.AddTeleporter
     EventScheduler.RegisterScheduledEventType("Teleporter.OnTimeToDieReached", Teleporter.OnTimeToDieReached)
     Events.RegisterHandlerEvent(defines.events.on_player_died, "Teleporter.OnPlayerDied", Teleporter.OnPlayerDied)
     Events.RegisterHandlerEvent(defines.events.on_player_joined_game, "Teleporter.OnPlayerJoined", Teleporter.OnPlayerJoined)

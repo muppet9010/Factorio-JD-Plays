@@ -13,9 +13,10 @@
                 "--window-size=1600x900"
             ],
             "hookControl": true,
-            "hookData": true,
-            "hookSettings": true,
-            "hookLog": true
+            "hookData": false,
+            "hookSettings": false,
+            "hookLog": true,
+            "hookMode": "debug"
         }
     ]
 }

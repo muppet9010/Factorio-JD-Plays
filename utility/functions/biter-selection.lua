@@ -1,7 +1,7 @@
 --[[
     Can get random biter types and worm type for specified evolution level.
 ]]
-local Utils = require("utility/utils")
+local Utils = require("utility.utils")
 
 local BiterSelection = {}
 

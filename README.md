@@ -9,14 +9,37 @@ General Notes
 ==============
 
 All listed modes below "should" still just work, but only the top one was tested during most recent updates.
-All modes from before Factorio 1.1 have been removed from the active mod as part of upgrade to 1.1. The code is retained in a de-activated fashion, but would require updating and testing to re-enable.
+All modes from before Factorio 1.1 have been removed from the active mod as part of the upgrade to 1.1. The code is retained in a deactivated fashion, but would require updating and testing to re-enable.
 
+
+
+JD Spider Race
+================
+
+A race by 2 teams to hunt down a massive hostile australian spider and kill it on a parallel frontier style map.
+Full details found here including RCON commands: [PDF docuemnt](https://github.com/muppet9010/Factorio-JD-Plays/tree/master/modes/jd-spider-race/JD-Plays & Mukkie Spider Hunt.pdf)
+Significant code contributions by AndrewReds.
+Expects the mod: JD Goes Boom.
+
+Information that players should know at a minimum to avoid surprises (or they can read the many page document in full).
+
+- Big scary spider far to the west. Aim is to kill the spider and take the reward coin back to your market to nuke the other tea and win.
+- The spider is a mega spidertron. It has lots of weapons including atomic bombs and artillery shells. The atomic-bombs are only used on high value targets. The spider never runs out of standard bullets, rockets and cannon shells, with the better ammo being given by chat (RCON).
+- The spider is naturally immune to artillery and tank shells, but is also immune to atomic bombs. Attack with lasers, rockets and bullets.
+- The spider roams a large area and can be moved by RCON commands. It has some basic reactive behaviour for fighting and intelligently pursuing enemies, so engage with caution. Once it’s suffered considerable damage it will retreat further away from you.
+- When you attack the spider all the nearby biters will attack towards you. This can be very large numbers, you have been warned.
+- You can’t interact with the team on the other side of the divide (electric wall) or walk a spidertron near/across the divide. You can steal each other's power, so be careful how close you build power poles to the divide. It's a race against your biters to the west, not directly against the other player's team.
+- Each team has a starting area of resources with continuous water to the east on a thin ribbon map.
+
+
+Future compatibility note: this mod has had to include copies of some base spidertron code and so is at risk of any changes to base game spidertron code after Factorio 1.1.58.
 
 
 Easter Egg Suprise (2022)
 ================
 
 When Biter Egg Nests are destroyed sometimes random items will be revealed as having been collected within the nest.
+
 - Expected Mods: Biter Eggs
 - When Biter Egg Nests are destroyed and the chance of neither it containing some number of biters or worms occurs, some random items will be revealed as being within the nest. Biter Eggs mod settings control the chance of an egg containing either biters or worms. But also contains settings that can then potentially spawn 0 of them in. This would lead to 0 items as the chance of biter/worms was met.
 - These random items will be 1 item per small egg nest and 1-3 items per large egg nest.
@@ -28,7 +51,8 @@ When Biter Egg Nests are destroyed sometimes random items will be revealed as ha
 JD P0ober Split Factory
 ==============
 
-There is an unpassable divide splitting the map in half; east and west. P0ober has the west side as her home, while JD has the east side.
+There is an impassable divide splitting the map in half; east and west. P0ober has the west side as her home, while JD has the east side.
+
 - Both sides are on the same team, sharing research progress, etc.
 - When a player dies they will always respawn on their home side of the divide.
 - Underground belts can go under the divide, while power pole wires and robots can go over the divide.

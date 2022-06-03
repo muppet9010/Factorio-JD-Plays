@@ -2,7 +2,6 @@ local PlayerHome = {}
 local Events = require("utility/events")
 local Utils = require("utility/utils")
 local Logging = require("utility/logging")
-local Interfaces = require("utility/interfaces")
 
 local SpawnXOffset = 20
 
@@ -47,7 +46,7 @@ PlayerHome.CreateTeam = function(teamId, spawnXPos, defaultPlayersOnTeam)
     for _, playerName in pairs(defaultPlayersOnTeam) do
         PlayerHome.AddPlayerNameToTeam(playerName, team)
     end
-    team.teleporterEntity = Interfaces.Call("Teleporter.AddTeleporter", team, game.surfaces["nauvis"], {x = spawnXPos, y = 20})
+    team.teleporterEntity = MOD.Interfaces.Teleporter.AddTeleporter(team, game.surfaces["nauvis"], {x = spawnXPos, y = 20})
 
     global.playerHome.teams[teamId] = team
 end
