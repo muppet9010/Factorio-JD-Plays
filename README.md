@@ -17,7 +17,7 @@ JD Spider Race
 ================
 
 A race by 2 teams to hunt down a massive hostile australian spider and kill it on a parallel frontier style map.
-Details found here including RCON commands: [Google Docs](https://docs.google.com/document/d/1MvcP3bVe1VIwInf3-35lQ6SMI4_8SvNg64u9Gb68C9Y)
+Full details found here including RCON commands: [PDF docuemnt](https://github.com/muppet9010/Factorio-JD-Plays/tree/master/modes/jd-spider-race/JD-Plays & Mukkie Spider Hunt.pdf)
 Significant code contributions by AndrewReds.
 Expects the mod: JD Goes Boom.
 
