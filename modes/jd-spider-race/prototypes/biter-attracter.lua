@@ -2,7 +2,7 @@ if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
     return
 end
 
-volume = 1 -- Step up from behemoth worm.
+local volume = 1 -- Step up from behemoth worm.
 data:extend(
     {
         {
