@@ -1,7 +1,7 @@
 local Utils = require("utility.utils")
 
 -- Spidertron generation functions copied from vanilla Factorio. Have to include prior to the mode check so there's no risk of a checksum mismatch.
-require("__base__.prototypes.entity.spidertron-animations")
+require("modes.jd-spider-race.prototypes.spidertron-animations-require-fixed")
 local sounds = require("__base__.prototypes.entity.sounds")
 
 -- Check if this is the mode we are playing now.

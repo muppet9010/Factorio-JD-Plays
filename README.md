@@ -32,6 +32,8 @@ Information that players should know at a minimum to avoid surprises (or they ca
 - Each team has a starting area of resources with continuous water to the east on a thin ribbon map.
 
 
+Future compatibility note: this mod has had to include copies of some base spidertron code and so is at risk of any changes to base game spidertron code after Factorio 1.1.58.
+
 
 Easter Egg Suprise (2022)
 ================
