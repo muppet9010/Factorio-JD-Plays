@@ -1,0 +1,29 @@
+On player leaving doesn't update the player GUI.
+Have Player GUI list the current number of online players in each team.
+Have the player GUI highlight the player when selected as well as showing their name at the bottom the GUI.
+Check the GUI updates for all player join and leave events, not just on first connection.
+Put offline after offline players names in brackets.
+
+
+
+Make sure all open GUIs are reloaded on joining.
+
+
+
+So it crashes if an admin tries to assign a player to a team once they have left.
+
+
+
+On moving a player to a team and they are in the waiting room, but offline it will fail as it tries to create them a character and errors.
+	Error while running event jd_plays::on_gui_click (ID 1)
+	User isn't connected; can't create character.
+	stack traceback:
+		[C]: in function 'create_character'
+		__jd_plays__/modes/jd-spider-race/scripts/player-home.lua:283: in function 'MovePlayerToTeam'
+		__jd_plays__/modes/jd-spider-race/scripts/player-home.lua:242: in function 'AssignPlayerToTeam'
+		__jd_plays__/modes/jd-spider-race/scripts/player-home.lua:830: in function 'actionFunction'
+		__jd_plays__/utility/gui-actions-click.lua:98: in function <__jd_plays__/utility/gui-actions-click.lua:84>"
+		
+		
+
+Rename the boss spider to "Huntsman spider" in locale.
