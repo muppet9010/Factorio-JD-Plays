@@ -38,6 +38,8 @@ PlayerHome.CreateGlobals = function()
     global.playerHome.playerIdToTeam = global.playerHome.playerIdToTeam or {} ---@type table<PlayerIndex, JdSpiderRace_PlayerHome_Team> @ Player to their team object.
     global.playerHome.waitingRoomPlayers = global.playerHome.waitingRoomPlayers or {} ---@type table<PlayerIndex, JdSpiderRace_PlayerHome_WaitingPlayerDetails> @ Player's initial permissions group name from before they were put in the waiting room.
     global.playerHome.playerManagerGuiOpened = global.playerHome.playerManagerGuiOpened or {} ---@type table<PlayerIndex, LuaPlayer>
+    global.playerHome.killPlayerOnNextJoin = global.playerHome.killPlayerOnNextJoin or {} ---@type table<PlayerIndex, True> @ Players who were moved teams while offline and so need their character killing on next join so they complete their move to the new team.
+    global.playerHome.createCharacterAtSpawnForPlayerOnNextJoin = global.playerHome.createCharacterAtSpawnForPlayerOnNextJoin or {} ---@type table<PlayerIndex, True> @ Players who were assigned a team while offline and so need their character creating when the next join to complete the team assignment process.
 
     global.playerHome.spawnXOffset = -256 -- Distance in from the coastline.
 end
@@ -45,6 +47,8 @@ end
 PlayerHome.OnLoad = function()
     Events.RegisterHandlerEvent(defines.events.on_player_created, "PlayerHome.OnPlayerCreated", PlayerHome.OnPlayerCreated)
     EventScheduler.RegisterScheduledEventType("PlayerHome.DelayedPlayerCreated_Scheduled", PlayerHome.DelayedPlayerCreated_Scheduled)
+    Events.RegisterHandlerEvent(defines.events.on_player_joined_game, "PlayerHome.OnPlayerJoinedGame", PlayerHome.OnPlayerJoinedGame)
+
     Events.RegisterHandlerEvent(defines.events.on_marked_for_deconstruction, "PlayerHome.OnMarkedForDeconstruction", PlayerHome.OnMarkedForDeconstruction)
     Events.RegisterHandlerEvent(defines.events.on_built_entity, "PlayerHome.OnBuiltEntity", PlayerHome.OnBuiltEntity)
     Events.RegisterHandlerEvent(defines.events.on_market_item_purchased, "PlayerHome.OnMarketItemPurchased", PlayerHome.OnMarketItemPurchased)
@@ -125,7 +129,8 @@ PlayerHome.CreateTeam = function(teamId, spawnYPos, spawnXPos)
     team.playerForce.technologies["landfill"].enabled = false
 end
 
---- When player first joins the server, put them in the waiting room.
+--- Called when the player first joins the server, before the on_player_joined_game event.
+--- Put them in the waiting room if they don't have a pre-assigned team, or move them to the correct team.
 ---@param event on_player_created
 PlayerHome.OnPlayerCreated = function(event)
     local player = game.get_player(event.player_index)
@@ -137,7 +142,7 @@ PlayerHome.OnPlayerCreated = function(event)
 
     local playerName = player.name
 
-    -- Check if the player has been pre-assigned to a team.
+    -- Check if the player has been pre-assigned to a team and if so handle this now and terminate function.
     for _, team in pairs(global.playerHome.teams) do
         if team.playerNames[playerName] ~= nil then
             -- Player is pre-assigned to this team.
@@ -188,12 +193,30 @@ PlayerHome.DelayedPlayerCreated_Scheduled = function(event)
         player.character.destroy() -- Clears any starting inventory just like if the player isn't pre-assigned a team.
     end
     player.teleport({0, 0}, global.general.surface)
-    player.create_character()
-    local playerMovedOk = PlayerHome.MovePlayerToSpawn(player)
-    if not playerMovedOk then
-        -- Can happen if this is run during initial map generation. Will just wait a few seconds and try movign the player again.
-        player.print("Trying to respawn you in a few seconds after map has generated more.", Colors.lightgreen)
-        EventScheduler.ScheduleEventOnce(event.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
+    PlayerHome.CreatePlayerCharacterAndMoveToSpawnNowOrLater(player, playerId)
+end
+
+--- Called every time a player joins the server, including the initial and every subsequent time.
+--- Is called after the on_player_created event when the player first joins the server.
+---@param event on_player_joined_game
+PlayerHome.OnPlayerJoinedGame = function(event)
+    local player = game.get_player(event.player_index)
+    local playerName = player.name
+
+    -- Check if the player need's a character creating now due to being offline when initially assigned to a team. Occurs if they were assigned to a team while offline, but after joining the server (joined server > waiting room > quit > assigned to team > rejoined server).
+    if global.playerHome.createCharacterAtSpawnForPlayerOnNextJoin[playerName] then
+        PlayerHome.CreatePlayerCharacterAndMoveToSpawnNowOrLater(player, event.player_index)
+        player.print({"message.jd_plays-jd_spider_race-player_moved_to_team", playerName, global.playerHome.playerIdToTeam[event.player_index].prettyName})
+        global.playerHome.createCharacterAtSpawnForPlayerOnNextJoin[playerName] = nil
+    end
+
+    -- Check if the player need's their character killing now due to being offline when moved from one team to another. Occurs if they were assigned to a team while offline, but after joining the server and  having been on a team (joined server > waiting room > assigned team > joined team with character > quit > assigned to different team > rejoined server).
+    if global.playerHome.killPlayerOnNextJoin[playerName] then
+        if player.character ~= nil then
+            player.character.die()
+            player.print({"message.jd_plays-jd_spider_race-player_moved_to_team", playerName, global.playerHome.playerIdToTeam[event.player_index].prettyName})
+        end
+        global.playerHome.killPlayerOnNextJoin[playerName] = nil
     end
 end
 
@@ -279,22 +302,40 @@ PlayerHome.MovePlayerToTeam = function(player, team, playerName)
         player.permission_group = playerInWaitingRoomDetails.origionalPermissionGroup
         global.playerHome.waitingRoomPlayers[playerId] = nil
 
-        -- Give the player a character in the right spot.
-        player.create_character()
-        local playerMovedOk = PlayerHome.MovePlayerToSpawn(player)
-        if not playerMovedOk then
-            -- Can happen if this is run during initial map generation. Will just wait a few seconds and try movign the player again.
-            player.print("Trying to respawn you in a few seconds after map has generated more.", Colors.lightgreen)
-            EventScheduler.ScheduleEventOnce(game.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
+        -- If the player is online then handle them now, otherwise flag this for action when they rejoin as we can't create them a character when offline.
+        if player.connected then
+            -- Give the player a character in the right spot.
+            PlayerHome.CreatePlayerCharacterAndMoveToSpawnNowOrLater(player, playerId)
+        else
+            -- Record this player as needing character creation when they next join the server.
+            global.playerHome.createCharacterAtSpawnForPlayerOnNextJoin[playerName] = true
         end
     else
         -- Player wasn't in the waiting room, so must have been already assigned to a team and is in a normal state.
 
-        -- So kill them and they will respawn on the new team. This will leave any current equipment on the old (correct) side of the map.
-        if player.character ~= nil then
-            -- If in Editor mode then no character.
-            player.character.die()
+        if player.connected then
+            -- They won't have a character if in editor mode or their character is dead and they are awaiting a respawn. This is fine and the process is complete now in all cases for online players.
+            if player.character ~= nil then
+                -- If they have a character kill them and they will respawn on the new team. This will leave any current equipment on the old (correct) side of the map.
+                player.character.die()
+            end
+        else
+            -- The player is offline when moved to another team so they don't have a character to kill now. But when they rejoin we need to kill their character so flag this.
+            global.playerHome.killPlayerOnNextJoin[playerName] = true
         end
+    end
+end
+
+--- Creates a player's character now and then tries to move them to thier spawn. If the move fails it will schedule retrying again later.
+---@param player LuaPlayer
+---@param playerId PlayerIndex
+PlayerHome.CreatePlayerCharacterAndMoveToSpawnNowOrLater = function(player, playerId)
+    player.create_character()
+    local playerMovedOk = PlayerHome.MovePlayerToSpawn(player)
+    if not playerMovedOk then
+        -- Can happen if this is run during initial map generation. Will just wait a few seconds and try moving the player again.
+        player.print("Trying to respawn you in a few seconds after map has generated more.", Colors.lightgreen)
+        EventScheduler.ScheduleEventOnce(game.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
     end
 end
 
