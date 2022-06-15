@@ -19,7 +19,7 @@ local MuppetStyles = require("utility.style-data").MuppetStyles
 ---@field spawnPosition MapPosition @ Position of this team's spawn.
 ---@field spawnChunk ChunkPosition @ Chunk with the spawn in it.
 ---@field players table<PlayerIndex, LuaPlayer> @ Table of the player who have joined this team.
----@field playerNames table<string, boolean> @ Table of player names who will/are on this team, with the value being if they ahve already joined the server yet. Player names can be pre-assigned and to a team so they are auto assigned on joining.
+---@field playerNames table<string, boolean> @ Table of player names who will/are on this team, with the value being if they have ever joined the server (True if they have ever joined). Player names can be pre-assigned to a team before they've joined (value of False) so they are auto assigned on joining (value becomes True).
 ---@field otherTeam JdSpiderRace_PlayerHome_Team @ Ref to the other teams global object.
 ---@field mostLeftBuiltEntityXPosition double @ The most left built entity of this team. Used in spider Score GUI.
 
@@ -125,7 +125,7 @@ PlayerHome.CreateTeam = function(teamId, spawnYPos, spawnXPos)
     team.playerForce.technologies["landfill"].enabled = false
 end
 
---- When player first joins put thme in the waiting room.
+--- When player first joins the server, put them in the waiting room.
 ---@param event on_player_created
 PlayerHome.OnPlayerCreated = function(event)
     local player = game.get_player(event.player_index)
@@ -747,29 +747,35 @@ end
 ---@param playerIndex PlayerIndex
 PlayerHome.UpdatePlayersInPlayerManagerGui = function(playerIndex)
     -- Check the GUI is still there (valid) as we expect it to be.
-    local playerManagerGuiElement = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_main", "frame")
+    local playerManagerGuiElement = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_main", "frame") ---@type LuaGuiElement
     if playerManagerGuiElement == nil or not playerManagerGuiElement.valid then
         -- GUI isn't present, so re-open it. This will also re-call this function to show the curernt players.
         PlayerHome.Gui_OpenPlayerManagerForPlayer(global.playerHome.playerManagerGuiOpened[playerIndex], playerIndex)
         return
     end
 
-    local northPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_north_players", "scroll-pane")
+    -- Remove all the references to old Player Name Buttons as we will be creating new ones.
+    GuiUtil.DestroyPlayersReferenceStorage(playerIndex, "PlayerManager_PlayerNameButtons")
+
+    -- Clear the North team list and re-populate it.
+    local northPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_north_players", "scroll-pane") ---@type LuaGuiElement
     northPlayerListGui.clear()
-    for playerName, connectedToServer in pairs(global.playerHome.teams["north"].playerNames) do
-        PlayerHome.AddPlayerToListInPlayerManagerGui(northPlayerListGui, playerName, connectedToServer)
+    for playerName, everConnectedToServer in pairs(global.playerHome.teams["north"].playerNames) do
+        PlayerHome.AddPlayerToListInPlayerManagerGui(northPlayerListGui, playerName, everConnectedToServer)
     end
 
-    local waitingPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_waiting_players", "scroll-pane")
+    -- Clear the waiting players list and re-populate it.
+    local waitingPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_waiting_players", "scroll-pane") ---@type LuaGuiElement
     waitingPlayerListGui.clear()
     for _, waitingPlayerDetails in pairs(global.playerHome.waitingRoomPlayers) do
         PlayerHome.AddPlayerToListInPlayerManagerGui(waitingPlayerListGui, waitingPlayerDetails.playerName, true)
     end
 
-    local southPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_south_players", "scroll-pane")
+    -- Clear the South team list and re-populate it.
+    local southPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_south_players", "scroll-pane") ---@type LuaGuiElement
     southPlayerListGui.clear()
-    for playerName, connectedToServer in pairs(global.playerHome.teams["south"].playerNames) do
-        PlayerHome.AddPlayerToListInPlayerManagerGui(southPlayerListGui, playerName, connectedToServer)
+    for playerName, everConnectedToServer in pairs(global.playerHome.teams["south"].playerNames) do
+        PlayerHome.AddPlayerToListInPlayerManagerGui(southPlayerListGui, playerName, everConnectedToServer)
     end
 end
 
@@ -782,8 +788,9 @@ PlayerHome.AddPlayerToListInPlayerManagerGui = function(playerListGui, playerNam
         GuiUtil.AddElement(
             {
                 parent = playerListGui,
-                descriptiveName = "pm_player_name" .. playerName,
+                descriptiveName = "pm_player_name-" .. playerName,
                 type = "button",
+                storeName = "PlayerManager_PlayerNameButtons",
                 style = MuppetStyles.button.medium.paddingSides,
                 styling = {height = 24, top_padding = -2},
                 caption = playerName,
@@ -806,10 +813,19 @@ end
 -- When an admin clicks on a player's name in the Player Manager GUI. The player's name is the event.data.
 ---@param event UtilityGuiActionsClick_ActionData
 PlayerHome.On_PlayerManagerPlayerNameClicked = function(event)
-    local playerName, adminPlayerIndex = event.data, event.playerIndex
+    local selecetdPlayerName, adminPlayerIndex = event.data, event.playerIndex
+    local previouslySelectedPlayerName = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label").caption
+
+    -- If a player was previously selected then de-select its button before the new selection is applied. A bit hacky way to do it, but otherwise I need to add in new global variables pre player and track them throughout the code just for this graphical highlighting.
+    if previouslySelectedPlayerName[1] ~= "gui-caption.jd_plays-jd_spider_race-pm_no_player_selected" then
+        -- Do it by font name text string manipulation as Style library is missing this support and not practical to add at present.
+        GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager_PlayerNameButtons", "pm_player_name-" .. previouslySelectedPlayerName, "button", {styling = {font = "muppet_medium_1_1_0"}}, false)
+    end
 
     -- Update the GUI to show this admin the player they have clicked on.
-    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label", {caption = playerName}, false)
+    -- Do it by font name text string manipulation as Style library is missing this support and not practical to add at present.
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager_PlayerNameButtons", "pm_player_name-" .. selecetdPlayerName, "button", {styling = {font = "muppet_medium_bold_1_1_0"}}, false)
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label", {caption = selecetdPlayerName}, false)
 
     -- Enable the 2 assignment buttons.
     GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_assign_player_north", "button", {enabled = true}, false)
@@ -820,17 +836,19 @@ end
 ---@param event UtilityGuiActionsClick_ActionData
 PlayerHome.On_PlayerManagerAssignPlayerClicked = function(event)
     local newTeamName, adminPlayerIndex = event.data, event.playerIndex
-    local playerName = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label").caption
-    local player = game.get_player(playerName)
+    local selectedPlayerName = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label").caption
+    local selectedPlayer = game.get_player(selectedPlayerName)
 
     -- Move the player if they are not currently on the assigned team.
-    local playersCurrentTeam = global.playerHome.playerIdToTeam[player.index]
+    local playersCurrentTeam = global.playerHome.playerIdToTeam[selectedPlayer.index]
     if playersCurrentTeam == nil or newTeamName ~= playersCurrentTeam.id then
         -- Player not currently on the selected team, so move them.
-        PlayerHome.AssignPlayerToTeam(playerName, player, global.playerHome.teams[newTeamName])
+        PlayerHome.AssignPlayerToTeam(selectedPlayerName, selectedPlayer, global.playerHome.teams[newTeamName])
     end
 
     -- Reset our GUI in all cases.
+    -- Do it by font name text string manipulation as Style library is missing this support and not practical to add at present.
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager_PlayerNameButtons", "pm_player_name-" .. selectedPlayerName, "button", {styling = {font = "muppet_medium_1_1_0"}}, false)
     GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-pm_no_player_selected"}}, false)
     GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_assign_player_north", "button", {enabled = false}, false)
     GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_assign_player_south", "button", {enabled = false}, false)
