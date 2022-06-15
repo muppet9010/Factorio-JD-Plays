@@ -506,9 +506,9 @@ end
 
 --- Open the Player Manager GUI for the player.
 ---@param player LuaPlayer
----@param playerIndex PlayerIndex
-PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
-    global.playerHome.playerManagerGuiOpened[playerIndex] = player
+---@param adminPlayerIndex PlayerIndex
+PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, adminPlayerIndex)
+    global.playerHome.playerManagerGuiOpened[adminPlayerIndex] = player
     player.set_shortcut_toggled("jd_plays-jd_spider_race-player_manager-gui_button", true)
 
     -- Code notes:
@@ -545,7 +545,7 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                             styling = {horizontally_stretchable = true, height = 20, top_margin = 4, minimal_width = 80},
                             attributes = {
                                 drag_target = function()
-                                    return GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_main", "frame")
+                                    return GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_main", "frame")
                                 end
                             }
                         },
@@ -587,9 +587,10 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                                     children = {
                                         {
                                             -- North player title
+                                            descriptiveName = "pm_teamNorthTitle",
                                             type = "label",
-                                            style = MuppetStyles.label.text.medium.semibold_paddingSides,
-                                            caption = global.playerHome.teams["north"].prettyName
+                                            storeName = "PlayerManager",
+                                            style = MuppetStyles.label.text.medium.semibold_paddingSides
                                         },
                                         {
                                             -- North players list.
@@ -620,7 +621,7 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                                             -- Waiting player title
                                             type = "label",
                                             style = MuppetStyles.label.text.medium.semibold_paddingSides,
-                                            caption = {"gui-caption.jd_plays-jd_spider_race-waiting_title"}
+                                            caption = {"gui-caption.jd_plays-jd_spider_race-pm_waiting_title"}
                                         },
                                         {
                                             -- Waiting players list.
@@ -649,9 +650,10 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                                     children = {
                                         {
                                             -- South player title
+                                            descriptiveName = "pm_teamSouthTitle",
                                             type = "label",
-                                            style = MuppetStyles.label.text.medium.semibold_paddingSides,
-                                            caption = global.playerHome.teams["south"].prettyName
+                                            storeName = "PlayerManager",
+                                            style = MuppetStyles.label.text.medium.semibold_paddingSides
                                         },
                                         {
                                             -- South players list.
@@ -698,7 +700,7 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                                                     storeName = "PlayerManager",
                                                     style = MuppetStyles.button.medium.paddingSides,
                                                     styling = {width = 200},
-                                                    caption = {"gui-caption.jd_plays-jd_spider_race-assign_player_north"},
+                                                    caption = {"gui-caption.jd_plays-jd_spider_race-pm_assign_player_north"},
                                                     registerClick = {actionName = "PlayerHome.On_PlayerManagerAssignPlayerClicked", data = "north"},
                                                     enabled = false
                                                 }
@@ -731,7 +733,7 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                                                     storeName = "PlayerManager",
                                                     style = MuppetStyles.button.medium.paddingSides,
                                                     styling = {width = 200},
-                                                    caption = {"gui-caption.jd_plays-jd_spider_race-assign_player_south"},
+                                                    caption = {"gui-caption.jd_plays-jd_spider_race-pm_assign_player_south"},
                                                     registerClick = {actionName = "PlayerHome.On_PlayerManagerAssignPlayerClicked", data = "south"},
                                                     enabled = false
                                                 }
@@ -754,7 +756,7 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
         }
     )
 
-    PlayerHome.UpdatePlayersInPlayerManagerGui(playerIndex)
+    PlayerHome.UpdatePlayersInPlayerManagerGui(adminPlayerIndex, nil)
 end
 
 --- When the player clicks the close button on their Player Manager GUI.
@@ -765,19 +767,21 @@ end
 
 --- Called to close a player's Player Manager GUI.
 ---@param player LuaPlayer
----@param playerIndex PlayerIndex
-PlayerHome.Gui_ClosePlayerManagerForPlayer = function(player, playerIndex)
-    GuiUtil.DestroyPlayersReferenceStorage(playerIndex, "PlayerManager")
-    global.playerHome.playerManagerGuiOpened[playerIndex] = nil
+---@param adminPlayerIndex PlayerIndex
+PlayerHome.Gui_ClosePlayerManagerForPlayer = function(player, adminPlayerIndex)
+    GuiUtil.DestroyPlayersReferenceStorage(adminPlayerIndex, "PlayerManager")
+    global.playerHome.playerManagerGuiOpened[adminPlayerIndex] = nil
     player.set_shortcut_toggled("jd_plays-jd_spider_race-player_manager-gui_button", false)
 end
 
 --- Called when a player changes team or joins the server so anyone with the Player Manager GUI open needs to be updated.
 PlayerHome.UpdateAllOpenPlayerManagerGuis = function()
+    local onlinePlayers  ---@type LuaPlayer[] @ Only populate if someone has the Player Manager GUI open.
     for playerIndex, player in pairs(global.playerHome.playerManagerGuiOpened) do
         -- If the admin player is online then refresh their GUI, but if they are offline just close the GUI to avoid it being checked again.
         if player.connected then
-            PlayerHome.UpdatePlayersInPlayerManagerGui(playerIndex)
+            onlinePlayers = onlinePlayers or game.connected_players -- Populate if not already obtained.
+            PlayerHome.UpdatePlayersInPlayerManagerGui(playerIndex, onlinePlayers)
         else
             PlayerHome.Gui_ClosePlayerManagerForPlayer(player, playerIndex)
         end
@@ -785,47 +789,66 @@ PlayerHome.UpdateAllOpenPlayerManagerGuis = function()
 end
 
 --- Called to update the player's list in the Player Manager GUI for an admin player who has the GUI currently open.
----@param playerIndex PlayerIndex
-PlayerHome.UpdatePlayersInPlayerManagerGui = function(playerIndex)
+---@param adminPlayerIndex PlayerIndex
+---@param onlinePlayers LuaPlayer[]|nil @ A shared copy of the current connected_players or nil.
+PlayerHome.UpdatePlayersInPlayerManagerGui = function(adminPlayerIndex, onlinePlayers)
     -- Check the GUI is still there (valid) as we expect it to be.
-    local playerManagerGuiElement = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_main", "frame") ---@type LuaGuiElement
+    local playerManagerGuiElement = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_main", "frame") ---@type LuaGuiElement
     if playerManagerGuiElement == nil or not playerManagerGuiElement.valid then
         -- GUI isn't present, so re-open it. This will also re-call this function to show the curernt players.
-        PlayerHome.Gui_OpenPlayerManagerForPlayer(global.playerHome.playerManagerGuiOpened[playerIndex], playerIndex)
+        PlayerHome.Gui_OpenPlayerManagerForPlayer(global.playerHome.playerManagerGuiOpened[adminPlayerIndex], adminPlayerIndex)
         return
     end
 
     -- Remove all the references to old Player Name Buttons as we will be creating new ones.
-    GuiUtil.DestroyPlayersReferenceStorage(playerIndex, "PlayerManager_PlayerNameButtons")
+    GuiUtil.DestroyPlayersReferenceStorage(adminPlayerIndex, "PlayerManager_PlayerNameButtons")
 
     -- Clear the North team list and re-populate it.
-    local northPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_north_players", "scroll-pane") ---@type LuaGuiElement
+    local northPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_north_players", "scroll-pane") ---@type LuaGuiElement
     northPlayerListGui.clear()
     for playerName, everConnectedToServer in pairs(global.playerHome.teams["north"].playerNames) do
         PlayerHome.AddPlayerToListInPlayerManagerGui(northPlayerListGui, playerName, everConnectedToServer)
     end
 
     -- Clear the waiting players list and re-populate it.
-    local waitingPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_waiting_players", "scroll-pane") ---@type LuaGuiElement
+    local waitingPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_waiting_players", "scroll-pane") ---@type LuaGuiElement
     waitingPlayerListGui.clear()
     for _, waitingPlayerDetails in pairs(global.playerHome.waitingRoomPlayers) do
         PlayerHome.AddPlayerToListInPlayerManagerGui(waitingPlayerListGui, waitingPlayerDetails.playerName, true)
     end
 
     -- Clear the South team list and re-populate it.
-    local southPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_south_players", "scroll-pane") ---@type LuaGuiElement
+    local southPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_south_players", "scroll-pane") ---@type LuaGuiElement
     southPlayerListGui.clear()
     for playerName, everConnectedToServer in pairs(global.playerHome.teams["south"].playerNames) do
         PlayerHome.AddPlayerToListInPlayerManagerGui(southPlayerListGui, playerName, everConnectedToServer)
     end
+
+    -- Get the list of currently online players and count how many are on each team.
+    onlinePlayers = onlinePlayers or game.connected_players -- Obtian if not passed in.
+    local northOnlinePlayerCount, southOnlinePlayerCount = 0, 0
+    local playerName  ---@type string
+    for _, onlinePlayer in pairs(onlinePlayers) do
+        playerName = onlinePlayer.name
+        if global.playerHome.teams["north"].playerNames[playerName] ~= nil then
+            northOnlinePlayerCount = northOnlinePlayerCount + 1
+        elseif global.playerHome.teams["south"].playerNames[playerName] ~= nil then
+            southOnlinePlayerCount = southOnlinePlayerCount + 1
+        end
+    end
+
+    -- Update the player team name entries with the current online player counts.
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_teamNorthTitle", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-pm_team_title", global.playerHome.teams["north"].prettyName, northOnlinePlayerCount}}, false)
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_teamSouthTitle", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-pm_team_title", global.playerHome.teams["south"].prettyName, southOnlinePlayerCount}}, false)
 end
 
 --- Adds a player button/label to a player list.
 ---@param playerListGui LuaGuiElement
 ---@param playerName string
----@param connectedToServer boolean
-PlayerHome.AddPlayerToListInPlayerManagerGui = function(playerListGui, playerName, connectedToServer)
-    if connectedToServer then
+---@param everConnectedToServer boolean @ If the player has ever connected to the server, if False they are a pre-assigned entry.
+PlayerHome.AddPlayerToListInPlayerManagerGui = function(playerListGui, playerName, everConnectedToServer)
+    if everConnectedToServer then
+        -- Player has joined server so is a standard entry that can be manipulated.
         GuiUtil.AddElement(
             {
                 parent = playerListGui,
@@ -839,6 +862,7 @@ PlayerHome.AddPlayerToListInPlayerManagerGui = function(playerListGui, playerNam
             }
         )
     else
+        -- Player is a pre-assigned player who has never joined the server. Managed via commands.
         GuiUtil.AddElement(
             {
                 parent = playerListGui,

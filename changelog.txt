@@ -3,7 +3,10 @@ Version: 20.2.4
 Date: 2022-06-16
   Features:
   Changes:
+    - JD Spider Race - Player Manager shows how many total players are online for each team. Doesn't update on players joining/leaving server as this would interfear with admins trying to assign players to teams as large parts of the GUI reload at once.
+    - JD Spider Race - Player Manager, when selecting a player's name button it now highlighs the button in bold as well as the name appearing at the bottom middle of the GUI. So its more obvious who has been selected.
   Bugfixes:
+    - JD Spider Race - Handle offline players being assigned to an initial team and moved between teams. Errored and crashed before.
   Info:
     - JD Spider Race - Renamed the enemy boss spider to "Huntsman spider" so its a little more generic.
 ---------------------------------------------------------------------------------------------------
