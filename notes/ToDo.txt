@@ -23,7 +23,3 @@ On moving a player to a team and they are in the waiting room, but offline it wi
 		__jd_plays__/modes/jd-spider-race/scripts/player-home.lua:242: in function 'AssignPlayerToTeam'
 		__jd_plays__/modes/jd-spider-race/scripts/player-home.lua:830: in function 'actionFunction'
 		__jd_plays__/utility/gui-actions-click.lua:98: in function <__jd_plays__/utility/gui-actions-click.lua:84>"
-		
-		
-
-Rename the boss spider to "Huntsman spider" in locale.

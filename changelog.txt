@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.4
+Date: 2022-06-16
+  Features:
+  Changes:
+  Bugfixes:
+  Info:
+    - JD Spider Race - Renamed the enemy boss spider to "Huntsman spider" so its a little more generic.
+---------------------------------------------------------------------------------------------------
 Version: 20.2.3
 Date: 2022-04-30
   Features:
