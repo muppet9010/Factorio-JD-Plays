@@ -19,7 +19,7 @@ local MuppetStyles = require("utility.style-data").MuppetStyles
 ---@field spawnPosition MapPosition @ Position of this team's spawn.
 ---@field spawnChunk ChunkPosition @ Chunk with the spawn in it.
 ---@field players table<PlayerIndex, LuaPlayer> @ Table of the player who have joined this team.
----@field playerNames table<string, boolean> @ Table of player names who will/are on this team, with the value being if they ahve already joined the server yet. Player names can be pre-assigned and to a team so they are auto assigned on joining.
+---@field playerNames table<string, boolean> @ Table of player names who will/are on this team, with the value being if they have ever joined the server (True if they have ever joined). Player names can be pre-assigned to a team before they've joined (value of False) so they are auto assigned on joining (value becomes True).
 ---@field otherTeam JdSpiderRace_PlayerHome_Team @ Ref to the other teams global object.
 ---@field mostLeftBuiltEntityXPosition double @ The most left built entity of this team. Used in spider Score GUI.
 
@@ -38,6 +38,8 @@ PlayerHome.CreateGlobals = function()
     global.playerHome.playerIdToTeam = global.playerHome.playerIdToTeam or {} ---@type table<PlayerIndex, JdSpiderRace_PlayerHome_Team> @ Player to their team object.
     global.playerHome.waitingRoomPlayers = global.playerHome.waitingRoomPlayers or {} ---@type table<PlayerIndex, JdSpiderRace_PlayerHome_WaitingPlayerDetails> @ Player's initial permissions group name from before they were put in the waiting room.
     global.playerHome.playerManagerGuiOpened = global.playerHome.playerManagerGuiOpened or {} ---@type table<PlayerIndex, LuaPlayer>
+    global.playerHome.killPlayerOnNextJoin = global.playerHome.killPlayerOnNextJoin or {} ---@type table<PlayerIndex, True> @ Players who were moved teams while offline and so need their character killing on next join so they complete their move to the new team.
+    global.playerHome.createCharacterAtSpawnForPlayerOnNextJoin = global.playerHome.createCharacterAtSpawnForPlayerOnNextJoin or {} ---@type table<PlayerIndex, True> @ Players who were assigned a team while offline and so need their character creating when the next join to complete the team assignment process.
 
     global.playerHome.spawnXOffset = -256 -- Distance in from the coastline.
 end
@@ -45,6 +47,8 @@ end
 PlayerHome.OnLoad = function()
     Events.RegisterHandlerEvent(defines.events.on_player_created, "PlayerHome.OnPlayerCreated", PlayerHome.OnPlayerCreated)
     EventScheduler.RegisterScheduledEventType("PlayerHome.DelayedPlayerCreated_Scheduled", PlayerHome.DelayedPlayerCreated_Scheduled)
+    Events.RegisterHandlerEvent(defines.events.on_player_joined_game, "PlayerHome.OnPlayerJoinedGame", PlayerHome.OnPlayerJoinedGame)
+
     Events.RegisterHandlerEvent(defines.events.on_marked_for_deconstruction, "PlayerHome.OnMarkedForDeconstruction", PlayerHome.OnMarkedForDeconstruction)
     Events.RegisterHandlerEvent(defines.events.on_built_entity, "PlayerHome.OnBuiltEntity", PlayerHome.OnBuiltEntity)
     Events.RegisterHandlerEvent(defines.events.on_market_item_purchased, "PlayerHome.OnMarketItemPurchased", PlayerHome.OnMarketItemPurchased)
@@ -125,7 +129,8 @@ PlayerHome.CreateTeam = function(teamId, spawnYPos, spawnXPos)
     team.playerForce.technologies["landfill"].enabled = false
 end
 
---- When player first joins put thme in the waiting room.
+--- Called when the player first joins the server, before the on_player_joined_game event.
+--- Put them in the waiting room if they don't have a pre-assigned team, or move them to the correct team.
 ---@param event on_player_created
 PlayerHome.OnPlayerCreated = function(event)
     local player = game.get_player(event.player_index)
@@ -137,7 +142,7 @@ PlayerHome.OnPlayerCreated = function(event)
 
     local playerName = player.name
 
-    -- Check if the player has been pre-assigned to a team.
+    -- Check if the player has been pre-assigned to a team and if so handle this now and terminate function.
     for _, team in pairs(global.playerHome.teams) do
         if team.playerNames[playerName] ~= nil then
             -- Player is pre-assigned to this team.
@@ -188,12 +193,30 @@ PlayerHome.DelayedPlayerCreated_Scheduled = function(event)
         player.character.destroy() -- Clears any starting inventory just like if the player isn't pre-assigned a team.
     end
     player.teleport({0, 0}, global.general.surface)
-    player.create_character()
-    local playerMovedOk = PlayerHome.MovePlayerToSpawn(player)
-    if not playerMovedOk then
-        -- Can happen if this is run during initial map generation. Will just wait a few seconds and try movign the player again.
-        player.print("Trying to respawn you in a few seconds after map has generated more.", Colors.lightgreen)
-        EventScheduler.ScheduleEventOnce(event.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
+    PlayerHome.CreatePlayerCharacterAndMoveToSpawnNowOrLater(player, playerId)
+end
+
+--- Called every time a player joins the server, including the initial and every subsequent time.
+--- Is called after the on_player_created event when the player first joins the server.
+---@param event on_player_joined_game
+PlayerHome.OnPlayerJoinedGame = function(event)
+    local player = game.get_player(event.player_index)
+    local playerName = player.name
+
+    -- Check if the player need's a character creating now due to being offline when initially assigned to a team. Occurs if they were assigned to a team while offline, but after joining the server (joined server > waiting room > quit > assigned to team > rejoined server).
+    if global.playerHome.createCharacterAtSpawnForPlayerOnNextJoin[playerName] then
+        PlayerHome.CreatePlayerCharacterAndMoveToSpawnNowOrLater(player, event.player_index)
+        player.print({"message.jd_plays-jd_spider_race-player_moved_to_team", playerName, global.playerHome.playerIdToTeam[event.player_index].prettyName})
+        global.playerHome.createCharacterAtSpawnForPlayerOnNextJoin[playerName] = nil
+    end
+
+    -- Check if the player need's their character killing now due to being offline when moved from one team to another. Occurs if they were assigned to a team while offline, but after joining the server and  having been on a team (joined server > waiting room > assigned team > joined team with character > quit > assigned to different team > rejoined server).
+    if global.playerHome.killPlayerOnNextJoin[playerName] then
+        if player.character ~= nil then
+            player.character.die()
+            player.print({"message.jd_plays-jd_spider_race-player_moved_to_team", playerName, global.playerHome.playerIdToTeam[event.player_index].prettyName})
+        end
+        global.playerHome.killPlayerOnNextJoin[playerName] = nil
     end
 end
 
@@ -279,22 +302,40 @@ PlayerHome.MovePlayerToTeam = function(player, team, playerName)
         player.permission_group = playerInWaitingRoomDetails.origionalPermissionGroup
         global.playerHome.waitingRoomPlayers[playerId] = nil
 
-        -- Give the player a character in the right spot.
-        player.create_character()
-        local playerMovedOk = PlayerHome.MovePlayerToSpawn(player)
-        if not playerMovedOk then
-            -- Can happen if this is run during initial map generation. Will just wait a few seconds and try movign the player again.
-            player.print("Trying to respawn you in a few seconds after map has generated more.", Colors.lightgreen)
-            EventScheduler.ScheduleEventOnce(game.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
+        -- If the player is online then handle them now, otherwise flag this for action when they rejoin as we can't create them a character when offline.
+        if player.connected then
+            -- Give the player a character in the right spot.
+            PlayerHome.CreatePlayerCharacterAndMoveToSpawnNowOrLater(player, playerId)
+        else
+            -- Record this player as needing character creation when they next join the server.
+            global.playerHome.createCharacterAtSpawnForPlayerOnNextJoin[playerName] = true
         end
     else
         -- Player wasn't in the waiting room, so must have been already assigned to a team and is in a normal state.
 
-        -- So kill them and they will respawn on the new team. This will leave any current equipment on the old (correct) side of the map.
-        if player.character ~= nil then
-            -- If in Editor mode then no character.
-            player.character.die()
+        if player.connected then
+            -- They won't have a character if in editor mode or their character is dead and they are awaiting a respawn. This is fine and the process is complete now in all cases for online players.
+            if player.character ~= nil then
+                -- If they have a character kill them and they will respawn on the new team. This will leave any current equipment on the old (correct) side of the map.
+                player.character.die()
+            end
+        else
+            -- The player is offline when moved to another team so they don't have a character to kill now. But when they rejoin we need to kill their character so flag this.
+            global.playerHome.killPlayerOnNextJoin[playerName] = true
         end
+    end
+end
+
+--- Creates a player's character now and then tries to move them to thier spawn. If the move fails it will schedule retrying again later.
+---@param player LuaPlayer
+---@param playerId PlayerIndex
+PlayerHome.CreatePlayerCharacterAndMoveToSpawnNowOrLater = function(player, playerId)
+    player.create_character()
+    local playerMovedOk = PlayerHome.MovePlayerToSpawn(player)
+    if not playerMovedOk then
+        -- Can happen if this is run during initial map generation. Will just wait a few seconds and try moving the player again.
+        player.print("Trying to respawn you in a few seconds after map has generated more.", Colors.lightgreen)
+        EventScheduler.ScheduleEventOnce(game.tick + 180, "PlayerHome.DelayedPlayerCreated_Scheduled", playerId)
     end
 end
 
@@ -465,9 +506,9 @@ end
 
 --- Open the Player Manager GUI for the player.
 ---@param player LuaPlayer
----@param playerIndex PlayerIndex
-PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
-    global.playerHome.playerManagerGuiOpened[playerIndex] = player
+---@param adminPlayerIndex PlayerIndex
+PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, adminPlayerIndex)
+    global.playerHome.playerManagerGuiOpened[adminPlayerIndex] = player
     player.set_shortcut_toggled("jd_plays-jd_spider_race-player_manager-gui_button", true)
 
     -- Code notes:
@@ -504,7 +545,7 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                             styling = {horizontally_stretchable = true, height = 20, top_margin = 4, minimal_width = 80},
                             attributes = {
                                 drag_target = function()
-                                    return GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_main", "frame")
+                                    return GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_main", "frame")
                                 end
                             }
                         },
@@ -546,9 +587,10 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                                     children = {
                                         {
                                             -- North player title
+                                            descriptiveName = "pm_teamNorthTitle",
                                             type = "label",
-                                            style = MuppetStyles.label.text.medium.semibold_paddingSides,
-                                            caption = global.playerHome.teams["north"].prettyName
+                                            storeName = "PlayerManager",
+                                            style = MuppetStyles.label.text.medium.semibold_paddingSides
                                         },
                                         {
                                             -- North players list.
@@ -579,7 +621,7 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                                             -- Waiting player title
                                             type = "label",
                                             style = MuppetStyles.label.text.medium.semibold_paddingSides,
-                                            caption = {"gui-caption.jd_plays-jd_spider_race-waiting_title"}
+                                            caption = {"gui-caption.jd_plays-jd_spider_race-pm_waiting_title"}
                                         },
                                         {
                                             -- Waiting players list.
@@ -608,9 +650,10 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                                     children = {
                                         {
                                             -- South player title
+                                            descriptiveName = "pm_teamSouthTitle",
                                             type = "label",
-                                            style = MuppetStyles.label.text.medium.semibold_paddingSides,
-                                            caption = global.playerHome.teams["south"].prettyName
+                                            storeName = "PlayerManager",
+                                            style = MuppetStyles.label.text.medium.semibold_paddingSides
                                         },
                                         {
                                             -- South players list.
@@ -657,7 +700,7 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                                                     storeName = "PlayerManager",
                                                     style = MuppetStyles.button.medium.paddingSides,
                                                     styling = {width = 200},
-                                                    caption = {"gui-caption.jd_plays-jd_spider_race-assign_player_north"},
+                                                    caption = {"gui-caption.jd_plays-jd_spider_race-pm_assign_player_north"},
                                                     registerClick = {actionName = "PlayerHome.On_PlayerManagerAssignPlayerClicked", data = "north"},
                                                     enabled = false
                                                 }
@@ -690,7 +733,7 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
                                                     storeName = "PlayerManager",
                                                     style = MuppetStyles.button.medium.paddingSides,
                                                     styling = {width = 200},
-                                                    caption = {"gui-caption.jd_plays-jd_spider_race-assign_player_south"},
+                                                    caption = {"gui-caption.jd_plays-jd_spider_race-pm_assign_player_south"},
                                                     registerClick = {actionName = "PlayerHome.On_PlayerManagerAssignPlayerClicked", data = "south"},
                                                     enabled = false
                                                 }
@@ -713,7 +756,7 @@ PlayerHome.Gui_OpenPlayerManagerForPlayer = function(player, playerIndex)
         }
     )
 
-    PlayerHome.UpdatePlayersInPlayerManagerGui(playerIndex)
+    PlayerHome.UpdatePlayersInPlayerManagerGui(adminPlayerIndex, nil)
 end
 
 --- When the player clicks the close button on their Player Manager GUI.
@@ -724,19 +767,21 @@ end
 
 --- Called to close a player's Player Manager GUI.
 ---@param player LuaPlayer
----@param playerIndex PlayerIndex
-PlayerHome.Gui_ClosePlayerManagerForPlayer = function(player, playerIndex)
-    GuiUtil.DestroyPlayersReferenceStorage(playerIndex, "PlayerManager")
-    global.playerHome.playerManagerGuiOpened[playerIndex] = nil
+---@param adminPlayerIndex PlayerIndex
+PlayerHome.Gui_ClosePlayerManagerForPlayer = function(player, adminPlayerIndex)
+    GuiUtil.DestroyPlayersReferenceStorage(adminPlayerIndex, "PlayerManager")
+    global.playerHome.playerManagerGuiOpened[adminPlayerIndex] = nil
     player.set_shortcut_toggled("jd_plays-jd_spider_race-player_manager-gui_button", false)
 end
 
 --- Called when a player changes team or joins the server so anyone with the Player Manager GUI open needs to be updated.
 PlayerHome.UpdateAllOpenPlayerManagerGuis = function()
+    local onlinePlayers  ---@type LuaPlayer[] @ Only populate if someone has the Player Manager GUI open.
     for playerIndex, player in pairs(global.playerHome.playerManagerGuiOpened) do
         -- If the admin player is online then refresh their GUI, but if they are offline just close the GUI to avoid it being checked again.
         if player.connected then
-            PlayerHome.UpdatePlayersInPlayerManagerGui(playerIndex)
+            onlinePlayers = onlinePlayers or game.connected_players -- Populate if not already obtained.
+            PlayerHome.UpdatePlayersInPlayerManagerGui(playerIndex, onlinePlayers)
         else
             PlayerHome.Gui_ClosePlayerManagerForPlayer(player, playerIndex)
         end
@@ -744,46 +789,72 @@ PlayerHome.UpdateAllOpenPlayerManagerGuis = function()
 end
 
 --- Called to update the player's list in the Player Manager GUI for an admin player who has the GUI currently open.
----@param playerIndex PlayerIndex
-PlayerHome.UpdatePlayersInPlayerManagerGui = function(playerIndex)
+---@param adminPlayerIndex PlayerIndex
+---@param onlinePlayers LuaPlayer[]|nil @ A shared copy of the current connected_players or nil.
+PlayerHome.UpdatePlayersInPlayerManagerGui = function(adminPlayerIndex, onlinePlayers)
     -- Check the GUI is still there (valid) as we expect it to be.
-    local playerManagerGuiElement = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_main", "frame")
+    local playerManagerGuiElement = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_main", "frame") ---@type LuaGuiElement
     if playerManagerGuiElement == nil or not playerManagerGuiElement.valid then
         -- GUI isn't present, so re-open it. This will also re-call this function to show the curernt players.
-        PlayerHome.Gui_OpenPlayerManagerForPlayer(global.playerHome.playerManagerGuiOpened[playerIndex], playerIndex)
+        PlayerHome.Gui_OpenPlayerManagerForPlayer(global.playerHome.playerManagerGuiOpened[adminPlayerIndex], adminPlayerIndex)
         return
     end
 
-    local northPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_north_players", "scroll-pane")
+    -- Remove all the references to old Player Name Buttons as we will be creating new ones.
+    GuiUtil.DestroyPlayersReferenceStorage(adminPlayerIndex, "PlayerManager_PlayerNameButtons")
+
+    -- Clear the North team list and re-populate it.
+    local northPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_north_players", "scroll-pane") ---@type LuaGuiElement
     northPlayerListGui.clear()
-    for playerName, connectedToServer in pairs(global.playerHome.teams["north"].playerNames) do
-        PlayerHome.AddPlayerToListInPlayerManagerGui(northPlayerListGui, playerName, connectedToServer)
+    for playerName, everConnectedToServer in pairs(global.playerHome.teams["north"].playerNames) do
+        PlayerHome.AddPlayerToListInPlayerManagerGui(northPlayerListGui, playerName, everConnectedToServer)
     end
 
-    local waitingPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_waiting_players", "scroll-pane")
+    -- Clear the waiting players list and re-populate it.
+    local waitingPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_waiting_players", "scroll-pane") ---@type LuaGuiElement
     waitingPlayerListGui.clear()
     for _, waitingPlayerDetails in pairs(global.playerHome.waitingRoomPlayers) do
         PlayerHome.AddPlayerToListInPlayerManagerGui(waitingPlayerListGui, waitingPlayerDetails.playerName, true)
     end
 
-    local southPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(playerIndex, "PlayerManager", "pm_south_players", "scroll-pane")
+    -- Clear the South team list and re-populate it.
+    local southPlayerListGui = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_south_players", "scroll-pane") ---@type LuaGuiElement
     southPlayerListGui.clear()
-    for playerName, connectedToServer in pairs(global.playerHome.teams["south"].playerNames) do
-        PlayerHome.AddPlayerToListInPlayerManagerGui(southPlayerListGui, playerName, connectedToServer)
+    for playerName, everConnectedToServer in pairs(global.playerHome.teams["south"].playerNames) do
+        PlayerHome.AddPlayerToListInPlayerManagerGui(southPlayerListGui, playerName, everConnectedToServer)
     end
+
+    -- Get the list of currently online players and count how many are on each team.
+    onlinePlayers = onlinePlayers or game.connected_players -- Obtian if not passed in.
+    local northOnlinePlayerCount, southOnlinePlayerCount = 0, 0
+    local playerName  ---@type string
+    for _, onlinePlayer in pairs(onlinePlayers) do
+        playerName = onlinePlayer.name
+        if global.playerHome.teams["north"].playerNames[playerName] ~= nil then
+            northOnlinePlayerCount = northOnlinePlayerCount + 1
+        elseif global.playerHome.teams["south"].playerNames[playerName] ~= nil then
+            southOnlinePlayerCount = southOnlinePlayerCount + 1
+        end
+    end
+
+    -- Update the player team name entries with the current online player counts.
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_teamNorthTitle", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-pm_team_title", global.playerHome.teams["north"].prettyName, northOnlinePlayerCount}}, false)
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_teamSouthTitle", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-pm_team_title", global.playerHome.teams["south"].prettyName, southOnlinePlayerCount}}, false)
 end
 
 --- Adds a player button/label to a player list.
 ---@param playerListGui LuaGuiElement
 ---@param playerName string
----@param connectedToServer boolean
-PlayerHome.AddPlayerToListInPlayerManagerGui = function(playerListGui, playerName, connectedToServer)
-    if connectedToServer then
+---@param everConnectedToServer boolean @ If the player has ever connected to the server, if False they are a pre-assigned entry.
+PlayerHome.AddPlayerToListInPlayerManagerGui = function(playerListGui, playerName, everConnectedToServer)
+    if everConnectedToServer then
+        -- Player has joined server so is a standard entry that can be manipulated.
         GuiUtil.AddElement(
             {
                 parent = playerListGui,
-                descriptiveName = "pm_player_name" .. playerName,
+                descriptiveName = "pm_player_name-" .. playerName,
                 type = "button",
+                storeName = "PlayerManager_PlayerNameButtons",
                 style = MuppetStyles.button.medium.paddingSides,
                 styling = {height = 24, top_padding = -2},
                 caption = playerName,
@@ -791,6 +862,7 @@ PlayerHome.AddPlayerToListInPlayerManagerGui = function(playerListGui, playerNam
             }
         )
     else
+        -- Player is a pre-assigned player who has never joined the server. Managed via commands.
         GuiUtil.AddElement(
             {
                 parent = playerListGui,
@@ -806,10 +878,19 @@ end
 -- When an admin clicks on a player's name in the Player Manager GUI. The player's name is the event.data.
 ---@param event UtilityGuiActionsClick_ActionData
 PlayerHome.On_PlayerManagerPlayerNameClicked = function(event)
-    local playerName, adminPlayerIndex = event.data, event.playerIndex
+    local selecetdPlayerName, adminPlayerIndex = event.data, event.playerIndex
+    local previouslySelectedPlayerName = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label").caption
+
+    -- If a player was previously selected then de-select its button before the new selection is applied. A bit hacky way to do it, but otherwise I need to add in new global variables pre player and track them throughout the code just for this graphical highlighting.
+    if previouslySelectedPlayerName[1] ~= "gui-caption.jd_plays-jd_spider_race-pm_no_player_selected" then
+        -- Do it by font name text string manipulation as Style library is missing this support and not practical to add at present.
+        GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager_PlayerNameButtons", "pm_player_name-" .. previouslySelectedPlayerName, "button", {styling = {font = "muppet_medium_1_1_0"}}, false)
+    end
 
     -- Update the GUI to show this admin the player they have clicked on.
-    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label", {caption = playerName}, false)
+    -- Do it by font name text string manipulation as Style library is missing this support and not practical to add at present.
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager_PlayerNameButtons", "pm_player_name-" .. selecetdPlayerName, "button", {styling = {font = "muppet_medium_bold_1_1_0"}}, false)
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label", {caption = selecetdPlayerName}, false)
 
     -- Enable the 2 assignment buttons.
     GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_assign_player_north", "button", {enabled = true}, false)
@@ -820,17 +901,19 @@ end
 ---@param event UtilityGuiActionsClick_ActionData
 PlayerHome.On_PlayerManagerAssignPlayerClicked = function(event)
     local newTeamName, adminPlayerIndex = event.data, event.playerIndex
-    local playerName = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label").caption
-    local player = game.get_player(playerName)
+    local selectedPlayerName = GuiUtil.GetElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label").caption
+    local selectedPlayer = game.get_player(selectedPlayerName)
 
     -- Move the player if they are not currently on the assigned team.
-    local playersCurrentTeam = global.playerHome.playerIdToTeam[player.index]
+    local playersCurrentTeam = global.playerHome.playerIdToTeam[selectedPlayer.index]
     if playersCurrentTeam == nil or newTeamName ~= playersCurrentTeam.id then
         -- Player not currently on the selected team, so move them.
-        PlayerHome.AssignPlayerToTeam(playerName, player, global.playerHome.teams[newTeamName])
+        PlayerHome.AssignPlayerToTeam(selectedPlayerName, selectedPlayer, global.playerHome.teams[newTeamName])
     end
 
     -- Reset our GUI in all cases.
+    -- Do it by font name text string manipulation as Style library is missing this support and not practical to add at present.
+    GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager_PlayerNameButtons", "pm_player_name-" .. selectedPlayerName, "button", {styling = {font = "muppet_medium_1_1_0"}}, false)
     GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_selected_player_name", "label", {caption = {"gui-caption.jd_plays-jd_spider_race-pm_no_player_selected"}}, false)
     GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_assign_player_north", "button", {enabled = false}, false)
     GuiUtil.UpdateElementFromPlayersReferenceStorage(adminPlayerIndex, "PlayerManager", "pm_assign_player_south", "button", {enabled = false}, false)

@@ -10,7 +10,7 @@ if settings.startup["jdplays_mode"].value ~= "jd_spider_race" then
 end
 
 --[[
-    Copy of spidertron generation functions from vanilla Factorio, but with some changes (commented): base\prototypes\entity\entities.lua
+    Copy of spidertron generation functions from vanilla Factorio 1.1.60, but with some changes (commented): base\prototypes\entity\entities.lua
 ]]
 --
 
@@ -28,7 +28,8 @@ local function get_leg_hit_the_ground_trigger()
     }
 end
 
-local function make_spidertron_leg(spidertron_name, scale, leg_thickness, movement_speed, number, base_sprite, ending_sprite)
+-- Removed the unused last arguments: base_sprite, ending_sprite
+local function make_spidertron_leg(spidertron_name, scale, leg_thickness, movement_speed, number)
     return {
         type = "spider-leg",
         name = spidertron_name .. "-leg-" .. number,
@@ -137,6 +138,7 @@ local function create_boss_spidertron(arguments)
                     }
                 },
                 minimap_representation = {
+                    -- Custom map icon for the boss spider.
                     filename = "__jd_plays__/graphics/jd-spider-race/spidertron_boss-map/spidertron_boss-map.png",
                     flags = {"icon"},
                     size = {128, 128},
@@ -252,6 +254,12 @@ local function create_boss_spidertron(arguments)
     )
 end
 
+--[[
+        End of copied spidertron creation code.
+]]
+--
+
+-- This is a copy from "__base__.prototypes.entity.spidertron-animations" with the below noted changes.
 local function create_spidertron_light_cone(orientation, intensity, size, shift_adder)
     local shift = {x = 0, y = -14 + shift_adder}
     return {
@@ -273,10 +281,6 @@ local function create_spidertron_light_cone(orientation, intensity, size, shift_
         color = {r = 0.92, g = 0, b = 0} -- Made red colored for the eyes.
     }
 end
---[[
-        End of copied spidertron creation code.
-]]
---
 
 -- Create our boss spidertron with custom settings.
 create_boss_spidertron {

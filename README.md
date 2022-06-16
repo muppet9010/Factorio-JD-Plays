@@ -28,11 +28,11 @@ Information that players should know at a minimum to avoid surprises (or they ca
 - The spider is naturally immune to artillery and tank shells, but is also immune to atomic bombs. Attack with lasers, rockets and bullets.
 - The spider roams a large area and can be moved by RCON commands. It has some basic reactive behaviour for fighting and intelligently pursuing enemies, so engage with caution. Once it’s suffered considerable damage it will retreat further away from you.
 - When you attack the spider all the nearby biters will attack towards you. This can be very large numbers, you have been warned.
-- You can’t interact with the team on the other side of the divide (electric wall) or walk a spidertron near/across the divide. You can steal each other's power, so be careful how close you build power poles to the divide. It's a race against your biters to the west, not directly against the other player's team.
+- You can’t interact directly with the team on the other side of the divide (electric wall) or walk a spidertron near/across the divide. You can steal each other's power, so be careful how close you build power poles to the divide. It's a race against your biters to the west, not directly against the other player's team.
 - Each team has a starting area of resources with continuous water to the east on a thin ribbon map.
 
 
-Future compatibility note: this mod has had to include copies of some base spidertron code and so is at risk of any changes to base game spidertron code after Factorio 1.1.58.
+Future compatibility note: this mod has had to include copies of some base spidertron code and so is at risk of any changes to base game spidertron code after Factorio 1.1.60.
 
 
 Easter Egg Suprise (2022)

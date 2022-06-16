@@ -1,4 +1,4 @@
--- This is a copy of "__base__.prototypes.entity.spidertron-animations" from Factorio 1.1.58, but the inline require has been made a variable so that this file can be conditionally required.
+-- This is a perfect copy of "__base__.prototypes.entity.spidertron-animations" from Factorio 1.1.60, but the inline require has been made a variable so that this file can be conditionally required.
 
 local spidertronLightPositions = require("__base__/prototypes/entity/spidertron-light-positions") -- This is the added variable.
 
