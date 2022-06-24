@@ -67,7 +67,7 @@ local function create_boss_spidertron(arguments)
                 name = arguments.name,
                 collision_box = {{-1 * scale, -1 * scale}, {1 * scale, 1 * scale}},
                 sticker_box = {{-1.5 * scale, -1.5 * scale}, {1.5 * scale, 1.5 * scale}},
-                selection_box = {{-1 * scale, -1 * scale}, {1 * scale, 1 * scale}},
+                selection_box = {{-2 * scale, -2 * scale}, {2 * scale, 2 * scale}},
                 drawing_box = {{-3 * scale, -4 * scale}, {3 * scale, 2 * scale}},
                 icon = "__base__/graphics/icons/spidertron.png",
                 mined_sound = {filename = "__core__/sound/deconstruct-large.ogg", volume = 0.8},
@@ -151,7 +151,7 @@ local function create_boss_spidertron(arguments)
                 inventory_size = 80,
                 equipment_grid = "spidertron-boss-equipment-grid", -- Changed to custom sized grid.
                 trash_inventory_size = 20,
-                height = 1 * scale * leg_scale, -- Changed height from 1.5x to 1x, as otherwsie it tended to bob up and down excessively.
+                height = 2 * scale * leg_scale, -- Changed height from 1.5x to 1x, as otherwsie it tended to bob up and down excessively.
                 torso_rotation_speed = 0.010, -- Made to rotate twice as fast, 0.005 to 0.010.
                 chunk_exploration_radius = 3,
                 selection_priority = 51,
@@ -240,7 +240,7 @@ local function create_boss_spidertron(arguments)
                     military_target = "spidertron-military-target"
                 },
                 loot = {{item = "coin"}}, -- Added as reward.
-                hit_visualization_box = {{-1.5, -5.5}, {1.5, -3}} -- Added so lasers targetted at the spider hit the body and not the ground between its feet.
+                hit_visualization_box = {{-0.5, -0.5}, {0.5, 0.5}} -- Added so lasers targetted at the spider hit the body and not the ground between its feet.
             },
             make_spidertron_leg(arguments.name, leg_scale, arguments.leg_thickness, arguments.leg_movement_speed, 1),
             make_spidertron_leg(arguments.name, leg_scale, arguments.leg_thickness, arguments.leg_movement_speed, 2),
@@ -285,10 +285,10 @@ end
 -- Create our boss spidertron with custom settings.
 create_boss_spidertron {
     name = "jd_plays-jd_spider_race-spidertron_boss",
-    scale = 2,
+    scale = 0.2,
     leg_scale = 1, -- relative to scale
     leg_thickness = 1, -- relative to leg_scale
-    leg_movement_speed = 3 -- Same approximate real speed as a regular spider with 3 (max) legs.
+    leg_movement_speed = 12 -- Same approximate real speed as a regular spider with 3 (max) legs.
 }
 local bossSpider = data.raw["spider-vehicle"]["jd_plays-jd_spider_race-spidertron_boss"]
 -- Make the 4 eyes have red lights, but no auro light.
