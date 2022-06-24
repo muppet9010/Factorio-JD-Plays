@@ -1,7 +1,8 @@
 ---------------------------------------------------------------------------------------------------
 Version: 20.2.5
-Date: 2022-XX-XX
+Date: 2022-06-24
   Features:
+    - JD Spider Race - Has been modified for play testing with a reduced spider. See readme/mod description for details. These changes will be reverted/balanced in future main releases.
   Changes:
   Bugfixes:
   Info:

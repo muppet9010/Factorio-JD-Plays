@@ -21,6 +21,8 @@ Full details found here including RCON commands: [PDF docuemnt](https://github.c
 Significant code contributions by AndrewReds.
 Expects the mod: JD Goes Boom.
 
+NOTE: this specific mod version (20.2.5) is for play testing and has a reduced Spider. It differs from the PDF document in; starting only 2k tiles from spawn, having only 10% health, retreating at each 50% of new health (2nd retreat would be its death), retreating only 500 tiles, only roaming 250 +/- on the X axis, spider will only chase 1k tiles to avoid running in to spawn, being 10% the size of normal boss spider.
+
 Information that players should know at a minimum to avoid surprises (or they can read the many page document in full).
 
 - Big scary spider far to the west. Aim is to kill the spider and take the reward coin back to your market to nuke the other tea and win.

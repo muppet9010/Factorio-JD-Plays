@@ -98,7 +98,7 @@ local function create_boss_spidertron(arguments)
                 flags = {"placeable-neutral", "player-creation", "placeable-off-grid"},
                 collision_mask = {},
                 minable = nil, -- Will never be mined.
-                max_health = 100000, -- Increased to desired health level.
+                max_health = 10000, -- Increased to desired health level.
                 resistances = {
                     -- These are all increased significantly.
                     {
