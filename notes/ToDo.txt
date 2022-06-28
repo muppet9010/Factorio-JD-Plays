@@ -9,3 +9,7 @@ Spiders atomic bombs:
 /Evolution commmand:
 	React to a player using the non admin default game command and add a supplementary response with the team north and south enemy Evo levels. I can;t stop the base games resposne from what I can see. So the enemy evo returned will always be wrong :(
 	https://lua-api.factorio.com/latest/events.html#on_console_chat
+	
+	
+Losing Team explosions:
+	With the change in logic of JD Goes Boom mod so smaller early increases blow up more, we need to reduce the size of the explosions for the losing team.
