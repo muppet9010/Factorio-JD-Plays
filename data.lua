@@ -4,3 +4,4 @@ require("utility.style-data").GeneratePrototypes()
 
 require("modes/jd-p0ober-split-factory/data")
 require("modes.jd-spider-race.data")
+require("modes.battlefluffy-scenario.data")

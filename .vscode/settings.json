@@ -1,0 +1,47 @@
+{
+    "factorio.versions": [
+        {
+            "name": "Modding Current",
+            "factorioPath": "c:\\FactorioModding\\bin\\x64\\factorio.exe",
+            "active": true
+        }
+    ],
+    "Lua.diagnostics.globals": [
+        "game",
+        "script",
+        "remote",
+        "commands",
+        "settings",
+        "rcon",
+        "rendering",
+        "global",
+        "log",
+        "defines",
+        "data",
+        "mods",
+        "serpent",
+        "table_size",
+        "bit32",
+        "util",
+        "localised_print",
+        "circuit_connector_definitions",
+        "universal_connector_template",
+        "__DebugAdapter",
+        "__Profiler",
+        "ourConnectionPoint"
+    ],
+    "Lua.runtime.version": "Lua 5.2",
+    "Lua.workspace.library": [
+        "c:\\FactorioModding\\factorio-api",
+        "/utility", // Have to include it so we can get its TypeDefs.
+        "c:\\FactorioModding\\data",
+        "c:\\FactorioModding\\data\\core\\lualib",
+        "c:\\FactorioModding\\runtime-api"
+    ],
+    "Lua.workspace.ignoreDir": [
+        ".vscode",
+        "/utility/*", // Exclude it as we don;t want to check it. We include it as a library file to load its TypeDefs still.
+        "/modes/*", // Exclude all modes.
+        "!/modes/battlefluffy-scenario/" // Negate this specific mode.
+    ]
+}
