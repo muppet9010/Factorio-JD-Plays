@@ -104,8 +104,58 @@ data:extend({
 
 
 
+--- Removes the glow from a sprite and its child fields they have it or even exist.
+---@param sprite Sprite
+local function RemoveGlowFromSpriteContents(sprite)
+    if sprite.draw_as_glow ~= nil then sprite.draw_as_glow = false end
+    if sprite.hr_version ~= nil then
+        if sprite.hr_version.draw_as_glow ~= nil then sprite.hr_version.draw_as_glow = false end
+    end
+end
+
+--- Removes the glow from an Animation and its child fields they have it or even exist.
+---@param animation Animation
+local function RemoveGlowFromAnimationContents(animation)
+    if animation.draw_as_glow ~= nil then animation.draw_as_glow = false end
+    if animation.layers ~= nil then
+        for _, layer in pairs(animation.layers--[[@as Animation[] ]] ) do
+            RemoveGlowFromAnimationContents(layer)
+        end
+    end
+    if animation.hr_version ~= nil then
+        RemoveGlowFromAnimationContents(animation.hr_version)
+    end
+end
+
+--- Removes the glow from an Animation Variation and its child fields they have it or even exist.
+---@param animationVariations AnimationVariations
+local function RemoveGlowFromAnimationVariationsContents(animationVariations)
+    if type(next(animationVariations)) == "string" then
+        -- Is just a straight animation.
+        RemoveGlowFromAnimationContents(animationVariations--[[@as Animation]] )
+    else
+        -- Is an array of animations.
+        for _, animation in pairs(animationVariations--[[@as Animation[] ]] ) do
+            RemoveGlowFromAnimationContents(animation--[[@as Animation]] )
+        end
+    end
+end
+
+--- Removes the draw_as_glow from all of the places this prototype could have it set. So the graphics always respect the light level.
+---@param prototype Prototype.Projectile|Prototype.FluidStream|Prototype.FireFlame|Prototype.ArtilleryProjectile
+local function RemoveGlowFromPictures(prototype)
+    if prototype.animation ~= nil then RemoveGlowFromAnimationContents(prototype.animation) end -- Projectile & Fluid Stream
+    if prototype.picture ~= nil then RemoveGlowFromSpriteContents(prototype.picture) end -- Artillery Projectile
+    if prototype.pictures ~= nil then RemoveGlowFromAnimationVariationsContents(prototype.pictures) end -- Fire
+    if prototype.small_tree_fire_pictures ~= nil then RemoveGlowFromAnimationVariationsContents(prototype.small_tree_fire_pictures) end -- Fire
+    if prototype.secondary_pictures ~= nil then RemoveGlowFromAnimationVariationsContents(prototype.secondary_pictures) end -- Fire
+    if prototype.smoke_source_pictures ~= nil then RemoveGlowFromAnimationVariationsContents(prototype.smoke_source_pictures) end -- Fire
+end
+
 -- Increase the light from fire on the ground and trees. As the default is too low for these very dark maps.
 for _, prototype in pairs(data.raw["fire"]) do
+    RemoveGlowFromPictures(prototype)
+
     -- Only a fire type that that does fire damage, so excludes acid spit.
     if prototype.damage_per_tick ~= nil and prototype.damage_per_tick.type --[[@as string]] ~= nil and prototype.damage_per_tick.type --[[@as string]] == "fire" then
         -- Default is: light = {intensity = 0.2, size = 8, color = {1, 0.5, 0}},
@@ -121,7 +171,7 @@ end
 --- Ensures a prototypes field is an array rather than a single entry and that it exists.
 ---@param container table<string, any>
 ---@param fieldName string
-local EnsureFieldIsArrayInContainer = function(container, fieldName)
+local function EnsureFieldIsArrayInContainer(container, fieldName)
     local thing = container[fieldName]
     if thing == nil then
         -- Non existant, so create the empty table so the later code works.
@@ -137,7 +187,7 @@ local ProjectilesToModify = {} ---@type table<string, string> # projectileName t
 --- Record the prototypes that this ammo type creates.
 ---@param action TriggerItem[]
 ---@param ammoCategory string
-local RecordProjectileNameToAmmoCategory = function(action, ammoCategory)
+local function RecordProjectileNameToAmmoCategory(action, ammoCategory)
     for _, triggerItem in pairs(action) do
         EnsureFieldIsArrayInContainer(triggerItem, "action_delivery")
         for _, triggerDelivery in pairs(triggerItem.action_delivery--[[@as TriggerDelivery[] ]] ) do
@@ -207,6 +257,8 @@ end
 -- Go over each projectile prototype and if it was flagged by the ammo type that made it add what we need based on its ammo category. We just add a new action to avoid any conflicts with others.
 -- CODE NOTE: If doing the specific explosions types doesn't work out, check in both action and final_action for nested area effect then include light on the impact. need to do this so we can control how long the light is there.
 for projectileName, prototype in pairs(data.raw["projectile"]) do
+    RemoveGlowFromPictures(prototype)
+
     local projectileModifyType = ProjectilesToModify[projectileName]
     if projectileModifyType == "rocket" then
         -- Is a type of rocket.
@@ -225,22 +277,28 @@ for projectileName, prototype in pairs(data.raw["projectile"]) do
                 }
             }
         }
-        prototype.light = {
-            {
-                intensity = 0.2,
-                size = 3,
-                minimum_darkness = 0.3,
-                shift = { 0, -1 }
-            }
-        }
+        prototype.animation.draw_as_glow = false
     elseif projectileModifyType == "tank-shell" then
-    elseif projectileModifyType == "artillery-shell" then
     end
 end
 
 
+-- Go over each artillery projectile prototype and if it was flagged by the ammo type that made it add what we need based on its ammo category. We just add a new action to avoid any conflicts with others.
+for projectileName, prototype in pairs(data.raw["artillery-projectile"]) do
+    RemoveGlowFromPictures(prototype)
+
+    local projectileModifyType = ProjectilesToModify[projectileName]
+    if projectileModifyType == "artillery-shell" then
+
+    end
+end
+
+
+
 -- Go over the stream types and add light to the fire ones.
 for _, prototype in pairs(data.raw["stream"]) do
+    RemoveGlowFromPictures(prototype)
+
     -- Only fire streams have smoke from them.
     if prototype.smoke_sources ~= nil then
         prototype.stream_light = { intensity = 0.3, size = 12, color = { 1, 0.5, 0 } }
@@ -293,7 +351,7 @@ data:extend({
     {
         type = "sprite",
         name = "light_cone-rear_ended",
-        filename = graphicsPath .. "light_cone-rear_ended.png",
+        filename = graphicsPath .. "light_area-rear_ended.png",
         priority = "extra-high",
         flags = { "light" },
         width = 400,
