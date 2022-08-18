@@ -8,13 +8,14 @@ end
 local OnScriptTriggerEffectEvent = function(event)
     if event.effect_id == "rocket-projectile" then
         rendering.draw_light {
-            sprite = "light_cone-one_sided",
+            sprite = "light_cone-rear_ended",
             orientation = 0.5,
-            scale = 0.5,
-            intensity = 0.6,
+            scale = 1.0,
+            intensity = 0.5,
             minimum_darkness = 0.3,
             oriented = true,
             target = event.source_entity,
+            target_offset = { 0, -1 }, -- Needed as projectile images are 1 tile offset from their real position to give the appearance of height.
             surface = event.surface_index
         }
     end
