@@ -1,3 +1,8 @@
+--[[
+    Do all of these changes in final fixes so hopefully other mods have created all of their bits and we can overwrite them. When made a standalone mod we can always add them as hidden optional dependencies so that we run after them if really needed.
+]]
+
+
 if settings.startup["jdplays_mode"].value ~= "battlefluffy-scenario" then
     return
 end
@@ -373,3 +378,17 @@ data:extend({
         height = 400
     }
 })
+
+
+
+
+--[[
+    Modify the camp-fire entity if its present from the fire-place mod.
+    This is for JD's play through only. We will create them purely via Muppet Streamer mod's Spawn Around Player feature.
+    We want to hide it from being crafted and make it un-minable.
+]]
+
+data.raw["recipe"]["camp-fire"].enabled = false
+
+local campFireEntity = data.raw["furnace"]["camp-fire"]
+campFireEntity.minable = nil
