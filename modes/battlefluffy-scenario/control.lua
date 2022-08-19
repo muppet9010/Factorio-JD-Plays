@@ -4,6 +4,8 @@ if settings.startup["jdplays_mode"].value ~= "battlefluffy-scenario" then
     return
 end
 
+local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 } -- Same as in data.
+
 ---@param event on_script_trigger_effect
 local OnScriptTriggerEffectEvent = function(event)
     if event.effect_id == "rocket-projectile" then
@@ -14,7 +16,7 @@ local OnScriptTriggerEffectEvent = function(event)
             intensity = 0.3,
             minimum_darkness = 0.3,
             oriented = true,
-            color = { r = 246.0, g = 248.0, b = 182.0 },
+            color = ExplosionColor,
             target = event.source_entity,
             target_offset = { 0, -1 }, -- Needed as projectile images are 1 tile offset from their real position to give the appearance of height.
             surface = event.surface_index

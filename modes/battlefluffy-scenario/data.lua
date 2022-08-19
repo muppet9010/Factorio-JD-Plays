@@ -7,33 +7,30 @@ end
     Atomic bombs (rockets) just work.
 ]]
 
-local bulletLight = {
-    intensity = 0.3,
-    size = 5,
-    minimum_darkness = 0.3
-}
 
 
-local graphicsPath = "__jd_plays__/graphics/battlefluffy-scenario/"
+local GraphicsPath = "__jd_plays__/graphics/battlefluffy-scenario/"
+local FireColor = { 1, 0.5, 0 }
+local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 }
 
 
 -- Create the blank animations that set how long light-explosions last and thus how long the light is visible for.
 local BlankAnimation10Ticks = {
-    filename = graphicsPath .. "empty_10.png",
+    filename = GraphicsPath .. "empty_10.png",
     priority = "extra-high",
     width = 1,
     height = 1,
     frame_count = 10,
 }
 local BlankAnimation20Ticks = {
-    filename = graphicsPath .. "empty_30.png",
+    filename = GraphicsPath .. "empty_30.png",
     priority = "extra-high",
     width = 1,
     height = 1,
     frame_count = 20,
 }
 local BlankAnimation30Ticks = {
-    filename = graphicsPath .. "empty_30.png",
+    filename = GraphicsPath .. "empty_30.png",
     priority = "extra-high",
     width = 1,
     height = 1,
@@ -48,7 +45,11 @@ data:extend({
         name = "light-explosion-bullet-source",
         animations = BlankAnimation10Ticks,
         light = {
-            bulletLight
+            {
+                intensity = 0.3,
+                size = 5,
+                minimum_darkness = 0.3
+            }
         }
     },
     {
@@ -60,6 +61,7 @@ data:extend({
                 intensity = 0.6,
                 size = 8,
                 minimum_darkness = 0.3,
+                color = ExplosionColor
             }
         }
     },
@@ -69,33 +71,36 @@ data:extend({
         animations = BlankAnimation20Ticks,
         light = {
             {
-                intensity = 1,
+                intensity = 0.8,
                 size = 30,
                 minimum_darkness = 0.3,
+                color = ExplosionColor
             }
         }
     },
     {
         type = "explosion",
         name = "light-explosion-artillery-source",
-        animations = BlankAnimation30Ticks,
+        animations = BlankAnimation20Ticks,
         light = {
             {
-                intensity = 1,
+                intensity = 0.8,
                 size = 60,
                 minimum_darkness = 0.3,
+                color = ExplosionColor
             }
         }
     },
     {
         type = "explosion",
         name = "light-explosion-explosive-impact",
-        animations = BlankAnimation10Ticks,
+        animations = BlankAnimation30Ticks,
         light = {
             {
-                intensity = 1,
-                size = 20,
+                intensity = 0.6,
+                size = 15,
                 minimum_darkness = 0.3,
+                color = ExplosionColor
             }
         }
     }
@@ -159,7 +164,7 @@ for _, prototype in pairs(data.raw["fire"]) do
     -- Only a fire type that that does fire damage, so excludes acid spit.
     if prototype.damage_per_tick ~= nil and prototype.damage_per_tick.type --[[@as string]] ~= nil and prototype.damage_per_tick.type --[[@as string]] == "fire" then
         -- Default is: light = {intensity = 0.2, size = 8, color = {1, 0.5, 0}},
-        prototype.light = { { intensity = 0.4, size = 30, color = { 1, 0.5, 0 } } }
+        prototype.light = { { intensity = 0.4, size = 30, color = FireColor } }
     end
 end
 
@@ -278,7 +283,12 @@ for projectileName, prototype in pairs(data.raw["projectile"]) do
             }
         }
         prototype.animation.draw_as_glow = false
+
+        --CODE NOTE: action check would go here if we can't just tack it on to the specific explosion types nicely.
     elseif projectileModifyType == "tank-shell" then
+        -- Is a type of tank shell.
+
+        --CODE NOTE: action check would go here if we can't just tack it on to the specific explosion types nicely.
     end
 end
 
@@ -289,7 +299,9 @@ for projectileName, prototype in pairs(data.raw["artillery-projectile"]) do
 
     local projectileModifyType = ProjectilesToModify[projectileName]
     if projectileModifyType == "artillery-shell" then
+        -- Is a type of artillery-shell.
 
+        --CODE NOTE: action check would go here if we can't just tack it on to the specific explosion types nicely.
     end
 end
 
@@ -301,42 +313,45 @@ for _, prototype in pairs(data.raw["stream"]) do
 
     -- Only fire streams have smoke from them.
     if prototype.smoke_sources ~= nil then
-        prototype.stream_light = { intensity = 0.3, size = 12, color = { 1, 0.5, 0 } }
+        prototype.stream_light = { intensity = 0.3, size = 12, color = FireColor }
         -- ground_light is terrible
     end
 end
 
 
 
--- Add lights to the larger explosions that are only cause by explosives and not just projectile impacts.
--- TODO: move these to be our own explosions as we can't control how long the light is present for with these.
-data.raw["explosion"]["big-explosion"].light = {
-    {
-        intensity = 1,
-        size = 30,
-        minimum_darkness = 0.3,
+-- Add lights to the larger explosions that are only cause by explosives and not just projectile impacts. If we add them as their own light-explosions we can set our own TTL and avoid any complicated checks on the Projectile prototypes.
+data.raw["explosion"]["big-explosion"].created_effect = {
+    type = "direct",
+    action_delivery = {
+        type = "instant",
+        source_effects = { type = "create-explosion", entity_name = "light-explosion-explosive-impact" }
     }
 }
-data.raw["explosion"]["uranium-cannon-shell-explosion"].light = {
-    {
-        intensity = 1,
-        size = 30,
-        minimum_darkness = 0.3,
+data.raw["explosion"]["uranium-cannon-shell-explosion"].created_effect = {
+    type = "direct",
+    action_delivery = {
+        type = "instant",
+        source_effects = { type = "create-explosion", entity_name = "light-explosion-explosive-impact" }
     }
 }
-data.raw["explosion"]["big-artillery-explosion"].light = {
-    {
-        intensity = 1,
-        size = 30,
-        minimum_darkness = 0.3,
+data.raw["explosion"]["big-artillery-explosion"].created_effect = {
+    type = "direct",
+    action_delivery = {
+        type = "instant",
+        source_effects = { type = "create-explosion", entity_name = "light-explosion-explosive-impact" }
     }
 }
 
 
 
--- Flying robots that shoot bullets we can pickup via their use of the source shooting explosion
-data.raw["explosion"]["explosion-gunshot-small"].light = {
-    bulletLight
+-- Flying robots that shoot bullets we can pickup via their use of the source shooting explosion and just add a light to this to mirror a bullet guns. If we add them as their own light-explosions we can set our own TTL and avoid any complicated checks on the Projectile prototypes.
+data.raw["explosion"]["explosion-gunshot-small"].created_effect = {
+    type = "direct",
+    action_delivery = {
+        type = "instant",
+        source_effects = { type = "create-explosion", entity_name = "light-explosion-bullet-source" }
+    }
 }
 
 
@@ -351,7 +366,7 @@ data:extend({
     {
         type = "sprite",
         name = "light_cone-rear_ended",
-        filename = graphicsPath .. "light_area-rear_ended.png",
+        filename = GraphicsPath .. "light_area-rear_ended.png",
         priority = "extra-high",
         flags = { "light" },
         width = 400,
