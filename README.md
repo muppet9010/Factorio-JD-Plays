@@ -5,6 +5,7 @@
 A mod for streamer JD-Play's server. Includes a number of distinct modes.
 
 
+
 General Notes
 ==============
 
@@ -13,15 +14,23 @@ All modes from before Factorio 1.1 have been removed from the active mod as part
 
 
 
+Battlefluffy Scenario
+================
+
+Adds a lot of lights to effects as the map is pitch black. These will likely move to a standalone mod in the future as have been written in a semi generic manner.
+Also removes most things from glowing te dark. So a projectile fired across a dark screen is dark itself, rather than being always bright as vanilla Factorio is.
+
+
+
 JD Spider Race
 ================
 
 A race by 2 teams to hunt down a massive hostile australian spider and kill it on a parallel frontier style map.
-Full details found here including RCON commands: [PDF docuemnt](https://github.com/muppet9010/Factorio-JD-Plays/tree/master/modes/jd-spider-race/JD-Plays & Mukkie Spider Hunt.pdf)
+Full details found here including RCON commands: [PDF document](https://github.com/muppet9010/Factorio-JD-Plays/tree/master/modes/jd-spider-race/JD-Plays & Mukkie Spider Hunt.pdf)
 Significant code contributions by AndrewReds.
 Expects the mod: JD Goes Boom.
 
-NOTE: this specific mod version (20.2.5) is for play testing and has a reduced Spider. It differs from the PDF document in JD's exact requested manner; starting only 1.5k tiles from spawn, having only 10% health, being 10% the size of normal boss spider (small biter sized). Indirect chanegs to accomidate the above are: retreating at each 50% of new health (2nd retreat would be its death), retreating only 500 tiles, only roaming 250 +/- on the X axis, spider will only chase 1k tiles to avoid running in to spawn. The spider has the same movement speed and AI, so should be ok, but this is a known risk as not extensively tested liek this.
+NOTE: this specific mod version (20.2.5) is for play testing and has a reduced Spider. It differs from the PDF document in JD's exact requested manner; starting only 1.5k tiles from spawn, having only 10% health, being 10% the size of normal boss spider (small biter sized). Indirect changes to accommodate the above are: retreating at each 50% of new health (2nd retreat would be its death), retreating only 500 tiles, only roaming 250 +/- on the X axis, spider will only chase 1k tiles to avoid running in to spawn. The spider has the same movement speed and AI, so should be ok, but this is a known risk as not extensively tested like this.
 
 Information that players should know at a minimum to avoid surprises (or they can read the many page document in full).
 
@@ -33,8 +42,8 @@ Information that players should know at a minimum to avoid surprises (or they ca
 - You can’t interact directly with the team on the other side of the divide (electric wall) or walk a spidertron near/across the divide. You can steal each other's power, so be careful how close you build power poles to the divide. It's a race against your biters to the west, not directly against the other player's team.
 - Each team has a starting area of resources with continuous water to the east on a thin ribbon map.
 
-
 Future compatibility note: this mod has had to include copies of some base spidertron code and so is at risk of any changes to base game spidertron code after Factorio 1.1.60.
+
 
 
 Easter Egg Suprise (2022)
