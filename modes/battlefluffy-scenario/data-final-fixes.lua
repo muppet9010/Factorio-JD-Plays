@@ -21,26 +21,55 @@ local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 }
 
 -- Create the blank animations that set how long light-explosions last and thus how long the light is visible for.
 local BlankAnimation10Ticks = {
-    filename = GraphicsPath .. "empty_10.png",
+    frame_count = 10,
+    filename = GraphicsPath .. "empty_10x10.png",
     priority = "extra-high",
     width = 1,
     height = 1,
-    frame_count = 10,
+    line_length = 10
 }
 local BlankAnimation20Ticks = {
-    filename = GraphicsPath .. "empty_30.png",
+    frame_count = 20,
+    filename = GraphicsPath .. "empty_10x10.png",
     priority = "extra-high",
     width = 1,
     height = 1,
-    frame_count = 20,
+    line_length = 10
 }
 local BlankAnimation30Ticks = {
-    filename = GraphicsPath .. "empty_30.png",
+    frame_count = 30,
+    filename = GraphicsPath .. "empty_10x10.png",
     priority = "extra-high",
     width = 1,
     height = 1,
-    frame_count = 30,
+    line_length = 10
 }
+local BlankAnimation40Ticks = {
+    frame_count = 40,
+    filename = GraphicsPath .. "empty_10x10.png",
+    priority = "extra-high",
+    width = 1,
+    height = 1,
+    line_length = 10
+}
+local BlankAnimation50Ticks = {
+    frame_count = 50,
+    filename = GraphicsPath .. "empty_10x10.png",
+    priority = "extra-high",
+    width = 1,
+    height = 1,
+    line_length = 10
+}
+local BlankAnimation200Ticks = {
+    frame_count = 100,
+    repeat_count = 2,
+    filename = GraphicsPath .. "empty_10x10.png",
+    priority = "extra-high",
+    width = 1,
+    height = 1,
+    line_length = 10
+}
+
 
 
 -- Create the various light-explosions. Used to create a short light when something is shot.
@@ -53,7 +82,8 @@ data:extend({
             {
                 intensity = 0.3,
                 size = 5,
-                minimum_darkness = 0.3
+                minimum_darkness = 0.3,
+                shift = { 0, -1 }
             }
         }
     },
@@ -66,7 +96,8 @@ data:extend({
                 intensity = 0.6,
                 size = 8,
                 minimum_darkness = 0.3,
-                color = ExplosionColor
+                color = ExplosionColor,
+                shift = { 0, -1 }
             }
         }
     },
@@ -79,7 +110,8 @@ data:extend({
                 intensity = 0.8,
                 size = 30,
                 minimum_darkness = 0.3,
-                color = ExplosionColor
+                color = ExplosionColor,
+                shift = { 0, -1 }
             }
         }
     },
@@ -92,24 +124,81 @@ data:extend({
                 intensity = 0.8,
                 size = 60,
                 minimum_darkness = 0.3,
-                color = ExplosionColor
+                color = ExplosionColor,
+                shift = { 0, -1 }
             }
         }
     },
     {
         type = "explosion",
-        name = "light-explosion-explosive-impact",
-        animations = BlankAnimation30Ticks,
+        name = "light-explosion-small-explosive-impact",
+        animations = BlankAnimation20Ticks,
         light = {
             {
                 intensity = 0.6,
+                size = 7,
+                minimum_darkness = 0.3,
+                color = ExplosionColor,
+                shift = { 0, -0.5 }
+            }
+        }
+    },
+    {
+        type = "explosion",
+        name = "light-explosion-medium-explosive-impact",
+        animations = BlankAnimation30Ticks,
+        light = {
+            {
+                intensity = 0.7,
+                size = 10,
+                minimum_darkness = 0.3,
+                color = ExplosionColor,
+                shift = { 0, -0.5 }
+            }
+        }
+    },
+    {
+        type = "explosion",
+        name = "light-explosion-large-explosive-impact",
+        animations = BlankAnimation40Ticks,
+        light = {
+            {
+                intensity = 0.8,
                 size = 15,
                 minimum_darkness = 0.3,
-                color = ExplosionColor
+                color = ExplosionColor,
+                shift = { 0, 0 }
+            }
+        }
+    },
+    {
+        type = "explosion",
+        name = "light-explosion-massive-explosive-impact",
+        animations = BlankAnimation50Ticks,
+        light = {
+            {
+                intensity = 0.8,
+                size = 20,
+                minimum_darkness = 0.3,
+                color = ExplosionColor,
+                shift = { 0, 0 }
+            }
+        }
+    },
+    {
+        type = "explosion",
+        name = "light-explosion-nuke-explosive-impact",
+        animations = BlankAnimation200Ticks,
+        light = {
+            {
+                intensity = 0.8,
+                size = 60,
+                minimum_darkness = 0.3,
+                color = ExplosionColor,
+                shift = { 0, 0 }
             }
         }
     }
-
 })
 
 
@@ -128,7 +217,7 @@ end
 local function RemoveGlowFromAnimationContents(animation)
     if animation.draw_as_glow ~= nil then animation.draw_as_glow = false end
     if animation.layers ~= nil then
-        for _, layer in pairs(animation.layers--[[@as Animation[] ]] ) do
+        for _, layer in pairs(animation.layers) do
             RemoveGlowFromAnimationContents(layer)
         end
     end
@@ -138,15 +227,15 @@ local function RemoveGlowFromAnimationContents(animation)
 end
 
 --- Removes the glow from an Animation Variation and its child fields they have it or even exist.
----@param animationVariations AnimationVariations
+---@param animationVariations AnimationVariations[]
 local function RemoveGlowFromAnimationVariationsContents(animationVariations)
     if type(next(animationVariations)) == "string" then
         -- Is just a straight animation.
-        RemoveGlowFromAnimationContents(animationVariations--[[@as Animation]] )
+        RemoveGlowFromAnimationContents(animationVariations)
     else
         -- Is an array of animations.
-        for _, animation in pairs(animationVariations--[[@as Animation[] ]] ) do
-            RemoveGlowFromAnimationContents(animation--[[@as Animation]] )
+        for _, animation in pairs(animationVariations) do
+            RemoveGlowFromAnimationContents(animation)
         end
     end
 end
@@ -165,10 +254,11 @@ end
 
 -- Increase the light from fire on the ground and trees. As the default is too low for these very dark maps.
 for _, prototype in pairs(data.raw["fire"]) do
+    ---@cast prototype Prototype.FireFlame
     RemoveGlowFromPictures(prototype)
 
     -- Only a fire type that that does fire damage, so excludes acid spit.
-    if prototype.damage_per_tick ~= nil and prototype.damage_per_tick.type --[[@as string]] ~= nil and prototype.damage_per_tick.type --[[@as string]] == "fire" then
+    if prototype.damage_per_tick ~= nil and prototype.damage_per_tick.type ~= nil and prototype.damage_per_tick.type == "fire" then
         -- Default is: light = {intensity = 0.2, size = 8, color = {1, 0.5, 0}},
         prototype.light = { { intensity = 0.4, size = 30, color = FireColor } }
     end
@@ -326,29 +416,77 @@ for _, prototype in pairs(data.raw["stream"]) do
 end
 
 
+-- Go over the explosions and remove the glow from them all. So they don't just appear in the darkness. We add lights to the ones that should have them.
+for _, prototype in pairs(data.raw["explosion"]) do
+    RemoveGlowFromPictures(prototype)
+end
 
--- Add lights to the larger explosions that are only cause by explosives and not just projectile impacts. If we add them as their own light-explosions we can set our own TTL and avoid any complicated checks on the Projectile prototypes.
-data.raw["explosion"]["big-explosion"].created_effect = {
-    type = "direct",
-    action_delivery = {
-        type = "instant",
-        source_effects = { type = "create-explosion", entity_name = "light-explosion-explosive-impact" }
-    }
-}
-data.raw["explosion"]["uranium-cannon-shell-explosion"].created_effect = {
-    type = "direct",
-    action_delivery = {
-        type = "instant",
-        source_effects = { type = "create-explosion", entity_name = "light-explosion-explosive-impact" }
-    }
-}
-data.raw["explosion"]["big-artillery-explosion"].created_effect = {
-    type = "direct",
-    action_delivery = {
-        type = "instant",
-        source_effects = { type = "create-explosion", entity_name = "light-explosion-explosive-impact" }
-    }
-}
+
+-- Add lights to the explosions from projectiles that do explosive damage type. By adding them as their own light-explosions to the regular explosion we can set our own TTL and avoid any complicated checks on the Projectile prototypes.
+-- Also does Death explosions. Should have light if they have a fireball type explosion, but not if they don't. i.e. inserters and belts have small fireball explosions, but wooden chests and stone furnaces don't.
+-- Don't do "explosion" as this occurs when things are hurt by explosive weapons, i.e. a grenade exploding and damaging a wall creates an "explosion" one each wall piece.
+-- This only handles stock explosion animation graphics and doesn't detect or handle modded explosion graphics. But I assume most modders will use existing explosions, or at least the existing graphic files in a proportionate way.
+local smallLightExplosionNames = {} ---@type table<int, string>
+local mediumLightExplosionNames = {} ---@type table<int, string>
+local largeLightExplosionNames = {} ---@type table<int, string>
+local massiveLightExplosionNames = {} ---@type table<int, string>
+local nukeLightExplosionNames = {} ---@type table<int, string>
+local explosionLists = { [smallLightExplosionNames] = "light-explosion-small-explosive-impact", [mediumLightExplosionNames] = "light-explosion-medium-explosive-impact", [largeLightExplosionNames] = "light-explosion-large-explosive-impact", [massiveLightExplosionNames] = "light-explosion-massive-explosive-impact", [nukeLightExplosionNames] = "light-explosion-nuke-explosive-impact" }
+
+-- Populate the lists based on the explosion animation images.
+for prototypeName, prototype in pairs(data.raw["explosion"]) do
+    if prototype.animations ~= nil then
+        -- Has an animation so see if its one of our recognised explosion pictures.
+        local firstAnimation = prototype.animations[1] or prototype.animations
+        if firstAnimation ~= nil and firstAnimation.filename ~= nil then
+            local filename = firstAnimation.filename
+            if filename ~= nil then
+                if string.sub(filename, #filename - 20) == "small-explosion-1.png" then
+                    smallLightExplosionNames[#smallLightExplosionNames + 1] = prototypeName
+                elseif string.sub(filename, #filename - 21) == "medium-explosion-1.png" then
+                    mediumLightExplosionNames[#mediumLightExplosionNames + 1] = prototypeName
+                elseif string.sub(filename, #filename - 16) == "big-explosion.png" then
+                    largeLightExplosionNames[#largeLightExplosionNames + 1] = prototypeName
+                end
+            end
+        end
+        if firstAnimation ~= nil and firstAnimation.stripes ~= nil then
+            local firstStripe = firstAnimation.stripes[1] or firstAnimation.stripes
+            if firstStripe ~= nil and firstStripe.filename ~= nil then
+                local filename = firstStripe.filename
+                if filename ~= nil then
+                    if string.sub(filename, #filename - 22) == "massive-explosion-1.png" then
+                        massiveLightExplosionNames[#massiveLightExplosionNames + 1] = prototypeName
+                    elseif string.sub(filename, #filename - 25) == "bigass-explosion-36f-1.png" then
+                        largeLightExplosionNames[#largeLightExplosionNames + 1] = prototypeName
+                    elseif string.sub(filename, #filename - 19) == "nuke-explosion-1.png" then
+                        nukeLightExplosionNames[#nukeLightExplosionNames + 1] = prototypeName
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Add each light explosion to the animation explosion in the lists.
+for listExplosionNames, lightExplosionName in pairs(explosionLists) do
+    for _, explosionName in pairs(listExplosionNames) do
+        local prototype = data.raw["explosion"][explosionName]
+        if prototype ~= nil then
+            EnsureFieldIsArrayInContainer(prototype, "created_effect")
+            prototype.created_effect = {
+                type = "direct",
+                action_delivery = {
+                    type = "instant",
+                    source_effects = { type = "create-explosion", entity_name = lightExplosionName }
+                }
+            }
+        end
+    end
+end
+
+
+
 
 
 
