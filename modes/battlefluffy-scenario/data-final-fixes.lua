@@ -529,7 +529,10 @@ data:extend({
     We want to hide it from being crafted and make it un-minable.
 ]]
 
-data.raw["recipe"]["camp-fire"].enabled = false
+local campFireRecipe = data.raw["recipe"]["camp-fire"]
+if campFireRecipe ~= nil then
+    campFireRecipe.enabled = false
+end
 
 local campFireEntity = data.raw["furnace"]["camp-fire"]
 if campFireEntity ~= nil then

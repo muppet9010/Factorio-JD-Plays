@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.7
+Date: 2022-08-20
+  Features:
+  Changes:
+  Bugfixes:
+    - Fire Place mod is optional as intended (no errors on startup if missing).
+    - Camp Fire can't be opened by players.
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 20.2.6
 Date: 2022-08-18
   Features:

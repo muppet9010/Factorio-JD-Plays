@@ -45,6 +45,7 @@ local campFireTTLTicksMin, campFireTTLRandomMax = 1800, 1800 -- Between 330 and 
 local CampFireBuilt = function(event)
     local entity = event.entity or event.created_entity
     entity.insert({ name = "nuclear-fuel", count = 2 }) -- Will run for a long time.
+    entity.operable = false
 
     local removeTick = event.tick + campFireTTLTicksMin + math.random(0, campFireTTLRandomMax) ---@cast removeTick Tick
     EventScheduler.ScheduleEventOnce(removeTick, "RemoveCampFire_Scheduled", entity.unit_number--[[@as StringOrNumber]] , { entity = entity })
