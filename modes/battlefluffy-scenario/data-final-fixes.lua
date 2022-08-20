@@ -1,5 +1,9 @@
 --[[
     Do all of these changes in final fixes so hopefully other mods have created all of their bits and we can overwrite them. When made a standalone mod we can always add them as hidden optional dependencies so that we run after them if really needed.
+
+    Lasers and electric type weapons just work.
+    Atomic bombs (rockets) just work.
+    Lights are based on Factorio's shooting and impact explosion graphics. So grenades have a light to match their base game explosion graphic (overly large).
 ]]
 
 
@@ -7,10 +11,6 @@ if settings.startup["jdplays_mode"].value ~= "battlefluffy-scenario" then
     return
 end
 
---[[
-    Lasers and electric type weapons just work.
-    Atomic bombs (rockets) just work.
-]]
 
 
 
@@ -152,9 +152,10 @@ local function RemoveGlowFromAnimationVariationsContents(animationVariations)
 end
 
 --- Removes the draw_as_glow from all of the places this prototype could have it set. So the graphics always respect the light level.
----@param prototype Prototype.Projectile|Prototype.FluidStream|Prototype.FireFlame|Prototype.ArtilleryProjectile
+---@param prototype Prototype.Projectile|Prototype.FluidStream|Prototype.FireFlame|Prototype.ArtilleryProjectile|Prototype.Explosion
 local function RemoveGlowFromPictures(prototype)
     if prototype.animation ~= nil then RemoveGlowFromAnimationContents(prototype.animation) end -- Projectile & Fluid Stream
+    if prototype.animations ~= nil then RemoveGlowFromAnimationVariationsContents(prototype.animations) end -- Explosions
     if prototype.picture ~= nil then RemoveGlowFromSpriteContents(prototype.picture) end -- Artillery Projectile
     if prototype.pictures ~= nil then RemoveGlowFromAnimationVariationsContents(prototype.pictures) end -- Fire
     if prototype.small_tree_fire_pictures ~= nil then RemoveGlowFromAnimationVariationsContents(prototype.small_tree_fire_pictures) end -- Fire
@@ -210,6 +211,7 @@ local function RecordProjectileNameToAmmoCategory(action, ammoCategory)
 end
 
 -- Go over each ammo prototype and add what we need based on its category. We just add a new action to avoid any conflicts with others.
+-- Currently we only add shooting light through this directly. Any in-flight or hit explosions are added later as require much more filtering.
 -- Also capture all of the projectiles that we need to modify based on the ammo's of the correct type that create them.
 for _, prototype in pairs(data.raw["ammo"]) do
     local ammoCategory = prototype.ammo_type.category
@@ -287,7 +289,7 @@ for projectileName, prototype in pairs(data.raw["projectile"]) do
                 }
             }
         }
-        prototype.animation.draw_as_glow = false
+        RemoveGlowFromPictures(prototype)
 
         --CODE NOTE: action check would go here if we can't just tack it on to the specific explosion types nicely.
     elseif projectileModifyType == "tank-shell" then
@@ -361,6 +363,8 @@ data.raw["explosion"]["explosion-gunshot-small"].created_effect = {
 
 
 
+
+
 -- Sprites used by Rendering as can't do rotations correctly from prototype lights.
 --[[
     - Image has to have a black background to stop any auto cropping of the sprite pre rotating to the projectile's position.
@@ -381,7 +385,6 @@ data:extend({
 
 
 
-
 --[[
     Modify the camp-fire entity if its present from the fire-place mod.
     This is for JD's play through only. We will create them purely via Muppet Streamer mod's Spawn Around Player feature.
@@ -391,4 +394,6 @@ data:extend({
 data.raw["recipe"]["camp-fire"].enabled = false
 
 local campFireEntity = data.raw["furnace"]["camp-fire"]
-campFireEntity.minable = nil
+if campFireEntity ~= nil then
+    campFireEntity.minable = nil
+end
