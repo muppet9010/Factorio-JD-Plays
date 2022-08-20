@@ -18,7 +18,7 @@ Battlefluffy Scenario
 ================
 
 Adds a lot of lights to effects as the map is pitch black. These will likely move to a standalone mod in the future as have been written in a semi generic manner.
-Also removes most things from glowing te dark. So a projectile fired across a dark screen is dark itself, rather than being always bright as vanilla Factorio is.
+Also removes most things from glowing in the dark. So a projectile fired across a dark screen are dark themselves now, rather than always being bright like vanilla Factorio is.
 Modifies the "camp-fire" entity added by the Fire Place mod to be suitable for creation by Muppet Streamer mod's Spawn Around Player. This includes making it non minable, auto fuelling it (so it is active and has fire) and removing it 30-60 seconds after created.
 Expects the mod: Fire Place.
 
