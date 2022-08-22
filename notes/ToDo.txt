@@ -1,15 +1,41 @@
+
+Battlefluffy Scenario
+=====================
+
+- Add settings for the light size and intensity of weapon groupings. Should be a setting for direct (close by bright lights) and indirect lights (large gently lights). Groupings by player weapons, large weapons (tanks, arty), impact explosions, fires.
+
+- Make all our light effects come on at a lower darkness level. I suspect the darkness number is the point in the day/night cycle and not how bright the world map is. 0.3 isn't actually right looking at fires, as its already dusk-esk and then the fires suddenly gets lights on them.
+- Make lamp lights (and lighted power poles) be on at lower darkness than they currently do.
+- Make fire have an extra low intensity, large area light. To highlight the darkness further afield from the fires. Will need a reduction in the main light effect to balance the center areas out. Also check that there's no other light on fire, I believe we are overwriting whatever is there rather than adding to it.
+- Also add a larger partial lighting up to non fire lights.
+- The bullet shooting definitely needs a larger/brighter area as turrets shooting together are hard to see on stream. So do rockets and other player held weapons.
+- Maybe the bright area around the explosion should be larger. As a few meters diameter seems small ?
+- Flame shooting weapons should have a constant small fire light on their ends. Flame turrets mainly. They do have a tiny one, but it doesn't really show on stream.
+
+
+
+- Check lighted power poles mod has its lights turn on at the standard light darkness.
+- The pants on fire doesn't seem to be light trees on fire when JD runs past.
+
+
+
+
+Spider Hunt
+===========
+
+
 Bugs:
-    Damage from the north team affects south team's biters. Given we are already intercepting it affecting between the player teams, we may as well block it damaging biters on the other team as well. They aren't auto targetted, but when using nukes or manaully targettign arty at all red dots its very obvious.
+    Damage from the north team affects south team's biters. Given we are already intercepting it affecting between the player teams, we may as well block it damaging biters on the other team as well. They aren't auto targetted, but when using nukes or manually targetting arty at all red dots its very obvious.
 
 
 Spiders atomic bombs:
 	Change to be a small blast area of 5 tiles radius. With the impact damage being very high to kill whatever it hits still, but the blast area being a simple area damages of enough to kill turrets. I'd expect a player in a spider to loose the spider, but not to die themselves if possible. So I think the damages want to be ordered from outer to inner. So that the direct hit happens last, meaning any ejected player from the direct hit doesn't then taken additional damage from the radius ones.
 
 
-/Evolution commmand:
-	React to a player using the non admin default game command and add a supplementary response with the team north and south enemy Evo levels. I can;t stop the base games resposne from what I can see. So the enemy evo returned will always be wrong :(
+/Evolution command:
+	React to a player using the non admin default game command and add a supplementary response with the team north and south enemy Evo levels. I can;t stop the base games response from what I can see. So the enemy evo returned will always be wrong :(
 	https://lua-api.factorio.com/latest/events.html#on_console_chat
-	
-	
+
+
 Losing Team explosions:
 	With the change in logic of JD Goes Boom mod so smaller early increases blow up more, we need to reduce the size of the explosions for the losing team.

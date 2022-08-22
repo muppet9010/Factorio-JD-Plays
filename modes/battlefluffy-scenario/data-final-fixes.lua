@@ -431,7 +431,7 @@ local mediumLightExplosionNames = {} ---@type table<int, string>
 local largeLightExplosionNames = {} ---@type table<int, string>
 local massiveLightExplosionNames = {} ---@type table<int, string>
 local nukeLightExplosionNames = {} ---@type table<int, string>
-local explosionLists = { [smallLightExplosionNames] = "light-explosion-small-explosive-impact", [mediumLightExplosionNames] = "light-explosion-medium-explosive-impact", [largeLightExplosionNames] = "light-explosion-large-explosive-impact", [massiveLightExplosionNames] = "light-explosion-massive-explosive-impact", [nukeLightExplosionNames] = "light-explosion-nuke-explosive-impact" }
+local explosionLists = { [smallLightExplosionNames] = "light-explosion-small-explosive-impact", [mediumLightExplosionNames] = "light-explosion-medium-explosive-impact", [largeLightExplosionNames] = "light-explosion-large-explosive-impact", [massiveLightExplosionNames] = "light-explosion-massive-explosive-impact", [nukeLightExplosionNames] = "light-explosion-nuke-explosive-impact" } ---@type table<table<int, string>, string> # A table of array of explosion names, to the light explosion to be added to the array's named explosions.
 
 -- Populate the lists based on the explosion animation images.
 for prototypeName, prototype in pairs(data.raw["explosion"]) do

@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.8
+Date: 2022-08-XXX
+  Features:
+  Changes:
+  Bugfixes:
+    - Version numbers back on track. Last 2 versions were released under an old minor version number.
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 20.2.7
 Date: 2022-08-20
   Features:
@@ -9,7 +17,7 @@ Date: 2022-08-20
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 20.2.6
-Date: 2022-08-18
+Date: 2022-08-20
   Features:
     - Added mode: Battlefluffy Scenario
   Changes:

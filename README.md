@@ -17,9 +17,12 @@ All modes from before Factorio 1.1 have been removed from the active mod as part
 Battlefluffy Scenario
 ================
 
-Adds a lot of lights to effects as the map is pitch black. These will likely move to a standalone mod in the future as have been written in a semi generic manner.
-Also removes most things from glowing in the dark. So a projectile fired across a dark screen are dark themselves now, rather than always being bright like vanilla Factorio is.
-Modifies the "camp-fire" entity added by the Fire Place mod to be suitable for creation by Muppet Streamer mod's Spawn Around Player. This includes making it non minable, auto fuelling it (so it is active and has fire) and removing it 30-60 seconds after created.
+For use with BattleFluffy's scenario.
+
+- Adds a lot of lights to effects as the map is pitch black. These will likely move to a standalone mod in the future as have been written in a semi generic manner.
+- Removes most things from glowing in the dark. So a projectile fired across a dark screen are dark themselves now, rather than always being bright like vanilla Factorio is. Also means biter spit doesn't glow in the dark.
+- Modifies the "camp-fire" entity added by the Fire Place mod to be suitable for creation by Muppet Streamer mod's Spawn Around Player. This includes making it non minable, auto fuelling it (so it is active and has fire) and removing it 30-60 seconds after created.
+
 Expects the mod: Fire Place.
 
 
