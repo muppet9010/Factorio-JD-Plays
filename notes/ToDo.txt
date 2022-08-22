@@ -4,8 +4,7 @@ Battlefluffy Scenario
 
 - Add settings for the light size and intensity of weapon groupings. Should be a setting for direct (close by bright lights) and indirect lights (large gently lights). Groupings by player weapons, large weapons (tanks, arty), impact explosions, fires.
 
-- Make all our light effects come on at a lower darkness level. I suspect the darkness number is the point in the day/night cycle and not how bright the world map is. 0.3 isn't actually right looking at fires, as its already dusk-esk and then the fires suddenly gets lights on them.
-- Make lamp lights (and lighted power poles) be on at lower darkness than they currently do.
+
 - Make fire have an extra low intensity, large area light. To highlight the darkness further afield from the fires. Will need a reduction in the main light effect to balance the center areas out. Also check that there's no other light on fire, I believe we are overwriting whatever is there rather than adding to it.
 - Also add a larger partial lighting up to non fire lights.
 - The bullet shooting definitely needs a larger/brighter area as turrets shooting together are hard to see on stream. So do rockets and other player held weapons.
@@ -14,7 +13,6 @@ Battlefluffy Scenario
 
 
 
-- Check lighted power poles mod has its lights turn on at the standard light darkness.
 - The pants on fire doesn't seem to be light trees on fire when JD runs past.
 
 

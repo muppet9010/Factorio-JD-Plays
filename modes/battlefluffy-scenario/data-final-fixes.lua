@@ -2,7 +2,6 @@
     Do all of these changes in final fixes so hopefully other mods have created all of their bits and we can overwrite them. When made a standalone mod we can always add them as hidden optional dependencies so that we run after them if really needed.
 
     Lasers and electric type weapons just work.
-    Atomic bombs (rockets) just work.
     Lights are based on Factorio's shooting and impact explosion graphics. So grenades have a light to match their base game explosion graphic (overly large).
 ]]
 
@@ -16,7 +15,7 @@ end
 
 local GraphicsPath = "__jd_plays__/graphics/battlefluffy-scenario/"
 local FireColor = { 1, 0.5, 0 }
-local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 }
+local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 } -- Mirrored to control.
 
 
 -- Create the blank animations that set how long light-explosions last and thus how long the light is visible for.
@@ -82,7 +81,7 @@ data:extend({
             {
                 intensity = 0.3,
                 size = 5,
-                minimum_darkness = 0.3,
+                minimum_darkness = 0.2,
                 shift = { 0, -1 }
             }
         }
@@ -95,7 +94,7 @@ data:extend({
             {
                 intensity = 0.6,
                 size = 8,
-                minimum_darkness = 0.3,
+                minimum_darkness = 0.2,
                 color = ExplosionColor,
                 shift = { 0, -1 }
             }
@@ -109,7 +108,7 @@ data:extend({
             {
                 intensity = 0.8,
                 size = 30,
-                minimum_darkness = 0.3,
+                minimum_darkness = 0.2,
                 color = ExplosionColor,
                 shift = { 0, -1 }
             }
@@ -123,7 +122,7 @@ data:extend({
             {
                 intensity = 0.8,
                 size = 60,
-                minimum_darkness = 0.3,
+                minimum_darkness = 0.2,
                 color = ExplosionColor,
                 shift = { 0, -1 }
             }
@@ -137,7 +136,7 @@ data:extend({
             {
                 intensity = 0.6,
                 size = 7,
-                minimum_darkness = 0.3,
+                minimum_darkness = 0.2,
                 color = ExplosionColor,
                 shift = { 0, -0.5 }
             }
@@ -151,7 +150,7 @@ data:extend({
             {
                 intensity = 0.7,
                 size = 10,
-                minimum_darkness = 0.3,
+                minimum_darkness = 0.2,
                 color = ExplosionColor,
                 shift = { 0, -0.5 }
             }
@@ -165,7 +164,7 @@ data:extend({
             {
                 intensity = 0.8,
                 size = 15,
-                minimum_darkness = 0.3,
+                minimum_darkness = 0.2,
                 color = ExplosionColor,
                 shift = { 0, 0 }
             }
@@ -179,7 +178,7 @@ data:extend({
             {
                 intensity = 0.8,
                 size = 20,
-                minimum_darkness = 0.3,
+                minimum_darkness = 0.2,
                 color = ExplosionColor,
                 shift = { 0, 0 }
             }
@@ -193,7 +192,7 @@ data:extend({
             {
                 intensity = 0.8,
                 size = 60,
-                minimum_darkness = 0.3,
+                minimum_darkness = 0.2,
                 color = ExplosionColor,
                 shift = { 0, 0 }
             }
@@ -254,13 +253,12 @@ end
 
 -- Increase the light from fire on the ground and trees. As the default is too low for these very dark maps.
 for _, prototype in pairs(data.raw["fire"]) do
-    ---@cast prototype Prototype.FireFlame
     RemoveGlowFromPictures(prototype)
 
     -- Only a fire type that that does fire damage, so excludes acid spit.
     if prototype.damage_per_tick ~= nil and prototype.damage_per_tick.type ~= nil and prototype.damage_per_tick.type == "fire" then
         -- Default is: light = {intensity = 0.2, size = 8, color = {1, 0.5, 0}},
-        prototype.light = { { intensity = 0.4, size = 30, color = FireColor } }
+        prototype.light = { { intensity = 0.4, size = 30, color = FireColor, minimum_darkness = 0.2 } }
     end
 end
 
@@ -410,7 +408,7 @@ for _, prototype in pairs(data.raw["stream"]) do
 
     -- Only fire streams have smoke from them.
     if prototype.smoke_sources ~= nil then
-        prototype.stream_light = { intensity = 0.3, size = 12, color = FireColor }
+        prototype.stream_light = { intensity = 0.3, size = 12, color = FireColor, minimum_darkness = 0.2 }
         -- ground_light is terrible
     end
 end
@@ -537,4 +535,16 @@ end
 local campFireEntity = data.raw["furnace"]["camp-fire"]
 if campFireEntity ~= nil then
     campFireEntity.minable = nil
+end
+
+
+
+
+--[[
+    Modify all lamps to turn on earlier. So they don't flash on post dusk.
+]]
+
+for _, prototype in pairs(data.raw["lamp"]) do
+    prototype.darkness_for_all_lamps_on = 0.25 -- default is 0.5
+    prototype.darkness_for_all_lamps_off = 0.15 -- default is 0.3
 end
