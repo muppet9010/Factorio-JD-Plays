@@ -244,17 +244,16 @@ for _, prototype in pairs(data.raw["fire"]) do
     if prototype.damage_per_tick ~= nil and prototype.damage_per_tick.type ~= nil and prototype.damage_per_tick.type == "fire" then
         -- Do tree fires differently from fire flames.
         if prototype.small_tree_fire_pictures ~= nil then
-            -- Is a tree fire.
+            -- Is a tree fire. These are only ever so many close together.
             prototype.light = {
                 { intensity = 0.8 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
                 { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 20 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
                 { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 60 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
             }
         else
-            -- Is a regular fire flame. There isn't a separation in Factorio between the light of a single fire flame and many flames on a single point. So this light has to be a balance between one very very alight point and many smaller fires all near each other.
+            -- Is a regular fire flame. There isn't a separation in Factorio between the number of flames on a point, so the light of a single fire flame and many flames on a single point are equal. So this light has to be a balance between one very very alight point and many smaller fires all near each other. As the light is the same size, but a high flame sprite will be larger than a small lighted area.
             prototype.light = {
-                { intensity = 1 * FireLight_Intensity_Multiplier, size = 20 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
-                { intensity = 0.4 * FireLight_Intensity_Multiplier, size = 40 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
+                { intensity = 2 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
                 { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 60 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
             }
         end
