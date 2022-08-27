@@ -8,18 +8,23 @@ end
 
 
 -- Just have to add this via rendering and not data stage as oriented lights on Projectiles ignore the orientation and just face north.
-local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 } -- Same as in data.
+-- the below should all be the same as in data.
+local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 }
+local MinimumDarkness = 0.2
+local DirectLight_Size_Multiplier = 1
+local DirectLight_Intensity_Multiplier = 1
+
+
 
 ---@param event on_script_trigger_effect
 local OnScriptTriggerEffectEvent = function(event)
     if event.effect_id == "rocket-projectile" then
-        -- TODO: this needs to use the scaling multiplier settings.
         rendering.draw_light {
             sprite = "light_cone-rear_ended",
             orientation = 0.5,
-            scale = 0.3,
-            intensity = 0.3,
-            minimum_darkness = 0.2,
+            scale = 0.4 * DirectLight_Size_Multiplier,
+            intensity = 0.4 * DirectLight_Intensity_Multiplier,
+            minimum_darkness = MinimumDarkness,
             oriented = true,
             color = ExplosionColor,
             target = event.source_entity,

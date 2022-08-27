@@ -20,6 +20,7 @@ local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 } -- Mirrored to contro
 
 -- These should be mod settings, but we will just hardcode them here.
 -- In a standalone mod these should probably be per weapon grouping: player weapons, large weapons (tanks, arty), impact explosions, fires.
+-- Many of these are mirrored to control.
 local DirectLight_Time_Multiplier = 1
 local DirectLight_Size_Multiplier = 1
 local DirectLight_Intensity_Multiplier = 1
@@ -52,75 +53,147 @@ local LightExplosionDefinitions = {
         shift = { 0, -1 }
     },
     {
+        type = "indirect",
+        name = "light-explosion-bullet-source",
+        length = 10,
+        intensity = 0.1,
+        size = 10,
+        shift = { 0, -1 }
+    },
+    {
         type = "direct",
         name = "light-explosion-rocket-source",
-        length = 10,
-        intensity = 0.6,
-        size = 8,
-        color = ExplosionColor,
-        shift = { 0, -1 }
-    },
-    {
-        type = "direct",
-        name = "light-explosion-tank-source",
         length = 20,
-        intensity = 0.8,
-        size = 15,
-        color = ExplosionColor,
-        shift = { 0, -1 }
-    },
-    {
-        type = "direct",
-        name = "light-explosion-artillery-source",
-        length = 20,
-        intensity = 0.8,
+        intensity = 0.4,
         size = 20,
         color = ExplosionColor,
         shift = { 0, -1 }
     },
     {
+        type = "indirect",
+        name = "light-explosion-rocket-source",
+        length = 20,
+        intensity = 0.3,
+        size = 30,
+        shift = { 0, -1 }
+    },
+    {
+        type = "direct",
+        name = "light-explosion-tank-source",
+        length = 30,
+        intensity = 0.6,
+        size = 30,
+        color = ExplosionColor,
+        shift = { 0, -1 }
+    },
+    {
+        type = "indirect",
+        name = "light-explosion-tank-source",
+        length = 30,
+        intensity = 0.3,
+        size = 60,
+        shift = { 0, -1 }
+    },
+    {
+        type = "direct",
+        name = "light-explosion-artillery-source",
+        length = 40,
+        intensity = 0.6,
+        size = 40,
+        color = ExplosionColor,
+        shift = { 0, -1 }
+    },
+    {
+        type = "indirect",
+        name = "light-explosion-artillery-source",
+        length = 40,
+        intensity = 0.3,
+        size = 80,
+        shift = { 0, -1 }
+    },
+    {
         type = "direct",
         name = "light-explosion-small-explosive-impact",
-        length = 20,
-        intensity = 0.6,
-        size = 7,
+        length = 30,
+        intensity = 0.3,
+        size = 5,
         color = ExplosionColor,
+        shift = { 0, -0.5 }
+    },
+    {
+        type = "indirect",
+        name = "light-explosion-small-explosive-impact",
+        length = 40,
+        intensity = 0.3,
+        size = 10,
         shift = { 0, -0.5 }
     },
     {
         type = "direct",
         name = "light-explosion-medium-explosive-impact",
         length = 30,
-        intensity = 0.7,
+        intensity = 0.4,
         size = 10,
         color = ExplosionColor,
         shift = { 0, -0.5 }
     },
     {
+        type = "indirect",
+        name = "light-explosion-medium-explosive-impact",
+        length = 50,
+        intensity = 0.3,
+        size = 25,
+        shift = { 0, -0.5 }
+    },
+    {
         type = "direct",
         name = "light-explosion-large-explosive-impact",
-        length = 40,
-        intensity = 0.8,
-        size = 15,
+        length = 30,
+        intensity = 0.5,
+        size = 20,
         color = ExplosionColor,
+        shift = { 0, 0 }
+    },
+    {
+        type = "indirect",
+        name = "light-explosion-large-explosive-impact",
+        length = 50,
+        intensity = 0.3,
+        size = 40,
         shift = { 0, 0 }
     },
     {
         type = "direct",
         name = "light-explosion-massive-explosive-impact",
         length = 50,
-        intensity = 0.8,
-        size = 20,
+        intensity = 0.5,
+        size = 30,
         color = ExplosionColor,
+        shift = { 0, 0 }
+    },
+    {
+        type = "indirect",
+        name = "light-explosion-massive-explosive-impact",
+        length = 80,
+        intensity = 0.3,
+        size = 60,
         shift = { 0, 0 }
     },
     {
         type = "direct",
         name = "light-explosion-nuke-explosive-impact",
         length = 200,
-        intensity = 0.8,
-        size = 60,
+        intensity = 0.6,
+        size = 80,
         color = ExplosionColor,
+        shift = { 0, 0 }
+    },
+    {
+        type = "indirect",
+        name = "light-explosion-nuke-explosive-impact",
+        length = 250,
+        intensity = 0.3,
+        size = 160,
         shift = { 0, 0 }
     }
 }
@@ -147,14 +220,14 @@ for _, lightExplosionDefinition in pairs(LightExplosionDefinitions) do
     local length = math.max(math.floor(lightExplosionDefinition.length * time_Multiplier), 0) --[[@as uint]]
     local blankAnimation = BlankAnimations[length]
     if blankAnimation == nil then
-        local frames, repeatCount = length, 1
+        local frames, animationSpeed = length, 1
         if frames > 100 then
-            local repeatCount = math.ceil(frames / 100)
-            frames = math.floor(frames / repeatCount) --[[@as uint]]
+            animationSpeed = 100 / frames
+            frames = 100
         end
         blankAnimation = {
             frame_count = frames,
-            repeat_count = repeatCount,
+            animation_speed = animationSpeed,
             filename = GraphicsPath .. "empty_10x10.png",
             priority = "extra-high",
             width = 1,
@@ -309,7 +382,10 @@ for _, prototype in pairs(data.raw["ammo"]) do
             type = "direct",
             action_delivery = {
                 type = "instant",
-                source_effects = { type = "create-explosion", entity_name = "direct-light-explosion-bullet-source" }
+                source_effects = {
+                    { type = "create-explosion", entity_name = "direct-light-explosion-bullet-source" },
+                    { type = "create-explosion", entity_name = "indirect-light-explosion-bullet-source" }
+                }
             }
         }
     elseif ammoCategory == "rocket" then
@@ -320,7 +396,10 @@ for _, prototype in pairs(data.raw["ammo"]) do
             type = "direct",
             action_delivery = {
                 type = "instant",
-                source_effects = { type = "create-explosion", entity_name = "direct-light-explosion-rocket-source" }
+                source_effects = {
+                    { type = "create-explosion", entity_name = "direct-light-explosion-rocket-source" },
+                    { type = "create-explosion", entity_name = "indirect-light-explosion-rocket-source" }
+                }
             }
         }
         RecordProjectileNameToAmmoCategory(action, ammoCategory)
@@ -332,7 +411,10 @@ for _, prototype in pairs(data.raw["ammo"]) do
             type = "direct",
             action_delivery = {
                 type = "instant",
-                source_effects = { type = "create-explosion", entity_name = "direct-light-explosion-tank-source" }
+                source_effects = {
+                    { type = "create-explosion", entity_name = "direct-light-explosion-tank-source" },
+                    { type = "create-explosion", entity_name = "indirect-light-explosion-tank-source" }
+                }
             }
         }
         RecordProjectileNameToAmmoCategory(action, ammoCategory)
@@ -344,7 +426,10 @@ for _, prototype in pairs(data.raw["ammo"]) do
             type = "direct",
             action_delivery = {
                 type = "instant",
-                source_effects = { type = "create-explosion", entity_name = "direct-light-explosion-artillery-source" }
+                source_effects = {
+                    { type = "create-explosion", entity_name = "direct-light-explosion-artillery-source" },
+                    { type = "create-explosion", entity_name = "indirect-light-explosion-artillery-source" }
+                }
             }
         }
         RecordProjectileNameToAmmoCategory(action, ammoCategory)
@@ -443,7 +528,7 @@ local mediumLightExplosionNames = {} ---@type table<int, string>
 local largeLightExplosionNames = {} ---@type table<int, string>
 local massiveLightExplosionNames = {} ---@type table<int, string>
 local nukeLightExplosionNames = {} ---@type table<int, string>
-local explosionLists = { [smallLightExplosionNames] = "direct-light-explosion-small-explosive-impact", [mediumLightExplosionNames] = "direct-light-explosion-medium-explosive-impact", [largeLightExplosionNames] = "direct-light-explosion-large-explosive-impact", [massiveLightExplosionNames] = "direct-light-explosion-massive-explosive-impact", [nukeLightExplosionNames] = "direct-light-explosion-nuke-explosive-impact" } ---@type table<table<int, string>, string> # A table of array of explosion names, to the light explosion to be added to the array's named explosions.
+local explosionLists = { [smallLightExplosionNames] = "light-explosion-small-explosive-impact", [mediumLightExplosionNames] = "light-explosion-medium-explosive-impact", [largeLightExplosionNames] = "light-explosion-large-explosive-impact", [massiveLightExplosionNames] = "light-explosion-massive-explosive-impact", [nukeLightExplosionNames] = "light-explosion-nuke-explosive-impact" } ---@type table<table<int, string>, string> # A table of array of explosion names, to the light explosion to be added to the array's named explosions.
 
 -- Populate the lists based on the explosion animation images.
 for prototypeName, prototype in pairs(data.raw["explosion"]) do
@@ -454,10 +539,13 @@ for prototypeName, prototype in pairs(data.raw["explosion"]) do
             local filename = firstAnimation.filename
             if filename ~= nil then
                 if string.sub(filename, #filename - 20) == "small-explosion-1.png" then
+                    -- Small buildings (1 tile) dying.
                     smallLightExplosionNames[#smallLightExplosionNames + 1] = prototypeName
                 elseif string.sub(filename, #filename - 21) == "medium-explosion-1.png" then
+                    -- Medium buildings (2 tiles) dying.
                     mediumLightExplosionNames[#mediumLightExplosionNames + 1] = prototypeName
                 elseif string.sub(filename, #filename - 16) == "big-explosion.png" then
+                    -- Explosive rockets and tank shells, larger building (3-4 tiles) dying.
                     largeLightExplosionNames[#largeLightExplosionNames + 1] = prototypeName
                 end
             end
@@ -468,10 +556,13 @@ for prototypeName, prototype in pairs(data.raw["explosion"]) do
                 local filename = firstStripe.filename
                 if filename ~= nil then
                     if string.sub(filename, #filename - 22) == "massive-explosion-1.png" then
+                        -- Massive buildings (5-6 tiles) and spidertrons dying.
                         massiveLightExplosionNames[#massiveLightExplosionNames + 1] = prototypeName
                     elseif string.sub(filename, #filename - 25) == "bigass-explosion-36f-1.png" then
+                        -- Artillery shell hitting.
                         largeLightExplosionNames[#largeLightExplosionNames + 1] = prototypeName
                     elseif string.sub(filename, #filename - 19) == "nuke-explosion-1.png" then
+                        -- Nuclear explosion.
                         nukeLightExplosionNames[#nukeLightExplosionNames + 1] = prototypeName
                     end
                 end
@@ -490,7 +581,10 @@ for listExplosionNames, lightExplosionName in pairs(explosionLists) do
                 type = "direct",
                 action_delivery = {
                     type = "instant",
-                    source_effects = { type = "create-explosion", entity_name = lightExplosionName }
+                    source_effects = {
+                        { type = "create-explosion", entity_name = "direct-" .. lightExplosionName },
+                        { type = "create-explosion", entity_name = "indirect-" .. lightExplosionName }
+                    }
                 }
             }
         end
@@ -507,7 +601,10 @@ data.raw["explosion"]["explosion-gunshot-small"].created_effect = {
     type = "direct",
     action_delivery = {
         type = "instant",
-        source_effects = { type = "create-explosion", entity_name = "direct-light-explosion-bullet-source" }
+        source_effects = {
+            { type = "create-explosion", entity_name = "direct-light-explosion-bullet-source" },
+            { type = "create-explosion", entity_name = "indirect-light-explosion-bullet-source" }
+        }
     }
 }
 

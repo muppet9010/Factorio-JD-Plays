@@ -19,7 +19,7 @@ Battlefluffy Scenario
 
 For use with BattleFluffy's scenario.
 
-- Adds a lot of lights to effects as the map is pitch black, i.e. weapon shooting, weapon impacts and building death explosions.
+- Adds a lot of lights to effects as the map is pitch black, i.e. weapon shooting, weapon impacts, fires and building death explosions.
 - Adjusts when lights and lamps turn on times to work better with the dark map.
 - Removes most things from glowing in the dark. So a projectile fired across a dark screen are dark themselves now, rather than always being bright like vanilla Factorio is. Also means biter spit doesn't glow in the dark.
 - Modifies the "camp-fire" entity added by the Fire Place mod to be suitable for creation by Muppet Streamer mod's Spawn Around Player. This includes making it non minable, auto fuelling it (so it is active and has fire) and removing it 30-60 seconds after created.

@@ -3,13 +3,6 @@ Battlefluffy Scenario
 =====================
 
 
-- The visuals from the stream look to match in-game if I look very closely. However, if you are watching more casually then the light effects seem less noticeable. So we do need some buffing of lights for JD stream via hardcoded setting values for this. Also the big light effects are captured for shorter periods by Twitch, so a nuke screen whiting is for a shorter period when viewed in a VOD than in Factorio.
-
-
-- Also add a larger partial lighting up to non fire lights.
-- The bright area around the explosion should be larger. As a few meters diameter seems small given the size of a bright gas cloud. See google pictures for examples. but well lit area each side is 2 times total explosion size. With the less well lit area beyond this another 2 times the size at least.
-
-
 
 
 
