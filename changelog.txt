@@ -1,4 +1,17 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.8
+Date: 2022-08-27
+  Features:
+  Changes:
+    - Battlefluffy - lamps turn on at lower light levels, so they are on over dusk rather than sometimes being post dusk.
+    - Battlefluffy - all light effects start when the map is only a litle bit dark, so while still slightly brighted than vanilla Factorio.
+    - Battlefluffy - larger explosions and fires moved to having a bright inner light and a larger weaker lighting effect to highlight the shadows.
+    - Battlefluffy - flamethrower turrets have a proper idle flame glow.
+    - Battlefluffy - most light effects slightly lengthened for better visibility or aligned to explosion length better.
+  Bugfixes:
+  Info:
+    - Version numbers back on track. Last 2 versions were released under an old minor version number. This did mess up Factorio's feature to update to the latest version for them.
+---------------------------------------------------------------------------------------------------
 Version: 20.2.7
 Date: 2022-08-20
   Features:
@@ -9,7 +22,7 @@ Date: 2022-08-20
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 20.2.6
-Date: 2022-08-18
+Date: 2022-08-20
   Features:
     - Added mode: Battlefluffy Scenario
   Changes:

@@ -1,15 +1,34 @@
+
+Battlefluffy Scenario
+=====================
+
+
+
+
+
+
+
+Spider Hunt
+===========
+
+
 Bugs:
-    Damage from the north team affects south team's biters. Given we are already intercepting it affecting between the player teams, we may as well block it damaging biters on the other team as well. They aren't auto targetted, but when using nukes or manaully targettign arty at all red dots its very obvious.
+    Damage from the north team affects south team's biters. Given we are already intercepting it affecting between the player teams, we may as well block it damaging biters on the other team as well. They aren't auto targetted, but when using nukes or manually targetting arty at all red dots its very obvious.
 
 
 Spiders atomic bombs:
 	Change to be a small blast area of 5 tiles radius. With the impact damage being very high to kill whatever it hits still, but the blast area being a simple area damages of enough to kill turrets. I'd expect a player in a spider to loose the spider, but not to die themselves if possible. So I think the damages want to be ordered from outer to inner. So that the direct hit happens last, meaning any ejected player from the direct hit doesn't then taken additional damage from the radius ones.
 
 
-/Evolution commmand:
-	React to a player using the non admin default game command and add a supplementary response with the team north and south enemy Evo levels. I can;t stop the base games resposne from what I can see. So the enemy evo returned will always be wrong :(
+/Evolution command:
+	React to a player using the non admin default game command and add a supplementary response with the team north and south enemy Evo levels. I can;t stop the base games response from what I can see. So the enemy evo returned will always be wrong :(
 	https://lua-api.factorio.com/latest/events.html#on_console_chat
-	
-	
-Losing Team explosions:
+
+
+Losing team explosions:
 	With the change in logic of JD Goes Boom mod so smaller early increases blow up more, we need to reduce the size of the explosions for the losing team.
+
+
+Spider behaviour changes:
+    - Should look for projectiles near it and if they are nukes run away perpendicular to the rockets orientation. Should keep them away from direct/near hits and this removes the need to make them immune to nukes.
+    - Look to remove the extra invisible spiders. Just script create the extra weapons shooting. As not 100% sure even with big spiders that they won't become detached from the real spider. Alternatively teleport the invisible spiders constantly to the real spiders position and don't bother to give them orders.
