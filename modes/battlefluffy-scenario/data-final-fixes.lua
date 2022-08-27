@@ -18,187 +18,172 @@ local FireColor = { 1, 0.5, 0 }
 local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 } -- Mirrored to control.
 
 
--- Create the blank animations that set how long light-explosions last and thus how long the light is visible for.
-local BlankAnimation10Ticks = {
-    frame_count = 10,
-    filename = GraphicsPath .. "empty_10x10.png",
-    priority = "extra-high",
-    width = 1,
-    height = 1,
-    line_length = 10
+-- These should be mod settings, but we will just hardcode them here.
+-- In a standalone mod these should probably be per weapon grouping: player weapons, large weapons (tanks, arty), impact explosions, fires.
+local DirectLight_Time_Multiplier = 1
+local DirectLight_Size_Multiplier = 1
+local DirectLight_Intensity_Multiplier = 1
+local IndirectLight_Time_Multiplier = 1
+local IndirectLight_Size_Multiplier = 1
+local IndirectLight_Intensity_Multiplier = 1
+local FireLight_Size_Multiplier = 1
+local FireLight_Intensity_Multiplier = 1
+
+
+local MinimumDarkness = 0.2
+
+---@class BattleFluffy_LightExplosionDefinitions
+---@field type "direct"|"indirect"
+---@field name string
+---@field length uint
+---@field intensity double
+---@field size double
+---@field color? Color
+---@field shift MapPosition.1
+
+---@type BattleFluffy_LightExplosionDefinitions[]
+local LightExplosionDefinitions = {
+    {
+        type = "direct",
+        name = "light-explosion-bullet-source",
+        length = 10,
+        intensity = 0.3,
+        size = 5,
+        shift = { 0, -1 }
+    },
+    {
+        type = "direct",
+        name = "light-explosion-rocket-source",
+        length = 10,
+        intensity = 0.6,
+        size = 8,
+        color = ExplosionColor,
+        shift = { 0, -1 }
+    },
+    {
+        type = "direct",
+        name = "light-explosion-tank-source",
+        length = 20,
+        intensity = 0.8,
+        size = 15,
+        color = ExplosionColor,
+        shift = { 0, -1 }
+    },
+    {
+        type = "direct",
+        name = "light-explosion-artillery-source",
+        length = 20,
+        intensity = 0.8,
+        size = 20,
+        color = ExplosionColor,
+        shift = { 0, -1 }
+    },
+    {
+        type = "direct",
+        name = "light-explosion-small-explosive-impact",
+        length = 20,
+        intensity = 0.6,
+        size = 7,
+        color = ExplosionColor,
+        shift = { 0, -0.5 }
+    },
+    {
+        type = "direct",
+        name = "light-explosion-medium-explosive-impact",
+        length = 30,
+        intensity = 0.7,
+        size = 10,
+        color = ExplosionColor,
+        shift = { 0, -0.5 }
+    },
+    {
+        type = "direct",
+        name = "light-explosion-large-explosive-impact",
+        length = 40,
+        intensity = 0.8,
+        size = 15,
+        color = ExplosionColor,
+        shift = { 0, 0 }
+    },
+    {
+        type = "direct",
+        name = "light-explosion-massive-explosive-impact",
+        length = 50,
+        intensity = 0.8,
+        size = 20,
+        color = ExplosionColor,
+        shift = { 0, 0 }
+    },
+    {
+        type = "direct",
+        name = "light-explosion-nuke-explosive-impact",
+        length = 200,
+        intensity = 0.8,
+        size = 60,
+        color = ExplosionColor,
+        shift = { 0, 0 }
+    }
 }
-local BlankAnimation20Ticks = {
-    frame_count = 20,
-    filename = GraphicsPath .. "empty_10x10.png",
-    priority = "extra-high",
-    width = 1,
-    height = 1,
-    line_length = 10
-}
-local BlankAnimation30Ticks = {
-    frame_count = 30,
-    filename = GraphicsPath .. "empty_10x10.png",
-    priority = "extra-high",
-    width = 1,
-    height = 1,
-    line_length = 10
-}
-local BlankAnimation40Ticks = {
-    frame_count = 40,
-    filename = GraphicsPath .. "empty_10x10.png",
-    priority = "extra-high",
-    width = 1,
-    height = 1,
-    line_length = 10
-}
-local BlankAnimation50Ticks = {
-    frame_count = 50,
-    filename = GraphicsPath .. "empty_10x10.png",
-    priority = "extra-high",
-    width = 1,
-    height = 1,
-    line_length = 10
-}
-local BlankAnimation200Ticks = {
-    frame_count = 100,
-    repeat_count = 2,
-    filename = GraphicsPath .. "empty_10x10.png",
-    priority = "extra-high",
-    width = 1,
-    height = 1,
-    line_length = 10
-}
+
+
 
 
 
 -- Create the various light-explosions. Used to create a short light when something is shot.
-data:extend({
-    {
-        type = "explosion",
-        name = "light-explosion-bullet-source",
-        animations = BlankAnimation10Ticks,
-        light = {
-            {
-                intensity = 0.3,
-                size = 5,
-                minimum_darkness = 0.2,
-                shift = { 0, -1 }
+local BlankAnimations = {} ---@type table<uint, Animation>
+for _, lightExplosionDefinition in pairs(LightExplosionDefinitions) do
+
+    -- Get the right multipliers for this type.
+    local time_Multiplier, intensity_Multiplier, size_Multiplier
+    if lightExplosionDefinition.type == "direct" then
+        time_Multiplier, intensity_Multiplier, size_Multiplier = DirectLight_Time_Multiplier, DirectLight_Intensity_Multiplier, DirectLight_Size_Multiplier
+    elseif lightExplosionDefinition.type == "indirect" then
+        time_Multiplier, intensity_Multiplier, size_Multiplier = IndirectLight_Time_Multiplier, IndirectLight_Intensity_Multiplier, IndirectLight_Size_Multiplier
+    else
+        error("unsupported type")
+    end
+
+    -- Create the blank animations that set how long light-explosions last and thus how long the light is visible for.
+    local length = math.max(math.floor(lightExplosionDefinition.length * time_Multiplier), 0) --[[@as uint]]
+    local blankAnimation = BlankAnimations[length]
+    if blankAnimation == nil then
+        local frames, repeatCount = length, 1
+        if frames > 100 then
+            local repeatCount = math.ceil(frames / 100)
+            frames = math.floor(frames / repeatCount) --[[@as uint]]
+        end
+        blankAnimation = {
+            frame_count = frames,
+            repeat_count = repeatCount,
+            filename = GraphicsPath .. "empty_10x10.png",
+            priority = "extra-high",
+            width = 1,
+            height = 1,
+            line_length = 10
+        }
+        BlankAnimations[length] = blankAnimation
+    end
+
+    -- Create the explosion prototype.
+    data:extend({
+        {
+            type = "explosion",
+            name = lightExplosionDefinition.type .. "-" .. lightExplosionDefinition.name,
+            animations = blankAnimation,
+            light = {
+                {
+                    intensity = lightExplosionDefinition.intensity * intensity_Multiplier,
+                    size = lightExplosionDefinition.size * size_Multiplier,
+                    color = lightExplosionDefinition.color,
+                    minimum_darkness = MinimumDarkness,
+                    shift = lightExplosionDefinition.shift
+                }
             }
         }
-    },
-    {
-        type = "explosion",
-        name = "light-explosion-rocket-source",
-        animations = BlankAnimation10Ticks,
-        light = {
-            {
-                intensity = 0.6,
-                size = 8,
-                minimum_darkness = 0.2,
-                color = ExplosionColor,
-                shift = { 0, -1 }
-            }
-        }
-    },
-    {
-        type = "explosion",
-        name = "light-explosion-tank-source",
-        animations = BlankAnimation20Ticks,
-        light = {
-            {
-                intensity = 0.8,
-                size = 30,
-                minimum_darkness = 0.2,
-                color = ExplosionColor,
-                shift = { 0, -1 }
-            }
-        }
-    },
-    {
-        type = "explosion",
-        name = "light-explosion-artillery-source",
-        animations = BlankAnimation20Ticks,
-        light = {
-            {
-                intensity = 0.8,
-                size = 60,
-                minimum_darkness = 0.2,
-                color = ExplosionColor,
-                shift = { 0, -1 }
-            }
-        }
-    },
-    {
-        type = "explosion",
-        name = "light-explosion-small-explosive-impact",
-        animations = BlankAnimation20Ticks,
-        light = {
-            {
-                intensity = 0.6,
-                size = 7,
-                minimum_darkness = 0.2,
-                color = ExplosionColor,
-                shift = { 0, -0.5 }
-            }
-        }
-    },
-    {
-        type = "explosion",
-        name = "light-explosion-medium-explosive-impact",
-        animations = BlankAnimation30Ticks,
-        light = {
-            {
-                intensity = 0.7,
-                size = 10,
-                minimum_darkness = 0.2,
-                color = ExplosionColor,
-                shift = { 0, -0.5 }
-            }
-        }
-    },
-    {
-        type = "explosion",
-        name = "light-explosion-large-explosive-impact",
-        animations = BlankAnimation40Ticks,
-        light = {
-            {
-                intensity = 0.8,
-                size = 15,
-                minimum_darkness = 0.2,
-                color = ExplosionColor,
-                shift = { 0, 0 }
-            }
-        }
-    },
-    {
-        type = "explosion",
-        name = "light-explosion-massive-explosive-impact",
-        animations = BlankAnimation50Ticks,
-        light = {
-            {
-                intensity = 0.8,
-                size = 20,
-                minimum_darkness = 0.2,
-                color = ExplosionColor,
-                shift = { 0, 0 }
-            }
-        }
-    },
-    {
-        type = "explosion",
-        name = "light-explosion-nuke-explosive-impact",
-        animations = BlankAnimation200Ticks,
-        light = {
-            {
-                intensity = 0.8,
-                size = 60,
-                minimum_darkness = 0.2,
-                color = ExplosionColor,
-                shift = { 0, 0 }
-            }
-        }
-    }
-})
+    })
+end
+
+
 
 
 
@@ -257,8 +242,22 @@ for _, prototype in pairs(data.raw["fire"]) do
 
     -- Only a fire type that that does fire damage, so excludes acid spit.
     if prototype.damage_per_tick ~= nil and prototype.damage_per_tick.type ~= nil and prototype.damage_per_tick.type == "fire" then
-        -- Default is: light = {intensity = 0.2, size = 8, color = {1, 0.5, 0}},
-        prototype.light = { { intensity = 0.4, size = 30, color = FireColor, minimum_darkness = 0.2 } }
+        -- Do tree fires differently from fire flames.
+        if prototype.small_tree_fire_pictures ~= nil then
+            -- Is a tree fire.
+            prototype.light = {
+                { intensity = 0.8 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
+                { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 20 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
+                { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 60 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
+            }
+        else
+            -- Is a regular fire flame. There isn't a separation in Factorio between the light of a single fire flame and many flames on a single point. So this light has to be a balance between one very very alight point and many smaller fires all near each other.
+            prototype.light = {
+                { intensity = 1 * FireLight_Intensity_Multiplier, size = 20 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
+                { intensity = 0.4 * FireLight_Intensity_Multiplier, size = 40 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
+                { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 60 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
+            }
+        end
     end
 end
 
@@ -311,7 +310,7 @@ for _, prototype in pairs(data.raw["ammo"]) do
             type = "direct",
             action_delivery = {
                 type = "instant",
-                source_effects = { type = "create-explosion", entity_name = "light-explosion-bullet-source" }
+                source_effects = { type = "create-explosion", entity_name = "direct-light-explosion-bullet-source" }
             }
         }
     elseif ammoCategory == "rocket" then
@@ -322,7 +321,7 @@ for _, prototype in pairs(data.raw["ammo"]) do
             type = "direct",
             action_delivery = {
                 type = "instant",
-                source_effects = { type = "create-explosion", entity_name = "light-explosion-rocket-source" }
+                source_effects = { type = "create-explosion", entity_name = "direct-light-explosion-rocket-source" }
             }
         }
         RecordProjectileNameToAmmoCategory(action, ammoCategory)
@@ -334,7 +333,7 @@ for _, prototype in pairs(data.raw["ammo"]) do
             type = "direct",
             action_delivery = {
                 type = "instant",
-                source_effects = { type = "create-explosion", entity_name = "light-explosion-tank-source" }
+                source_effects = { type = "create-explosion", entity_name = "direct-light-explosion-tank-source" }
             }
         }
         RecordProjectileNameToAmmoCategory(action, ammoCategory)
@@ -346,7 +345,7 @@ for _, prototype in pairs(data.raw["ammo"]) do
             type = "direct",
             action_delivery = {
                 type = "instant",
-                source_effects = { type = "create-explosion", entity_name = "light-explosion-artillery-source" }
+                source_effects = { type = "create-explosion", entity_name = "direct-light-explosion-artillery-source" }
             }
         }
         RecordProjectileNameToAmmoCategory(action, ammoCategory)
@@ -408,8 +407,24 @@ for _, prototype in pairs(data.raw["stream"]) do
 
     -- Only fire streams have smoke from them.
     if prototype.smoke_sources ~= nil then
-        prototype.stream_light = { intensity = 0.3, size = 12, color = FireColor, minimum_darkness = 0.2 }
+        -- The stream_light does have a weird spreading out as it reaches the target, I assume its mean to represent it getting close to the ground.
+        prototype.stream_light = {
+            { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 5 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
+            { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness }
+        }
         -- ground_light is terrible
+    end
+end
+
+
+-- Go over the turrets and add better lighting to the flame turret nozzles.
+for _, prototype in pairs(data.raw["fluid-turret"]) do
+    if prototype.attack_parameters ~= nil and prototype.attack_parameters.ammo_type ~= nil and prototype.attack_parameters.ammo_type.category == "flamethrower" then
+        -- Is a flame turret.
+        prototype.muzzle_light = {
+            { intensity = 0.4 * FireLight_Intensity_Multiplier, size = 3 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
+            { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness }
+        }
     end
 end
 
@@ -429,7 +444,7 @@ local mediumLightExplosionNames = {} ---@type table<int, string>
 local largeLightExplosionNames = {} ---@type table<int, string>
 local massiveLightExplosionNames = {} ---@type table<int, string>
 local nukeLightExplosionNames = {} ---@type table<int, string>
-local explosionLists = { [smallLightExplosionNames] = "light-explosion-small-explosive-impact", [mediumLightExplosionNames] = "light-explosion-medium-explosive-impact", [largeLightExplosionNames] = "light-explosion-large-explosive-impact", [massiveLightExplosionNames] = "light-explosion-massive-explosive-impact", [nukeLightExplosionNames] = "light-explosion-nuke-explosive-impact" } ---@type table<table<int, string>, string> # A table of array of explosion names, to the light explosion to be added to the array's named explosions.
+local explosionLists = { [smallLightExplosionNames] = "direct-light-explosion-small-explosive-impact", [mediumLightExplosionNames] = "direct-light-explosion-medium-explosive-impact", [largeLightExplosionNames] = "direct-light-explosion-large-explosive-impact", [massiveLightExplosionNames] = "direct-light-explosion-massive-explosive-impact", [nukeLightExplosionNames] = "direct-light-explosion-nuke-explosive-impact" } ---@type table<table<int, string>, string> # A table of array of explosion names, to the light explosion to be added to the array's named explosions.
 
 -- Populate the lists based on the explosion animation images.
 for prototypeName, prototype in pairs(data.raw["explosion"]) do
@@ -493,7 +508,7 @@ data.raw["explosion"]["explosion-gunshot-small"].created_effect = {
     type = "direct",
     action_delivery = {
         type = "instant",
-        source_effects = { type = "create-explosion", entity_name = "light-explosion-bullet-source" }
+        source_effects = { type = "create-explosion", entity_name = "direct-light-explosion-bullet-source" }
     }
 }
 
@@ -545,6 +560,6 @@ end
 ]]
 
 for _, prototype in pairs(data.raw["lamp"]) do
-    prototype.darkness_for_all_lamps_on = 0.25 -- default is 0.5
-    prototype.darkness_for_all_lamps_off = 0.15 -- default is 0.3
+    prototype.darkness_for_all_lamps_on = MinimumDarkness + 0.05 -- default is 0.5
+    prototype.darkness_for_all_lamps_off = MinimumDarkness - 0.05 -- default is 0.3
 end

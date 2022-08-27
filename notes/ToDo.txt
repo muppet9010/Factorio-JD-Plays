@@ -2,18 +2,15 @@
 Battlefluffy Scenario
 =====================
 
-- Add settings for the light size and intensity of weapon groupings. Should be a setting for direct (close by bright lights) and indirect lights (large gently lights). Groupings by player weapons, large weapons (tanks, arty), impact explosions, fires.
+
+- The visuals from the stream look to match in-game if I look very closely. However, if you are watching more casually then the light effects seem less noticeable. So we do need some buffing of lights for JD stream via hardcoded setting values for this. Also the big light effects are captured for shorter periods by Twitch, so a nuke screen whiting is for a shorter period when viewed in a VOD than in Factorio.
 
 
-- Make fire have an extra low intensity, large area light. To highlight the darkness further afield from the fires. Will need a reduction in the main light effect to balance the center areas out. Also check that there's no other light on fire, I believe we are overwriting whatever is there rather than adding to it.
 - Also add a larger partial lighting up to non fire lights.
-- The bullet shooting definitely needs a larger/brighter area as turrets shooting together are hard to see on stream. So do rockets and other player held weapons.
-- Maybe the bright area around the explosion should be larger. As a few meters diameter seems small ?
-- Flame shooting weapons should have a constant small fire light on their ends. Flame turrets mainly. They do have a tiny one, but it doesn't really show on stream.
+- The bright area around the explosion should be larger. As a few meters diameter seems small given the size of a bright gas cloud. See google pictures for examples. but well lit area each side is 2 times total explosion size. With the less well lit area beyond this another 2 times the size at least.
 
 
 
-- The pants on fire doesn't seem to be light trees on fire when JD runs past.
 
 
 
@@ -35,5 +32,10 @@ Spiders atomic bombs:
 	https://lua-api.factorio.com/latest/events.html#on_console_chat
 
 
-Losing Team explosions:
+Losing team explosions:
 	With the change in logic of JD Goes Boom mod so smaller early increases blow up more, we need to reduce the size of the explosions for the losing team.
+
+
+Spider behaviour changes:
+    - Should look for projectiles near it and if they are nukes run away perpendicular to the rockets orientation. Should keep them away from direct/near hits and this removes the need to make them immune to nukes.
+    - Look to remove the extra invisible spiders. Just script create the extra weapons shooting. As not 100% sure even with big spiders that they won't become detached from the real spider. Alternatively teleport the invisible spiders constantly to the real spiders position and don't bother to give them orders.

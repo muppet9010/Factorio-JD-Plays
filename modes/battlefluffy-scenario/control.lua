@@ -13,6 +13,7 @@ local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 } -- Same as in data.
 ---@param event on_script_trigger_effect
 local OnScriptTriggerEffectEvent = function(event)
     if event.effect_id == "rocket-projectile" then
+        -- TODO: this needs to use the scaling multiplier settings.
         rendering.draw_light {
             sprite = "light_cone-rear_ended",
             orientation = 0.5,
