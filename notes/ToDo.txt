@@ -3,10 +3,6 @@ Battlefluffy Scenario
 =====================
 
 
-Make the large fire light be explosion colored, so just the immediate area of the flames is orange light.
-Review any other colored light we use. Should just be very local light colored, with rest just regular light.
-
-
 
 
 

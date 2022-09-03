@@ -1,8 +1,11 @@
 ---------------------------------------------------------------------------------------------------
 Version: 20.2.9
-Date: 2022-09-XXXX
+Date: 2022-09-03
   Features:
   Changes:
+    - Battlefluffy - made fire and explosion lights be present in all brightness conditions. So they don't just vanish/appear when its almost fully bright.
+    - Battlefluffy - reduce the red levels in fire lighting. Man made fire light is a yellow color due to the high heat. This makes them closer color wise to the larger shooting and explosion lights. Forest fires are still an orange colored light, but a bit less red than before.
+    - Battlefluffy - reduce fires central lighting a bit, so they don't stack as easily in to fully bright areas.
   Bugfixes:
   Info:
 ---------------------------------------------------------------------------------------------------
