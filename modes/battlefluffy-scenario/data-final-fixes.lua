@@ -14,6 +14,7 @@ end
 
 
 local GraphicsPath = "__jd_plays__/graphics/battlefluffy-scenario/"
+local WhiteColor = { 1, 1, 1 }
 local FireColor = { 1, 0.5, 0 }
 local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 } -- Mirrored to control.
 
@@ -50,6 +51,7 @@ local LightExplosionDefinitions = {
         length = 10,
         intensity = 0.3,
         size = 5,
+        color = WhiteColor,
         shift = { 0, -1 }
     },
     {
@@ -58,6 +60,7 @@ local LightExplosionDefinitions = {
         length = 10,
         intensity = 0.1,
         size = 10,
+        color = WhiteColor,
         shift = { 0, -1 }
     },
     {
@@ -75,6 +78,7 @@ local LightExplosionDefinitions = {
         length = 20,
         intensity = 0.3,
         size = 30,
+        color = WhiteColor,
         shift = { 0, -1 }
     },
     {
@@ -92,6 +96,7 @@ local LightExplosionDefinitions = {
         length = 30,
         intensity = 0.3,
         size = 60,
+        color = WhiteColor,
         shift = { 0, -1 }
     },
     {
@@ -109,6 +114,7 @@ local LightExplosionDefinitions = {
         length = 40,
         intensity = 0.3,
         size = 80,
+        color = WhiteColor,
         shift = { 0, -1 }
     },
     {
@@ -126,6 +132,7 @@ local LightExplosionDefinitions = {
         length = 40,
         intensity = 0.3,
         size = 10,
+        color = WhiteColor,
         shift = { 0, -0.5 }
     },
     {
@@ -143,6 +150,7 @@ local LightExplosionDefinitions = {
         length = 50,
         intensity = 0.3,
         size = 25,
+        color = WhiteColor,
         shift = { 0, -0.5 }
     },
     {
@@ -160,6 +168,7 @@ local LightExplosionDefinitions = {
         length = 50,
         intensity = 0.3,
         size = 40,
+        color = WhiteColor,
         shift = { 0, 0 }
     },
     {
@@ -177,6 +186,7 @@ local LightExplosionDefinitions = {
         length = 80,
         intensity = 0.3,
         size = 60,
+        color = WhiteColor,
         shift = { 0, 0 }
     },
     {
@@ -194,6 +204,7 @@ local LightExplosionDefinitions = {
         length = 250,
         intensity = 0.3,
         size = 160,
+        color = WhiteColor,
         shift = { 0, 0 }
     }
 }
