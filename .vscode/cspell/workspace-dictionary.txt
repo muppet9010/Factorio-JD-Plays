@@ -1,7 +1,9 @@
 JGB
-jdplays
-battlefluffy
-jd
-Mukkie
-p0ober
-Klonan
+JDPlays # Streamer's name.
+JD # Streamer's name.
+Battlefluffy # Scenario creator.
+Mukkie # Streamer's name.
+P0ober # Streamer's name.
+P0obers # Streamer's name.
+P00ber # Commonly used mis-spelling of the streamers name.
+Klonan # Factorio developer.

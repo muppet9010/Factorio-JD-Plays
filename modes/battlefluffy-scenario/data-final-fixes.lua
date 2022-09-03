@@ -14,7 +14,9 @@ end
 
 
 local GraphicsPath = "__jd_plays__/graphics/battlefluffy-scenario/"
-local FireColor = { 1, 0.5, 0 }
+local WhiteColor = { 1, 1, 1 }
+local ForestFireColor = { 255, 140, 0 }
+local OilFireColor = { 255, 225, 0 }
 local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 } -- Mirrored to control.
 
 
@@ -31,7 +33,7 @@ local FireLight_Size_Multiplier = 1
 local FireLight_Intensity_Multiplier = 1
 
 
-local MinimumDarkness = 0.2
+local MinimumDarkness = 0
 
 ---@class BattleFluffy_LightExplosionDefinitions
 ---@field type "direct"|"indirect"
@@ -50,6 +52,7 @@ local LightExplosionDefinitions = {
         length = 10,
         intensity = 0.3,
         size = 5,
+        color = WhiteColor,
         shift = { 0, -1 }
     },
     {
@@ -58,6 +61,7 @@ local LightExplosionDefinitions = {
         length = 10,
         intensity = 0.1,
         size = 10,
+        color = WhiteColor,
         shift = { 0, -1 }
     },
     {
@@ -75,6 +79,7 @@ local LightExplosionDefinitions = {
         length = 20,
         intensity = 0.3,
         size = 30,
+        color = WhiteColor,
         shift = { 0, -1 }
     },
     {
@@ -92,6 +97,7 @@ local LightExplosionDefinitions = {
         length = 30,
         intensity = 0.3,
         size = 60,
+        color = WhiteColor,
         shift = { 0, -1 }
     },
     {
@@ -109,6 +115,7 @@ local LightExplosionDefinitions = {
         length = 40,
         intensity = 0.3,
         size = 80,
+        color = WhiteColor,
         shift = { 0, -1 }
     },
     {
@@ -126,6 +133,7 @@ local LightExplosionDefinitions = {
         length = 40,
         intensity = 0.3,
         size = 10,
+        color = WhiteColor,
         shift = { 0, -0.5 }
     },
     {
@@ -143,6 +151,7 @@ local LightExplosionDefinitions = {
         length = 50,
         intensity = 0.3,
         size = 25,
+        color = WhiteColor,
         shift = { 0, -0.5 }
     },
     {
@@ -160,6 +169,7 @@ local LightExplosionDefinitions = {
         length = 50,
         intensity = 0.3,
         size = 40,
+        color = WhiteColor,
         shift = { 0, 0 }
     },
     {
@@ -177,6 +187,7 @@ local LightExplosionDefinitions = {
         length = 80,
         intensity = 0.3,
         size = 60,
+        color = WhiteColor,
         shift = { 0, 0 }
     },
     {
@@ -194,6 +205,7 @@ local LightExplosionDefinitions = {
         length = 250,
         intensity = 0.3,
         size = 160,
+        color = WhiteColor,
         shift = { 0, 0 }
     }
 }
@@ -319,15 +331,15 @@ for _, prototype in pairs(data.raw["fire"]) do
         if prototype.small_tree_fire_pictures ~= nil then
             -- Is a tree fire. These are only ever so many close together.
             prototype.light = {
-                { intensity = 0.8 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
-                { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 20 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
-                { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 60 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
+                { intensity = 0.4 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = ForestFireColor, minimum_darkness = MinimumDarkness },
+                { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 20 * FireLight_Size_Multiplier, color = ForestFireColor, minimum_darkness = MinimumDarkness },
+                { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 60 * FireLight_Size_Multiplier, color = ForestFireColor, minimum_darkness = MinimumDarkness },
             }
         else
             -- Is a regular fire flame. There isn't a separation in Factorio between the number of flames on a point, so the light of a single fire flame and many flames on a single point are equal. So this light has to be a balance between one very very alight point and many smaller fires all near each other. As the light is the same size, but a high flame sprite will be larger than a small lighted area.
             prototype.light = {
-                { intensity = 2 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
-                { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 60 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
+                { intensity = 2 * FireLight_Intensity_Multiplier, size = 8 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness },
+                { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 60 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness },
             }
         end
     end
@@ -493,8 +505,8 @@ for _, prototype in pairs(data.raw["stream"]) do
     if prototype.smoke_sources ~= nil then
         -- The stream_light does have a weird spreading out as it reaches the target, I assume its mean to represent it getting close to the ground.
         prototype.stream_light = {
-            { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 5 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
-            { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness }
+            { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 5 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness },
+            { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness }
         }
         -- ground_light is terrible
     end
@@ -506,8 +518,8 @@ for _, prototype in pairs(data.raw["fluid-turret"]) do
     if prototype.attack_parameters ~= nil and prototype.attack_parameters.ammo_type ~= nil and prototype.attack_parameters.ammo_type.category == "flamethrower" then
         -- Is a flame turret.
         prototype.muzzle_light = {
-            { intensity = 0.4 * FireLight_Intensity_Multiplier, size = 3 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness },
-            { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = FireColor, minimum_darkness = MinimumDarkness }
+            { intensity = 0.4 * FireLight_Intensity_Multiplier, size = 3 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness },
+            { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness }
         }
     end
 end
@@ -653,9 +665,10 @@ end
 
 --[[
     Modify all lamps to turn on earlier. So they don't flash on post dusk.
+    We don't want them on when its basically fully bright, but on the time its not bright as it gets dark fast.
 ]]
 
 for _, prototype in pairs(data.raw["lamp"]) do
-    prototype.darkness_for_all_lamps_on = MinimumDarkness + 0.05 -- default is 0.5
-    prototype.darkness_for_all_lamps_off = MinimumDarkness - 0.05 -- default is 0.3
+    prototype.darkness_for_all_lamps_on = 0.1 -- default is 0.5
+    prototype.darkness_for_all_lamps_off = 0.05 -- default is 0.3
 end

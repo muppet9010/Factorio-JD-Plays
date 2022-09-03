@@ -1,10 +1,20 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.9
+Date: 2022-09-03
+  Features:
+  Changes:
+    - Battlefluffy - made fire and explosion lights be present in all brightness conditions. So they don't just vanish/appear when its almost fully bright.
+    - Battlefluffy - reduce the red levels in fire lighting. Man made fire light is a yellow color due to the high heat. This makes them closer color wise to the larger shooting and explosion lights. Forest fires are still an orange colored light, but a bit less red than before.
+    - Battlefluffy - reduce fires central lighting a bit, so they don't stack as easily in to fully bright areas.
+  Bugfixes:
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 20.2.8
 Date: 2022-08-27
   Features:
   Changes:
     - Battlefluffy - lamps turn on at lower light levels, so they are on over dusk rather than sometimes being post dusk.
-    - Battlefluffy - all light effects start when the map is only a litle bit dark, so while still slightly brighted than vanilla Factorio.
+    - Battlefluffy - all light effects start when the map is only a little bit dark, so while still slightly brightened than vanilla Factorio.
     - Battlefluffy - larger explosions and fires moved to having a bright inner light and a larger weaker lighting effect to highlight the shadows.
     - Battlefluffy - flamethrower turrets have a proper idle flame glow.
     - Battlefluffy - most light effects slightly lengthened for better visibility or aligned to explosion length better.
@@ -41,8 +51,8 @@ Version: 20.2.4
 Date: 2022-06-16
   Features:
   Changes:
-    - JD Spider Race - Player Manager shows how many total players are online for each team. Doesn't update on players joining/leaving server as this would interfear with admins trying to assign players to teams as large parts of the GUI reload at once.
-    - JD Spider Race - Player Manager, when selecting a player's name button it now highlighs the button in bold as well as the name appearing at the bottom middle of the GUI. So its more obvious who has been selected.
+    - JD Spider Race - Player Manager shows how many total players are online for each team. Doesn't update on players joining/leaving server as this would interfere with admins trying to assign players to teams as large parts of the GUI reload at once.
+    - JD Spider Race - Player Manager, when selecting a player's name button it now highlights the button in bold as well as the name appearing at the bottom middle of the GUI. So its more obvious who has been selected.
   Bugfixes:
     - JD Spider Race - Handle offline players being assigned to an initial team and moved between teams. Errored and crashed before.
   Info:
@@ -112,7 +122,7 @@ Date: 2020-01-03
   Changes:
   Bugfixes:
   Info:
-    - January 2020: tweak tree list obtaining code to be more effecient and clearer to read
+    - January 2020: tweak tree list obtaining code to be more efficient and clearer to read
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.19
 Date: 2020-01-03
@@ -127,7 +137,7 @@ Date: 2019-12-13
   Features:
   Changes:
   Bugfixes:
-    - Make mod safe to be removed from save and then re-added later, or atleast not error on load...
+    - Make mod safe to be removed from save and then re-added later, or at least not error on load...
     - Shared Damage - Tweak player kills other player shared damage message so it reads properly
     - Biter Hunt Group - fixed logic path where biter target entity could be kept after becoming invalid if player driving state changed after death event received.
     - Added protection to try and catch invalid biter target entity command scenarios. Will try to fix state so mod doesn't crash, but it 'may' lead to a messed up mod state that can be cleared later.
@@ -137,7 +147,7 @@ Version: 17.0.17
 Date: 2019-12-10
   Features:
   Changes:
-    - Biter Hunt Groups will no longer be treated like vanilla biters. So not despawned or told to join a biter base.
+    - Biter Hunt Groups will no longer be treated like vanilla biters. So not de-spawned or told to join a biter base.
   Bugfixes:
     - Once biters are targeting spawn they will stop being re-directed in all cases. Should stop some back and forth behaviour.
     - Shared Damage map distance populated for existing saves
@@ -157,7 +167,7 @@ Date: 2019-12-08
 Version: 17.0.15
 Date: 2019-12-08
   Features:
-    - Shared damage is proportional to the distance between the injured player and the other player vs the generated map size. So on big maps you need to be further away from them to recive half damage than a small map.
+    - Shared damage is proportional to the distance between the injured player and the other player vs the generated map size. So on big maps you need to be further away from them to receive half damage than a small map.
     - Biter hunting group message includes clickable GPS location of targeted player's position.
     - Biter Hunt Groups has command to write out results as JSON: biters_write_out_hunt_group_results
     - Shared damage has command to write out results as JSON: shared_damage_write_out_kills_deaths
@@ -167,8 +177,8 @@ Date: 2019-12-08
   Bugfixes:
     - fixed typo in snowball mod compatibility added in 17.0.13
     - Shared damage - damage <= 0 is ignored
-    - Biter hunt groups will be given new attack orders should thye lose them.
-    - Biter hunt group will not declare player vicotry before they are all dead now.
+    - Biter hunt groups will be given new attack orders should they lose them.
+    - Biter hunt group will not declare player victory before they are all dead now.
     - Correct further intermittent startup crash for some players with scheduled event functions shown in logs.
   Info:
 ---------------------------------------------------------------------------------------------------
@@ -221,7 +231,7 @@ Date: 2019-05-19
 Version: 17.0.9
 Date: 2019-05-17
   Features:
-    - Added mode for JD & P00bers May 2019 multiplayer series.
+    - Added mode for JD & P0obers May 2019 multiplayer series.
   Changes:
   Bugfixes:
   Info:
@@ -234,7 +244,7 @@ Date: 2019-05-08
   Bugfixes:
     - May 2019 mode - Fixed crash loading previous version save.
   Info:
-    - Made all localisation texts truely uniquely named to avoid future conflicts.
+    - Made all localisation texts truly uniquely named to avoid future conflicts.
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.7
 Date: 2019-05-07
@@ -253,7 +263,7 @@ Date: 2019-05-05
   Bugfixes:
     - May 2019 mode - Fix possible infinite loop when trying to find places for missing biters when most have a spot.
     - May 2019 mode - Avoid nil LuaEntity references if a ground movement effect is removed by something else.
-    - May 2019 mode - Make ground effect space reserving entities indestructable to avoid issues. Does mean vehicles bounce off them. Need to reserve the space so that biters can safe to spawn there.
+    - May 2019 mode - Make ground effect space reserving entities indestructible to avoid issues. Does mean vehicles bounce off them. Need to reserve the space so that biters can safe to spawn there.
   Info:
     - May 2019 mode - Tweak GUI wording.
     - May 2019 mode - Clarify biter/player chat messages
@@ -263,7 +273,7 @@ Date: 2019-05-05
   Features:
   Changes:
   Bugfixes:
-    - May 2019 mode - resolved issue with taking an SP game in to MP around GUI creation and destroying.
+    - May 2019 mode - resolved issue with taking a Single Player game in to a Multi Player around GUI creation and destroying.
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 17.0.4
