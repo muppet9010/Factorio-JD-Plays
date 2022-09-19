@@ -3,7 +3,6 @@ Battlefluffy Scenario
 =====================
 
 Lower both fire types color saturation a bit.
-Make artillery wagons military targets.
 
 
 

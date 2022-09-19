@@ -3,6 +3,7 @@ Version: 20.2.10
 Date: 2022-09-19
   Features:
   Changes:
+    - Battlefluffy - made the artillery wagon unable to fire to balance out scenario limitations. It can still be used to carry a lot of shells.
   Bugfixes:
   Info:
 ---------------------------------------------------------------------------------------------------
