@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.10
+Date: 2022-09-19
+  Features:
+  Changes:
+  Bugfixes:
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 20.2.9
 Date: 2022-09-03
   Features:
@@ -69,7 +76,7 @@ Date: 2022-04-30
 Version: 20.2.2
 Date: 2022-04-15
   Features:
-    - Added mode: Easter Egg Suprise (2022)
+    - Added mode: Easter Egg Surprise (2022)
   Changes:
   Bugfixes:
   Info:

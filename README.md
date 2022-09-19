@@ -52,7 +52,7 @@ Future compatibility note: this mod has had to include copies of some base spide
 
 
 
-Easter Egg Suprise (2022)
+Easter Egg Surprise (2022)
 ================
 
 When Biter Egg Nests are destroyed sometimes random items will be revealed as having been collected within the nest.
