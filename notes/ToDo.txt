@@ -2,8 +2,6 @@
 Battlefluffy Scenario
 =====================
 
-Lower both fire types color saturation a bit.
-
 
 
 

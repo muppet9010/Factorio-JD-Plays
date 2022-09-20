@@ -17,9 +17,9 @@ end
 
 local GraphicsPath = "__jd_plays__/graphics/battlefluffy-scenario/"
 local WhiteColor = { 1, 1, 1 }
-local ForestFireColor = { 255, 140, 0 }
-local OilFireColor = { 255, 225, 0 }
 local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 } -- Mirrored to control.
+local ForestFireColor = { 241, 162, 68 }
+local OilFireColor = { 215, 199, 79 }
 
 
 -- These should be mod settings, but we will just hardcode them here.
