@@ -5,6 +5,8 @@
     Lights are based on Factorio's shooting and impact explosion graphics. So grenades have a light to match their base game explosion graphic (overly large).
 ]]
 
+local Utils = require("utility.utils")
+
 
 if settings.startup["jdplays_mode"].value ~= "battlefluffy-scenario" then
     return
@@ -15,9 +17,9 @@ end
 
 local GraphicsPath = "__jd_plays__/graphics/battlefluffy-scenario/"
 local WhiteColor = { 1, 1, 1 }
-local ForestFireColor = { 255, 140, 0 }
-local OilFireColor = { 255, 225, 0 }
 local ExplosionColor = { r = 246.0, g = 248.0, b = 182.0 } -- Mirrored to control.
+local ForestFireColor = { 241, 162, 68 }
+local OilFireColor = { 215, 199, 79 }
 
 
 -- These should be mod settings, but we will just hardcode them here.
@@ -672,3 +674,47 @@ for _, prototype in pairs(data.raw["lamp"]) do
     prototype.darkness_for_all_lamps_on = 0.1 -- default is 0.5
     prototype.darkness_for_all_lamps_off = 0.05 -- default is 0.3
 end
+
+
+
+
+
+--[[
+    Make artillery wagon not able to shoot, to resolve the issue they can;t be targetted by artillery.
+]]
+
+local artilleryWagonPrototype = data.raw["artillery-wagon"]["artillery-wagon"] ---@cast artilleryWagonPrototype - nil
+artilleryWagonPrototype.localised_name = { "item-name.disabled-artillery-wagon" }
+artilleryWagonPrototype.localised_description = { "item-description.disabled-artillery-wagon" }
+artilleryWagonPrototype.icon = GraphicsPath .. "disabled-artillery-wagon-icon.png"
+artilleryWagonPrototype.icon_size = 64
+artilleryWagonPrototype.icon_mipmaps = 0
+artilleryWagonPrototype.gun = "disabled-artillery-wagon-cannon"
+artilleryWagonPrototype.cannon_barrel_pictures = nil
+artilleryWagonPrototype.cannon_base_pictures = nil
+artilleryWagonPrototype.cannon_base_shiftings = nil
+artilleryWagonPrototype.cannon_barrel_recoil_shiftings = nil
+artilleryWagonPrototype.cannon_barrel_light_direction = nil
+artilleryWagonPrototype.cannon_barrel_recoil_shiftings_load_correction_matrix = nil
+
+local disabledArtilleryWagonGun = Utils.DeepCopy(data.raw["gun"]["artillery-wagon-cannon"]) ---@cast disabledArtilleryWagonGun - nil
+disabledArtilleryWagonGun.name = "disabled-artillery-wagon-cannon"
+disabledArtilleryWagonGun.attack_parameters.range = 0.0
+disabledArtilleryWagonGun.attack_parameters.min_range = 0.0
+disabledArtilleryWagonGun.attack_parameters.cooldown = 0
+
+local artilleryWagonItem = data.raw["item-with-entity-data"]["artillery-wagon"]
+artilleryWagonItem.localised_name = { "item-name.disabled-artillery-wagon" }
+artilleryWagonItem.localised_description = { "item-description.disabled-artillery-wagon" }
+artilleryWagonItem.icon = GraphicsPath .. "disabled-artillery-wagon-icon.png"
+artilleryWagonItem.icon_size = 64
+artilleryWagonItem.icon_mipmaps = 0
+
+local artilleryWagonRecipe = data.raw["recipe"]["artillery-wagon"] ---@cast artilleryWagonRecipe - nil
+artilleryWagonRecipe.ingredients = {
+    { "iron-gear-wheel", 20 },
+    { "iron-plate", 40 },
+    { "steel-plate", 40 }
+}
+
+data:extend({ disabledArtilleryWagonGun })

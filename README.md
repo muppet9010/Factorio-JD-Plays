@@ -23,6 +23,7 @@ For use with BattleFluffy's scenario.
 - Adjusts when lights and lamps turn on times to work better with the dark map.
 - Removes most things from glowing in the dark. So a projectile fired across a dark screen are dark themselves now, rather than always being bright like vanilla Factorio is. Also means biter spit doesn't glow in the dark.
 - Modifies the "camp-fire" entity added by the Fire Place mod to be suitable for creation by Muppet Streamer mod's Spawn Around Player. This includes making it non minable, auto fuelling it (so it is active and has fire) and removing it 30-60 seconds after created.
+- Artillery wagons are not able to shoot, they are just good for artillery ammo carrying. They are thus renamed, re-imaged, and have an updated recipe accordingly. This is to work around the issue that they won't and can't be made to be naturally targetted by enemy artillery. Normal artillery turrets can be used for doing the shooting.
 
 Expects the mod: Fire Place.
 
@@ -52,7 +53,7 @@ Future compatibility note: this mod has had to include copies of some base spide
 
 
 
-Easter Egg Suprise (2022)
+Easter Egg Surprise (2022)
 ================
 
 When Biter Egg Nests are destroyed sometimes random items will be revealed as having been collected within the nest.

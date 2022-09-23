@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.10
+Date: 2022-09-19
+  Features:
+  Changes:
+    - Battlefluffy - made the artillery wagon unable to fire to balance out scenario limitations. It can still be used to carry a lot of shells.
+    - Battlefluffy - reduced fire color saturation for both oil and forest fires.
+  Bugfixes:
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 20.2.9
 Date: 2022-09-03
   Features:
@@ -69,7 +78,7 @@ Date: 2022-04-30
 Version: 20.2.2
 Date: 2022-04-15
   Features:
-    - Added mode: Easter Egg Suprise (2022)
+    - Added mode: Easter Egg Surprise (2022)
   Changes:
   Bugfixes:
   Info:
