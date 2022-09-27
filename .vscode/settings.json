@@ -42,6 +42,7 @@
         ".vscode",
         "/utility/*", // Exclude it as we don;t want to check it. We include it as a library file to load its TypeDefs still.
         "/modes/*", // Exclude all modes.
-        "!/modes/battlefluffy-scenario/" // Negate this specific mode.
+        "!/modes/battlefluffy-scenario/", // Negate this specific mode.
+        "!/modes/jd-split-factory/" // Negate this specific mode.
     ]
 }

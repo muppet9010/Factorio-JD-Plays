@@ -1,34 +1,35 @@
+---@diagnostic disable
 local CollisionMaskUtil = require("__core__/lualib/collision-mask-util")
 local Utils = require("utility/utils")
 
-if settings.startup["jdplays_mode"].value ~= "jd_p0ober_split_factory" then
+if settings.startup["jdplays_mode"].value ~= "jd_split_factory" then
     return
 end
 
 local spiderBlockCollisionLayer = CollisionMaskUtil.get_first_unused_layer()
 
--- Do as 2 seperate entities as the spider needs a much larger area to be blocked than player or other buildines/units.
+-- Do as 2 separate entities as the spider needs a much larger area to be blocked than player or other buildings/units.
 data:extend(
     {
         {
             type = "simple-entity",
-            name = "jd_plays-jd_p0ober_split_factory-divider_entity",
-            collision_box = {{-0.5, -0.5}, {0.5, 0.5}},
+            name = "jd_plays-jd_split_factory-divider_entity",
+            collision_box = { { -0.5, -0.5 }, { 0.5, 0.5 } },
             collision_mask = {
                 "water-tile",
                 "item-layer",
                 "object-layer",
                 "player-layer"
             },
-            flags = {"placeable-off-grid"},
+            flags = { "placeable-off-grid" },
             picture = Utils.EmptyRotatedSprite()
         },
         {
             type = "simple-entity",
-            name = "jd_plays-jd_p0ober_split_factory-divider_entity_spider_block",
-            collision_box = {{-10, -1}, {10, 1}}, -- Wide enough a spider can't reach across with its legs.
-            collision_mask = {spiderBlockCollisionLayer},
-            flags = {"placeable-off-grid"},
+            name = "jd_plays-jd_split_factory-divider_entity_spider_block",
+            collision_box = { { -10, -1 }, { 10, 1 } }, -- Wide enough a spider can't reach across with its legs.
+            collision_mask = { spiderBlockCollisionLayer },
+            flags = { "placeable-off-grid" },
             picture = Utils.EmptyRotatedSprite()
         }
     }

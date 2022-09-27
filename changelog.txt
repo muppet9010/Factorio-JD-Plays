@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.11
+Date: 2022-09-27
+  Features:
+    - JD Split Factory - repurposing of old `JD P0ober Split Factory` feature to make it more generic. So that JD is on one side and anyone else is on the other. Also updated to work in Factorio 1.1.69. This new mode is not backwards compatible with a save made using the `JD P0ober Split Factory` feature.
+  Changes:
+  Bugfixes:
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 20.2.10
 Date: 2022-09-19
   Features:
