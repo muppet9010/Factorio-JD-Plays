@@ -14,6 +14,21 @@ All modes from before Factorio 1.1 have been removed from the active mod as part
 
 
 
+JD Split Factory
+==============
+
+There is an impassable divide splitting the map in half; east and west. JD has the east side as his home, while any other streamer has the west side.
+
+- Both sides are on the same team, sharing research progress, etc.
+- When a player dies they will always respawn on their home side of the divide.
+- Underground belts can go under the divide, while power pole wires and robots can go over the divide.
+- There is a teleport on each side that can transfer the player's conscience into a cloned body on the other side of the divide. The cloned body can only be controlled for 15 minutes before you're returned to a new body on your own side. When a conscience leaves a body for any reason the body dies.
+- Spider vehicles will be blocked from walking over (or near) the divide.
+
+Teleporters graphics and sound copied from the Teleporters mod (with approval) by Klonan. https://mods.factorio.com/mod/Teleporters
+
+
+
 Battlefluffy Scenario
 ================
 
@@ -63,18 +78,3 @@ When Biter Egg Nests are destroyed sometimes random items will be revealed as ha
 - These random items will be 1 item per small egg nest and 1-3 items per large egg nest.
 - These items will just be simple vanilla items (with equal chance weight): iron plate, copper plate, steel plate, green circuits, gears, pipes, basic ammo, walls, gun turrets.
 - There won't be a repeat item within the same destroyed egg nest.
-
-
-
-JD P0ober Split Factory
-==============
-
-There is an impassable divide splitting the map in half; east and west. P0ober has the west side as her home, while JD has the east side.
-
-- Both sides are on the same team, sharing research progress, etc.
-- When a player dies they will always respawn on their home side of the divide.
-- Underground belts can go under the divide, while power pole wires and robots can go over the divide.
-- There is a teleport on each side that can transfer the player's conscience into a cloned body on the other side of the divide. The cloned body can only be controlled for 15 minutes before you're returned to a new body on your own side. When a conscience leaves a body for any reason the body dies.
-- Spider vehicles will be blocked from walking over (or near) the divide.
-
-Teleporters graphics and sound copied from the Teleporters mod (with approval) by Klonan. https://mods.factorio.com/mod/Teleporters

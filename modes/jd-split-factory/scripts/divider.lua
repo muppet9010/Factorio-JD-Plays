@@ -36,8 +36,8 @@ Divider.OnChunkGenerated = function(event)
     for x = global.divider.dividerStartXPos, global.divider.dividerEndXPos do
         for y = yMin, yMax do
             local existingTileName = surface.get_tile(x, y).name
-            if existingTileName ~= "water" and existingTileName ~= "deepwater" and existingTileName ~= "jd_plays-jd_p0ober_split_factory-divider_tile_land" then
-                table.insert(landTilesToReplace, {name = "jd_plays-jd_p0ober_split_factory-divider_tile_land", position = {x = x, y = y}})
+            if existingTileName ~= "water" and existingTileName ~= "deepwater" and existingTileName ~= "jd_plays-jd_split_factory-divider_tile_land" then
+                table.insert(landTilesToReplace, { name = "jd_plays-jd_split_factory-divider_tile_land", position = { x = x, y = y } })
             end
         end
     end
@@ -45,14 +45,14 @@ Divider.OnChunkGenerated = function(event)
 
     -- Place the blocking entities in the center of the 2 tiles.
     for y = event.area.left_top.y, event.area.left_top.y + 31 do
-        local dividerEntity = surface.create_entity {name = "jd_plays-jd_p0ober_split_factory-divider_entity", position = {x = global.divider.dividerMiddleXPos, y = y + 0.5}, create_build_effect_smoke = false, raise_built = false}
+        local dividerEntity = surface.create_entity { name = "jd_plays-jd_split_factory-divider_entity", position = { x = global.divider.dividerMiddleXPos, y = y + 0.5 }, create_build_effect_smoke = false, raise_built = false }
         dividerEntity.destructible = false
-        local dividerEntitySpider = surface.create_entity {name = "jd_plays-jd_p0ober_split_factory-divider_entity_spider_block", position = {x = global.divider.dividerMiddleXPos, y = y + 0.5}, create_build_effect_smoke = false, raise_built = false}
+        local dividerEntitySpider = surface.create_entity { name = "jd_plays-jd_split_factory-divider_entity_spider_block", position = { x = global.divider.dividerMiddleXPos, y = y + 0.5 }, create_build_effect_smoke = false, raise_built = false }
         dividerEntitySpider.destructible = false
     end
 
-    -- Place the beam effect. Overlap by a tile as we have overlaped all the graphics bits of the beam prototype.
-    surface.create_entity {name = "jd_plays-jd_p0ober_split_factory-divider_beam", position = {0, 0}, target_position = {x = global.divider.dividerMiddleXPos, y = event.area.left_top.y - 1}, source_position = {x = global.divider.dividerMiddleXPos, y = event.area.left_top.y + 33}}
+    -- Place the beam effect. Overlap by a tile as we have overlapped all the graphics bits of the beam prototype.
+    surface.create_entity { name = "jd_plays-jd_split_factory-divider_beam", position = { 0, 0 }, target_position = { x = global.divider.dividerMiddleXPos, y = event.area.left_top.y - 1 }, source_position = { x = global.divider.dividerMiddleXPos, y = event.area.left_top.y + 33 } }
 end
 
 Divider.OnTilePlaced = function(event)
@@ -62,7 +62,7 @@ Divider.OnTilePlaced = function(event)
     local surface, landTilesToReplace = game.surfaces[event.surface_index], {}
     for _, tileReplaced in pairs(event.tiles) do
         if tileReplaced.position.x >= global.divider.dividerStartXPos and tileReplaced.position.x <= global.divider.dividerEndXPos then
-            table.insert(landTilesToReplace, {name = "jd_plays-jd_p0ober_split_factory-divider_tile_land", position = tileReplaced.position})
+            table.insert(landTilesToReplace, { name = "jd_plays-jd_split_factory-divider_tile_land", position = tileReplaced.position })
         end
     end
     if #landTilesToReplace > 0 then

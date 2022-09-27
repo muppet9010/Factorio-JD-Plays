@@ -1,9 +1,9 @@
 local EventScheduler = require("utility/event-scheduler")
-local PlayerHome = require("modes/jd-p0ober-split-factory/scripts/player-home")
-local Divider = require("modes/jd-p0ober-split-factory/scripts/divider")
-local Teleporter = require("modes/jd-p0ober-split-factory/scripts/teleporter")
+local PlayerHome = require("modes/jd-split-factory/scripts/player-home")
+local Divider = require("modes/jd-split-factory/scripts/divider")
+local Teleporter = require("modes/jd-split-factory/scripts/teleporter")
 
-if settings.startup["jdplays_mode"].value ~= "jd_p0ober_split_factory" then
+if settings.startup["jdplays_mode"].value ~= "jd_split_factory" then
     return
 end
 
@@ -40,7 +40,7 @@ script.on_configuration_changed(OnStartup)
 script.on_load(OnLoad)
 EventScheduler.RegisterScheduler()
 
--- Mod wide function interface table creation. Means EmmyLua can support it and saves on UPS cost of old Interface function middelayer.
+-- Mod wide function interface table creation. Means EmmyLua can support it and saves on UPS cost of old Interface function middle layer.
 ---@class InternalInterfaces
 MOD.Interfaces = MOD.Interfaces or {} ---@type table<string, function>
 --[[

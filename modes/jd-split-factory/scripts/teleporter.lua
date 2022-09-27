@@ -13,7 +13,7 @@ Teleporter.CreateGlobals = function()
         [id] = {
             id = player index.
             characterEntity = LuaEntity of the character entity they gained in the other team's side.
-            timeTransfered = tick they transferred across.
+            timeTransferred = tick they transferred across.
             timeToDie = time of this teleported character to die.
         }
     ]]
@@ -31,14 +31,14 @@ Teleporter.OnLoad = function()
 end
 
 Teleporter.AddTeleporter = function(ownerTeam, surface, position)
-    local teleporterEntity = surface.create_entity {name = "jd_plays-jd_p0ober_split_factory-teleporter", position = position, force = "player"}
+    local teleporterEntity = surface.create_entity { name = "jd_plays-jd_split_factory-teleporter", position = position, force = "player" }
     teleporterEntity.destructible = false
     global.teleporter.teleporterIdToTeam[teleporterEntity.unit_number] = ownerTeam
 
     local hazardTilesToSet = {}
     for x = teleporterEntity.position.x - 2, teleporterEntity.position.x + 1 do
         for y = teleporterEntity.position.y - 2, teleporterEntity.position.y + 1 do
-            table.insert(hazardTilesToSet, {name = "hazard-concrete-left", position = {x = x, y = y}})
+            table.insert(hazardTilesToSet, { name = "hazard-concrete-left", position = { x = x, y = y } })
         end
     end
     surface.set_tiles(hazardTilesToSet, true, true, false, false)
@@ -47,7 +47,7 @@ Teleporter.AddTeleporter = function(ownerTeam, surface, position)
 end
 
 Teleporter.OnScriptTriggerEffect = function(event)
-    if event.effect_id == "jd_plays-jd_p0ober_split_factory-teleporter-affected_target" then
+    if event.effect_id == "jd_plays-jd_split_factory-teleporter-affected_target" then
         local triggerEntity = event.target_entity
         -- A triggerEntity with no player is a left behind character, so just ignore these.
         if triggerEntity.valid and triggerEntity.name == "character" and triggerEntity.player ~= nil then
@@ -64,7 +64,7 @@ Teleporter.PlayerOnTeleporter = function(characterEntity, teleporterEntity)
         -- Player is leaving their team's side and going to the other team's side.
         local teleportedPlayerEntry = {
             id = player.index,
-            timeTransfered = game.tick,
+            timeTransferred = game.tick,
             timeToDie = game.tick + TeleportedTTL
         }
 
@@ -83,7 +83,7 @@ Teleporter.TeleportCharacter = function(player, targetPosition)
     local character, surface = player.character, player.surface
 
     -- Create corpse for player and move all items in to it.
-    local corpseEntity = surface.create_entity {name = "character-corpse", position = player.position, force = player.force, player_index = player.index, inventory_size = 1000, player = player}
+    local corpseEntity = surface.create_entity { name = "character-corpse", position = player.position, force = player.force, player_index = player.index, inventory_size = 1000, player = player }
     local corpseInventory = corpseEntity.get_inventory(defines.inventory.character_corpse)
     Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_main), corpseInventory, false, 1)
     Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_guns), corpseInventory, false, 1)
@@ -93,9 +93,9 @@ Teleporter.TeleportCharacter = function(player, targetPosition)
     Utils.TryMoveInventoriesLuaItemStacks(character.get_inventory(defines.inventory.character_trash), corpseInventory, false, 1)
     if corpseInventory.is_empty() then
         -- If corpse inventory is empty it will auto vanish in 1 tick, so place a corpse without an inventory as well that will last.
-        corpseEntity = surface.create_entity {name = "character-corpse", position = player.position, force = player.force, player_index = player.index, player = player}
+        corpseEntity = surface.create_entity { name = "character-corpse", position = player.position, force = player.force, player_index = player.index, player = player }
     end
-    corpseEntity.character_corpse_death_cause = {"entity-name.jdplays_mode-jd_p0ober_split_factory-teleport"}
+    corpseEntity.character_corpse_death_cause = { "entity-name.jdplays_mode-jd_split_factory-teleport" }
 
     -- Teleport now empty character to new location and reset.
     local foundPosition = surface.find_non_colliding_position("character", targetPosition, 0, 0.2, false)
@@ -107,7 +107,7 @@ Teleporter.TeleportCharacter = function(player, targetPosition)
         end
     end
 
-    surface.create_entity {name = "jd_plays-jd_p0ober_split_factory-teleporter-player_moved", position = foundPosition}
+    surface.create_entity { name = "jd_plays-jd_split_factory-teleporter-player_moved", position = foundPosition }
 end
 
 Teleporter.OnTimeToDieReached = function(event)

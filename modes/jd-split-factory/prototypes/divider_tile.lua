@@ -1,10 +1,10 @@
 --[[
-    Only block units (biters) to make the pathfinder effecient as it views it like water in preliminary pathfinder. Blocking everything else can be done with entities fine. Blocking any other layer will prevent cliff placement.
+    Only block units (biters) to make the pathfinder efficient as it views it like water in preliminary pathfinder. Blocking everything else can be done with entities fine. Blocking any other layer will prevent cliff placement.
     Have to use new layer to just block biters and then apply it all units.
 ]]
 local CollisionMaskUtil = require("__core__/lualib/collision-mask-util")
 
-if settings.startup["jdplays_mode"].value ~= "jd_p0ober_split_factory" then
+if settings.startup["jdplays_mode"].value ~= "jd_split_factory" then
     return
 end
 
@@ -15,9 +15,9 @@ data:extend(
     {
         {
             type = "tile",
-            name = "jd_plays-jd_p0ober_split_factory-divider_tile_land",
+            name = "jd_plays-jd_split_factory-divider_tile_land",
             order = "zzz1",
-            collision_mask = {"ground-tile", unitBlockCollisionLayer},
+            collision_mask = { "ground-tile", unitBlockCollisionLayer },
             layer_group = refNuclearGroundTile.layer_group,
             layer = 200, -- Above ground tiles and player flooring.
             variants = refNuclearGroundTile.variants,
