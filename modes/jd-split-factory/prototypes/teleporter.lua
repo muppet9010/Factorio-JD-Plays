@@ -1,4 +1,5 @@
 -- This is copied from the Teleporters mod by Klonan. https://github.com/Klonan/Teleporters
+---@diagnostic disable
 local Utils = require("utility/utils")
 
 if settings.startup["jdplays_mode"].value ~= "jd_split_factory" then

@@ -2,6 +2,7 @@
     Only block units (biters) to make the pathfinder efficient as it views it like water in preliminary pathfinder. Blocking everything else can be done with entities fine. Blocking any other layer will prevent cliff placement.
     Have to use new layer to just block biters and then apply it all units.
 ]]
+---@diagnostic disable
 local CollisionMaskUtil = require("__core__/lualib/collision-mask-util")
 
 if settings.startup["jdplays_mode"].value ~= "jd_split_factory" then

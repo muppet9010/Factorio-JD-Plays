@@ -17,12 +17,12 @@ All modes from before Factorio 1.1 have been removed from the active mod as part
 JD Split Factory
 ==============
 
-There is an impassable divide splitting the map in half; east and west. JD has the east side as his home, while any other streamer has the west side.
+There is an impassable divide splitting the map in half; east and west. JD has the east side as his home, while any other player goes on the west side.
 
 - Both sides are on the same team, sharing research progress, etc.
 - When a player dies they will always respawn on their home side of the divide.
 - Underground belts can go under the divide, while power pole wires and robots can go over the divide.
-- There is a teleport on each side that can transfer the player's conscience into a cloned body on the other side of the divide. The cloned body can only be controlled for 15 minutes before you're returned to a new body on your own side. When a conscience leaves a body for any reason the body dies.
+- There is a teleporter on each side that can transfer the player's conscience into a cloned body on the other side of the divide. The cloned body only lives for 15 minutes before it dies and you're returned to a new body on your own side. When a conscience leaves a body for any reason the body dies. The teleporter is in a hard coded position.
 - Spider vehicles will be blocked from walking over (or near) the divide.
 
 Teleporters graphics and sound copied from the Teleporters mod (with approval) by Klonan. https://mods.factorio.com/mod/Teleporters

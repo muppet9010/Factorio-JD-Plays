@@ -1,3 +1,4 @@
+---@diagnostic disable
 local CollisionMaskUtil = require("__core__/lualib/collision-mask-util")
 local Utils = require("utility/utils")
 
