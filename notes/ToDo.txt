@@ -1,3 +1,11 @@
+General
+=========
+
+- Why are some mode's graphics under the general graphics folder and not in their own mode folders. Move them and re-link references.
+
+
+
+
 
 Halloween 2023
 ==============
@@ -5,6 +13,7 @@ Halloween 2023
 Requested:
     - Add JD player gravestone graphics to Zombie mod if we have generic graphics available for it from rubble. Otherwise use JD graphics in main Zombie mod.
     - A way to have all the lights go off for a bit, both lamps and inbuilt lighting. I can't find a way to disable or cancel out a lamp. So the only option would be to replace them all with non light versions and then switch them back afterwards. We could do this around each player for all lamps within X range. But this would need a bit of coding and logic, as we need to track the changed lights, player locations, handle things being removed in alternate state s and so only returned as appropriate, especially with inbuilt lighting and accounting for its own logic. Also need to check how inbuilt lighting would handle it, I think fine.
+    - Look at pulling across combat lighting effects from BattleFluffy scenario. The dark will likely be a different base color so it might need some color re-balancing.
 
 
 

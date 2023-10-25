@@ -8,3 +8,9 @@ P0obers # Streamer's name.
 P00ber # Commonly used mis-spelling of the streamers name.
 Poober # Streamer P0ober's ingame name.
 Klonan # Factorio developer.
+JD-Plays
+MODDATA
+Bilbo
+BTG
+JD
+Sorahn
