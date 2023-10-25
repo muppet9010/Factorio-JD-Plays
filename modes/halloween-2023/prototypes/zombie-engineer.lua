@@ -13,13 +13,15 @@ end
 
 -- Add the custom avatar gravestones. This will leave the remaining ones as the blank gravestone.
 local graveWithHeadstonePrototype = data.raw["simple-entity"]["zombie_engineer-grave_with_headstone"]
-for index, imageName in pairs({ "Bilbo", "BTG", "Fox", "Huff", "JD", "Muppet", "Sorahn" }) do
-    graveWithHeadstonePrototype.pictures[index] =
-    {
-        filename = Constants.AssetModName .. "/modes/halloween-2023/graphics/zombie-engineer/" .. imageName .. ".png",
-        width = 140,
-        height = 181,
-        scale = 0.5,
-        shift = { 0.1, 0.3 }
-    } --[[@as data.Sprite ]]
+if graveWithHeadstonePrototype ~= nil then
+    for index, imageName in pairs({ "Bilbo", "BTG", "Fox", "Huff", "JD", "Muppet", "Sorahn" }) do
+        graveWithHeadstonePrototype.pictures[index] =
+        {
+            filename = Constants.AssetModName .. "/modes/halloween-2023/graphics/zombie-engineer/" .. imageName .. ".png",
+            width = 140,
+            height = 181,
+            scale = 0.5,
+            shift = { 0.1, 0.3 }
+        } --[[@as data.Sprite ]]
+    end
 end

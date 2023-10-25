@@ -20,6 +20,7 @@ Halloween 2023
 Small changes for a halloween play through. Other mods provide most of the gameplay changes.
 - Disabled artillery in all forms via technology.
 - Radar nerfed to restrict vision.
+- Replacement graphics for other mods to make them more halloween themed: Biter Eggs & Zombie Engineer.
 
 
 

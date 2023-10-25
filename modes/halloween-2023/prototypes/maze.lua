@@ -3,21 +3,31 @@ if settings.startup["jdplays_mode"].value ~= "halloween_2023" then
 end
 
 local woodKilnDryingTechnologyPrototype = data.raw["technology"]["wood-kiln-drying"]
-woodKilnDryingTechnologyPrototype.hidden = true
-woodKilnDryingTechnologyPrototype.enabled = false
+if woodKilnDryingTechnologyPrototype ~= nil then
+    woodKilnDryingTechnologyPrototype.hidden = true
+    woodKilnDryingTechnologyPrototype.enabled = false
+end
 
 local inVesselCompostingTechnologyPrototype = data.raw["technology"]["in-vessel-composting"]
-inVesselCompostingTechnologyPrototype.hidden = true
-inVesselCompostingTechnologyPrototype.enabled = false
+if inVesselCompostingTechnologyPrototype ~= nil then
+    inVesselCompostingTechnologyPrototype.hidden = true
+    inVesselCompostingTechnologyPrototype.enabled = false
+end
 
 local landfillTechnologyPrototype = data.raw["technology"]["landfill"]
-landfillTechnologyPrototype.hidden = true
-landfillTechnologyPrototype.enabled = false
+if landfillTechnologyPrototype ~= nil then
+    landfillTechnologyPrototype.hidden = true
+    landfillTechnologyPrototype.enabled = false
+end
 
 local mazeTerraformingTechnologyPrototype = data.raw["technology"]["maze-terraforming"]
-mazeTerraformingTechnologyPrototype.hidden = true
-mazeTerraformingTechnologyPrototype.enabled = false
+if mazeTerraformingTechnologyPrototype ~= nil then
+    mazeTerraformingTechnologyPrototype.hidden = true
+    mazeTerraformingTechnologyPrototype.enabled = false
+end
 
 local mangroveHarvestingTechnologyPrototype = data.raw["technology"]["mangrove-harvesting"]
-mangroveHarvestingTechnologyPrototype.hidden = true
-mangroveHarvestingTechnologyPrototype.enabled = false
+if mangroveHarvestingTechnologyPrototype ~= nil then
+    mangroveHarvestingTechnologyPrototype.hidden = true
+    mangroveHarvestingTechnologyPrototype.enabled = false
+end
