@@ -3,12 +3,8 @@ Halloween 2023
 ==============
 
 Requested:
-    - Biter eggs to something Halloween or tombstone related - need graphics extracting from JD's images.
-    - Place rocket silo at end and launch as many rockets as players (rocket silos not able to be built) - Will place manually in the end part way through the second stream probably, based on how long JD wants it to go on for.
-    - Disable arty
-    - limit/disable radar explore.
-    - Also new idea could inbuilt lighting be tweaked to randomly turn off/on?
     - Add JD player gravestone graphics to Zombie mod if we have generic graphics available for it from rubble. Otherwise use JD graphics in main Zombie mod.
+    - A way to have all the lights go off for a bit, both lamps and inbuilt lighting. I can't find a way to disable or cancel out a lamp. So the only option would be to replace them all with non light versions and then switch them back afterwards. We could do this around each player for all lamps within X range. But this would need a bit of coding and logic, as we need to track the changed lights, player locations, handle things being removed in alternate state s and so only returned as appropriate, especially with inbuilt lighting and accounting for its own logic. Also need to check how inbuilt lighting would handle it, I think fine.
 
 
 

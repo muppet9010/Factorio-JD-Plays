@@ -219,7 +219,6 @@ local LightExplosionDefinitions = {
 -- Create the various light-explosions. Used to create a short light when something is shot.
 local BlankAnimations = {} ---@type table<uint, Animation>
 for _, lightExplosionDefinition in pairs(LightExplosionDefinitions) do
-
     -- Get the right multipliers for this type.
     local time_Multiplier, intensity_Multiplier, size_Multiplier
     if lightExplosionDefinition.type == "direct" then
@@ -340,7 +339,7 @@ for _, prototype in pairs(data.raw["fire"]) do
         else
             -- Is a regular fire flame. There isn't a separation in Factorio between the number of flames on a point, so the light of a single fire flame and many flames on a single point are equal. So this light has to be a balance between one very very alight point and many smaller fires all near each other. As the light is the same size, but a high flame sprite will be larger than a small lighted area.
             prototype.light = {
-                { intensity = 2 * FireLight_Intensity_Multiplier, size = 8 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness },
+                { intensity = 2 * FireLight_Intensity_Multiplier,   size = 8 * FireLight_Size_Multiplier,  color = OilFireColor, minimum_darkness = MinimumDarkness },
                 { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 60 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness },
             }
         end
@@ -374,7 +373,7 @@ local ProjectilesToModify = {} ---@type table<string, string> # projectileName t
 local function RecordProjectileNameToAmmoCategory(action, ammoCategory)
     for _, triggerItem in pairs(action) do
         EnsureFieldIsArrayInContainer(triggerItem, "action_delivery")
-        for _, triggerDelivery in pairs(triggerItem.action_delivery--[[@as TriggerDelivery[] ]] ) do
+        for _, triggerDelivery in pairs(triggerItem.action_delivery --[[@as TriggerDelivery[] ]]) do
             if triggerDelivery.type == "projectile" then
                 ---@cast triggerDelivery ProjectileTriggerDelivery
                 ProjectilesToModify[triggerDelivery.projectile] = ammoCategory
@@ -507,7 +506,7 @@ for _, prototype in pairs(data.raw["stream"]) do
     if prototype.smoke_sources ~= nil then
         -- The stream_light does have a weird spreading out as it reaches the target, I assume its mean to represent it getting close to the ground.
         prototype.stream_light = {
-            { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 5 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness },
+            { intensity = 0.2 * FireLight_Intensity_Multiplier, size = 5 * FireLight_Size_Multiplier,  color = OilFireColor, minimum_darkness = MinimumDarkness },
             { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness }
         }
         -- ground_light is terrible
@@ -520,7 +519,7 @@ for _, prototype in pairs(data.raw["fluid-turret"]) do
     if prototype.attack_parameters ~= nil and prototype.attack_parameters.ammo_type ~= nil and prototype.attack_parameters.ammo_type.category == "flamethrower" then
         -- Is a flame turret.
         prototype.muzzle_light = {
-            { intensity = 0.4 * FireLight_Intensity_Multiplier, size = 3 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness },
+            { intensity = 0.4 * FireLight_Intensity_Multiplier, size = 3 * FireLight_Size_Multiplier,  color = OilFireColor, minimum_darkness = MinimumDarkness },
             { intensity = 0.1 * FireLight_Intensity_Multiplier, size = 10 * FireLight_Size_Multiplier, color = OilFireColor, minimum_darkness = MinimumDarkness }
         }
     end
@@ -680,7 +679,7 @@ end
 
 
 --[[
-    Make artillery wagon not able to shoot, to resolve the issue they can;t be targetted by artillery.
+    Make artillery wagon not able to shoot, to resolve the issue they can't be targetted by artillery.
 ]]
 
 local artilleryWagonPrototype = data.raw["artillery-wagon"]["artillery-wagon"] ---@cast artilleryWagonPrototype - nil
@@ -713,8 +712,8 @@ artilleryWagonItem.icon_mipmaps = 0
 local artilleryWagonRecipe = data.raw["recipe"]["artillery-wagon"] ---@cast artilleryWagonRecipe - nil
 artilleryWagonRecipe.ingredients = {
     { "iron-gear-wheel", 20 },
-    { "iron-plate", 40 },
-    { "steel-plate", 40 }
+    { "iron-plate",      40 },
+    { "steel-plate",     40 }
 }
 
 data:extend({ disabledArtilleryWagonGun })
