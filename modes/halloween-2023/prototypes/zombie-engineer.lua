@@ -11,10 +11,10 @@ if settings.startup["jdplays_mode"].value ~= "halloween_2023" then
     return
 end
 
--- Add the custom avatar gravestones. This will leave the remaining ones as the blank gravestone.
+-- Add the custom avatar gravestones. The base game has 10 variations, so replace those we have new ones for. This will leave the remaining ones as the blank gravestone. TO go above 10 we will need to do some sort of script update in a migration to all current graves and shuffle them.
 local graveWithHeadstonePrototype = data.raw["simple-entity"]["zombie_engineer-grave_with_headstone"]
 if graveWithHeadstonePrototype ~= nil then
-    for index, imageName in pairs({ "Bilbo", "BTG", "Fox", "Huff", "JD", "Muppet", "Sorahn" }) do
+    for index, imageName in pairs({ "Bilbo", "BTG", "Fox", "Huff", "JD", "Muppet", "Sorahn", "Sassy" }) do
         graveWithHeadstonePrototype.pictures[index] =
         {
             filename = Constants.AssetModName .. "/modes/halloween-2023/graphics/zombie-engineer/" .. imageName .. ".png",
