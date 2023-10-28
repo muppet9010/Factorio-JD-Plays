@@ -4,3 +4,4 @@ require("utility.style-data").GeneratePrototypes()
 
 require("modes/jd-split-factory/data")
 require("modes.jd-spider-race.data")
+require("modes.halloween-2023.data")

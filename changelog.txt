@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.12
+Date: 2023-10-25
+  Features:
+    - Halloween 2023 - Added new mod for a Halloween play through.
+  Changes:
+  Bugfixes:
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 20.2.11
 Date: 2022-09-27
   Features:
@@ -166,7 +174,7 @@ Date: 2019-12-10
   Changes:
     - Biter Hunt Groups will no longer be treated like vanilla biters. So not de-spawned or told to join a biter base.
   Bugfixes:
-    - Once biters are targeting spawn they will stop being re-directed in all cases. Should stop some back and forth behaviour.
+    - Once biters are targeting spawn they will stop being re-directed in all cases. Should stop some back and forth behavior.
     - Shared Damage map distance populated for existing saves
   Info:
 ---------------------------------------------------------------------------------------------------

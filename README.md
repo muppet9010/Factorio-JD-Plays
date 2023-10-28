@@ -14,6 +14,17 @@ All modes from before Factorio 1.1 have been removed from the active mod as part
 
 
 
+Halloween 2023
+==============
+
+Small changes for a halloween play through. Other mods provide most of the gameplay changes.
+- Disabled artillery in all forms via technology.
+- Radar nerfed to restrict vision.
+- Replacement graphics for other mods to make them more halloween themed: Biter Eggs & Zombie Engineer.
+- Disable crafting rocket silos. One will be present on the map.
+
+
+
 JD Split Factory
 ==============
 
@@ -59,7 +70,7 @@ Information that players should know at a minimum to avoid surprises (or they ca
 - Big scary spider far to the west. Aim is to kill the spider and take the reward coin back to your market to nuke the other tea and win.
 - The spider is a mega spidertron. It has lots of weapons including atomic bombs and artillery shells. The atomic-bombs are only used on high value targets. The spider never runs out of standard bullets, rockets and cannon shells, with the better ammo being given by chat (RCON).
 - The spider is naturally immune to artillery and tank shells, but is also immune to atomic bombs. Attack with lasers, rockets and bullets.
-- The spider roams a large area and can be moved by RCON commands. It has some basic reactive behaviour for fighting and intelligently pursuing enemies, so engage with caution. Once it’s suffered considerable damage it will retreat further away from you.
+- The spider roams a large area and can be moved by RCON commands. It has some basic reactive behavior for fighting and intelligently pursuing enemies, so engage with caution. Once it’s suffered considerable damage it will retreat further away from you.
 - When you attack the spider all the nearby biters will attack towards you. This can be very large numbers, you have been warned.
 - You can’t interact directly with the team on the other side of the divide (electric wall) or walk a spidertron near/across the divide. You can steal each other's power, so be careful how close you build power poles to the divide. It's a race against your biters to the west, not directly against the other player's team.
 - Each team has a starting area of resources with continuous water to the east on a thin ribbon map.
