@@ -21,6 +21,7 @@ Small changes for a halloween play through. Other mods provide most of the gamep
 - Disabled artillery in all forms via technology.
 - Radar nerfed to restrict vision.
 - Replacement graphics for other mods to make them more halloween themed: Biter Eggs & Zombie Engineer.
+- Disable crafting rocket silos. One will be present on the map.
 
 
 
