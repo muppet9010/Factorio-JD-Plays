@@ -22,6 +22,9 @@ Small changes for a halloween play through. Other mods provide most of the gamep
 - Radar nerfed to restrict vision.
 - Replacement graphics for other mods to make them more halloween themed: Biter Eggs & Zombie Engineer.
 - Disable crafting rocket silos. One will be present on the map.
+- Adds a lot of lights to effects as the map is pitch black, i.e. weapon shooting, weapon impacts, fires and building death explosions.
+- Adjusts when lights and lamps turn on times to work better with the dark map.
+- Removes most things from glowing in the dark. So a projectile fired across a dark screen are dark themselves now, rather than always being bright like vanilla Factorio is. Also means biter spit doesn't glow in the dark.
 
 
 
