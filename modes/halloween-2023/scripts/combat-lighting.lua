@@ -4,7 +4,7 @@ if settings.startup["jdplays_mode"].value ~= "halloween_2023" then
     return
 end
 
-
+---@class Class-halloween_2023-CombatLighting
 local CombatLighting = {}
 
 

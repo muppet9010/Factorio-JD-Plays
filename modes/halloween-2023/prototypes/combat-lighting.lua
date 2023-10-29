@@ -236,6 +236,7 @@ for _, lightExplosionDefinition in pairs(LightExplosionDefinitions) do
             animationSpeed = 100 / frames
             frames = 100
         end
+        ---@diagnostic disable-next-line: missing-fields # Temporary work around until Factorio docs fix bug: https://forums.factorio.com/viewtopic.php?f=233&t=109426
         blankAnimation = {
             frame_count = frames,
             animation_speed = animationSpeed,

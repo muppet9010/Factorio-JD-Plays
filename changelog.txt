@@ -1,6 +1,14 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.14
+Date: 2023-10-29
+  Features:
+  Changes:
+    - Halloween 2023 - Landfill is returned back to vanilla Factorio's requirements and recipe. Made available for save games created on an older mod version.
+  Bugfixes:
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 20.2.13
-Date: 2023-10-25
+Date: 2023-10-28
   Features:
     - Halloween 2023 - Add combat lighting from Battlefluffy scenario.
   Changes:

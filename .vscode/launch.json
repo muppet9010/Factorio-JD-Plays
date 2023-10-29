@@ -16,7 +16,10 @@
             "hookSettings": true,
             "hookLog": true,
             "hookMode": "debug",
-            "profileLines": true
+            "profileLines": true,
+            /*"adjustMods": {
+                "JDGoesBoom": false
+            }*/
         }
     ]
 }

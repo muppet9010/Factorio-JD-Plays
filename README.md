@@ -20,6 +20,8 @@ Halloween 2023
 Small changes for a halloween play through. Other mods provide most of the gameplay changes.
 - Disabled artillery in all forms via technology.
 - Radar nerfed to restrict vision.
+- Removed the Maze mod's terraforming concepts, so the maze shape is locked.
+- Returns Landfill to vanilla technology and recipe from how the Maze mod changes it.
 - Replacement graphics for other mods to make them more halloween themed: Biter Eggs & Zombie Engineer.
 - Disable crafting rocket silos. One will be present on the map.
 - Adds a lot of lights to effects as the map is pitch black, i.e. weapon shooting, weapon impacts, fires and building death explosions.
