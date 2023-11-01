@@ -15,20 +15,28 @@ end
 local gravestoneGraphics = { { main = "Bilbo", corpse = "Bilbo Destroyed" }, { main = "BTG", corpse = "JD Destroyed" }, { main = "Fox", corpse = "Fox Destroyed" }, { main = "Huff", corpse = "Huff Destroyed" }, { main = "JD", corpse = "JD Destroyed" }, { main = "Rubble", corpse = "Bilbo Destroyed" }, { main = "Muppet", corpse = "Bilbo Destroyed" }, { main = "Sassy", corpse = "Huff Destroyed" }, { main = "Sorahn", corpse = "Huff Destroyed" } }
 local graveWithHeadstonePrototype = data.raw["simple-entity-with-force"]["zombie_engineer-grave_with_headstone"]
 if graveWithHeadstonePrototype ~= nil then
+    local defaultGraphic = graveWithHeadstonePrototype.picture
+    graveWithHeadstonePrototype.picture = nil
+    graveWithHeadstonePrototype.pictures = {}
     for index, gravestoneGraphic in pairs(gravestoneGraphics) do
         graveWithHeadstonePrototype.pictures[index] =
         {
-            filename = Constants.AssetModName .. "/modes/halloween-2023/graphics/zombie-engineer/" .. gravestoneGraphic.main .. ".png",
+            filename = Constants.AssetModName ..
+                "/modes/halloween-2023/graphics/zombie-engineer/" .. gravestoneGraphic.main .. ".png",
             width = 140,
             height = 181,
             scale = 0.5,
             shift = { 0.1, 0.3 }
         }
     end
+    graveWithHeadstonePrototype.pictures[#graveWithHeadstonePrototype.pictures + 1] = defaultGraphic
 end
 -- The custom corpse images are matched on headstone color.
 local graveWithHeadstoneCorpsePrototype = data.raw["corpse"]["zombie_engineer-grave_with_headstone-corpse"]
 if graveWithHeadstoneCorpsePrototype ~= nil then
+    local defaultGraphic = graveWithHeadstoneCorpsePrototype.animation
+    graveWithHeadstoneCorpsePrototype.animation = nil
+    graveWithHeadstoneCorpsePrototype.animation = {}
     for index, gravestoneGraphic in pairs(gravestoneGraphics) do
         graveWithHeadstoneCorpsePrototype.animation[index] =
         {
@@ -41,4 +49,5 @@ if graveWithHeadstoneCorpsePrototype ~= nil then
             direction_count = 1
         }
     end
+    graveWithHeadstoneCorpsePrototype.animation[#graveWithHeadstoneCorpsePrototype.animation + 1] = defaultGraphic
 end
