@@ -5,6 +5,7 @@ Date: 2023-11-01
   Changes:
   Bugfixes:
     - Halloween 2023 - Updated to latest Zombie mod gravestone graphics structure.
+    - Halloween 2023 - Rename the biter eggs to pumpkin patch.
   Info:
 ---------------------------------------------------------------------------------------------------
 Version: 20.2.14
