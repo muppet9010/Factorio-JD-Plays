@@ -18,6 +18,8 @@ if smallEggNestPrototype ~= nil then
             }
         }
     }
+    smallEggNestPrototype.localised_name = { "entity-name.jd_plays-halloween_2023-biter_egg_nest_small" }
+    smallEggNestPrototype.localised_description = { "entity-description.jd_plays-halloween_2023-biter_egg_nest_small" }
 end
 
 local smallEggNestCorpsePrototype = data.raw["corpse"]["biter-egg-nest-small-corpse"]
@@ -34,6 +36,7 @@ if smallEggNestCorpsePrototype ~= nil then
             }
         }
     }
+    smallEggNestCorpsePrototype.localised_name = { "entity-name.jd_plays-halloween_2023-biter_egg_nest_small-corpse" }
 end
 
 
@@ -50,6 +53,8 @@ if largeEggNestPrototype ~= nil then
             }
         }
     }
+    largeEggNestPrototype.localised_name = { "entity-name.jd_plays-halloween_2023-biter_egg_nest_large" }
+    largeEggNestPrototype.localised_description = { "entity-description.jd_plays-halloween_2023-biter_egg_nest_large" }
 end
 
 local largeEggNestCorpsePrototype = data.raw["corpse"]["biter-egg-nest-large-corpse"]
@@ -66,4 +71,5 @@ if largeEggNestCorpsePrototype ~= nil then
             }
         }
     }
+    largeEggNestCorpsePrototype.localised_name = { "entity-name.jd_plays-halloween_2023-biter_egg_nest_large-corpse" }
 end
