@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 20.2.16
+Date: 2023-11-11
+  Features:
+  Changes:
+  Bugfixes:
+    - Halloween 2023 - Biter spit in mid air no longer glows in the dark when in the air.
+    - Halloween 2023 - Biter spit sticker no longer glows in the dark. Wo when a player/vehicle has the slow effect from biter spit.
+  Info:
+---------------------------------------------------------------------------------------------------
 Version: 20.2.15
 Date: 2023-11-01
   Features:

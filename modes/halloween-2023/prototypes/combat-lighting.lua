@@ -310,7 +310,7 @@ local function RemoveGlowFromAnimationVariationsContents(animationVariations)
 end
 
 --- Removes the draw_as_glow from all of the places this prototype could have it set. So the graphics always respect the light level.
----@param prototype data.ProjectilePrototype|data.FluidStreamPrototype|data.FireFlamePrototype|data.ArtilleryProjectilePrototype|data.ExplosionPrototype
+---@param prototype data.ProjectilePrototype|data.FluidStreamPrototype|data.FireFlamePrototype|data.ArtilleryProjectilePrototype|data.ExplosionPrototype|data.StickerPrototype
 local function RemoveGlowFromPictures(prototype)
     if prototype.animation ~= nil then RemoveGlowFromAnimationContents(prototype.animation) end -- Projectile & Fluid Stream
     if prototype.animations ~= nil then RemoveGlowFromAnimationVariationsContents(prototype.animations) end -- Explosions
@@ -319,12 +319,12 @@ local function RemoveGlowFromPictures(prototype)
     if prototype.small_tree_fire_pictures ~= nil then RemoveGlowFromAnimationVariationsContents(prototype.small_tree_fire_pictures) end -- Fire
     if prototype.secondary_pictures ~= nil then RemoveGlowFromAnimationVariationsContents(prototype.secondary_pictures) end -- Fire
     if prototype.smoke_source_pictures ~= nil then RemoveGlowFromAnimationVariationsContents(prototype.smoke_source_pictures) end -- Fire
+    if prototype.particle ~= nil then RemoveGlowFromAnimationContents(prototype.particle) end -- Fluid Stream
+    if prototype.spine_animation ~= nil then RemoveGlowFromAnimationContents(prototype.spine_animation) end -- Fluid Stream
 end
 
 -- Increase the light from fire on the ground and trees. As the default is too low for these very dark maps.
 for _, prototype in pairs(data.raw["fire"]) do
-    RemoveGlowFromPictures(prototype)
-
     -- Only a fire type that that does fire damage, so excludes acid spit.
     if prototype.damage_per_tick ~= nil and prototype.damage_per_tick.type ~= nil and prototype.damage_per_tick.type == "fire" then
         -- Do tree fires differently from fire flames.
@@ -346,6 +346,15 @@ for _, prototype in pairs(data.raw["fire"]) do
             }
             ---@diagnostic enable: missing-fields
         end
+    else
+        RemoveGlowFromPictures(prototype)
+    end
+end
+
+-- Remove the glow from non fire stickers. Stickers only have their glow to make them bright by default. For mot
+for _, prototype in pairs(data.raw["sticker"]) do
+    if prototype.spread_fire_entity == nil then
+        RemoveGlowFromPictures(prototype)
     end
 end
 
@@ -501,7 +510,7 @@ end
 
 
 
--- Go over the stream types and add light to the fire ones.
+-- Go over the stream types and light to the fire ones. Remove light and glow from the others.
 for _, prototype in pairs(data.raw["stream"]) do
     RemoveGlowFromPictures(prototype)
 
