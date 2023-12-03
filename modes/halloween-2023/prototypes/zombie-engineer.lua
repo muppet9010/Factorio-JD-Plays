@@ -15,7 +15,7 @@ end
 local gravestoneGraphics = { { main = "Bilbo", corpse = "Bilbo Destroyed" }, { main = "BTG", corpse = "JD Destroyed" }, { main = "Fox", corpse = "Fox Destroyed" }, { main = "Huff", corpse = "Huff Destroyed" }, { main = "JD", corpse = "JD Destroyed" }, { main = "Rubble", corpse = "Bilbo Destroyed" }, { main = "Muppet", corpse = "Bilbo Destroyed" }, { main = "Sassy", corpse = "Huff Destroyed" }, { main = "Sorahn", corpse = "Huff Destroyed" } }
 local graveWithHeadstonePrototype = data.raw["simple-entity-with-force"]["zombie_engineer-grave_with_headstone"]
 if graveWithHeadstonePrototype ~= nil then
-    local defaultGraphic = graveWithHeadstonePrototype.picture
+    local defaultGraphic = graveWithHeadstonePrototype.picture --[[@as data.Sprite # We only specify it as a simple 1 directional sprite in the main Zombie Engineer mod.]]
     graveWithHeadstonePrototype.picture = nil
     graveWithHeadstonePrototype.pictures = {}
     for index, gravestoneGraphic in pairs(gravestoneGraphics) do

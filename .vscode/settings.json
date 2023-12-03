@@ -17,6 +17,7 @@
         "/utility/*", // Exclude it as we don't want to check it. We include it as a library file to load its TypeDefs still.
         "/modes/*", // Exclude all modes by default.
         "!/modes/halloween-2023/", // Check this specific mode.
+        "!/modes/christmas-2023/", // Check this specific mode.
         //"!/modes/battlefluffy-scenario/", // Check this specific mode. - These aren't updated to new TypeDefs 2023-10-25 so ignored again.
         //"!/modes/jd-split-factory/" // Check this specific mode. - These aren't updated to new TypeDefs 2023-10-25 so ignored again.
     ],

@@ -14,6 +14,14 @@ All modes from before Factorio 1.1 have been removed from the active mod as part
 
 
 
+Christmas 2023
+==============
+
+Small changes for a christmas play through. Other mods provide most of the gameplay changes.
+- Change regular locomotive techs to unlock mini locomotives
+
+
+
 Halloween 2023
 ==============
 
