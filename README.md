@@ -18,7 +18,10 @@ Christmas 2023
 ==============
 
 Small changes for a christmas play through. Other mods provide most of the gameplay changes.
+
 - Change regular locomotive techs to unlock mini locomotives
+
+Expects the `Mini Trains` mod by Klonan.
 
 
 
@@ -26,6 +29,7 @@ Halloween 2023
 ==============
 
 Small changes for a halloween play through. Other mods provide most of the gameplay changes.
+
 - Disabled artillery in all forms via technology.
 - Radar nerfed to restrict vision.
 - Removed the Maze mod's terraforming concepts, so the maze shape is locked.
@@ -35,6 +39,8 @@ Small changes for a halloween play through. Other mods provide most of the gamep
 - Adds a lot of lights to effects as the map is pitch black, i.e. weapon shooting, weapon impacts, fires and building death explosions.
 - Adjusts when lights and lamps turn on times to work better with the dark map.
 - Removes most things from glowing in the dark. So a projectile fired across a dark screen are dark themselves now, rather than always being bright like vanilla Factorio is. Also means biter spit doesn't glow in the dark.
+
+Expects the `Ribbon Maze (fix for 1.1)` mod by kajacx. Also the `Zombie Engineer` and `Biter Eggs` mods by Muppet9010.
 
 
 
