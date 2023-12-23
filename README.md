@@ -20,8 +20,9 @@ Christmas 2023
 Small changes for a christmas play through. Other mods provide most of the gameplay changes.
 
 - Change regular locomotive techs to unlock mini locomotives
+- Fix the non-winter ground tile graphics in Big Winter. So no more green grass. This issue is caused by the Redmew scenario forcing tiles to be used that Big Winter had stopped being auto placed by map generation. Does break the Big Winter feature and mod setting "Replace snow under furnace" as this used these non-snow tiles.
 
-Expects the `Mini Trains` mod by Klonan.
+Expects the `Mini Trains` mod by Klonan. Also the `Big Winter` mod by darkfrei.
 
 
 

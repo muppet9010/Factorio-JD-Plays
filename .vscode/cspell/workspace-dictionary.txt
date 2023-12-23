@@ -1,16 +1,18 @@
-JGB
-JDPlays # Streamer's name.
-JD # Streamer's name.
 Battlefluffy # Scenario creator.
-Mukkie # Streamer's name.
-P0ober # Streamer's name.
-P0obers # Streamer's name.
-P00ber # Commonly used mis-spelling of the streamers name.
-Poober # Streamer P0ober's ingame name.
+Bilbo # JD Plays community members name.
+BTG # JD Plays community members name.
+darkfrei # Modders name.
+JD # Streamers name.
+JD-Plays # Streamer JD Plays's ingame name.
+JDPlays # Streamers name.
+JGB
+kajacx # Modders name.
 Klonan # Factorio developer.
-JD-Plays
 MODDATA
-Bilbo
-BTG
-JD
-Sorahn
+Mukkie # Streamers name.
+P00ber # Commonly used mis-spelling of the streamers name.
+P0ober # Streamers name.
+P0obers # Streamers name.
+Poober # Streamer P0ober's ingame name.
+Redmew # Scenario name/creator.
+Sorahn # JD Plays community members name.
